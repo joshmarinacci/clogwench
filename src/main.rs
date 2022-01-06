@@ -45,8 +45,6 @@ fn print_debug_info(framebuffer: &Framebuffer) {
 
 }
 
-//Algorithm copied from:
-//https://en.wikipedia.org/wiki/Mandelbrot_set
 fn main() {
     let mut framebuffer = Framebuffer::new("/dev/fb0").unwrap();
 
