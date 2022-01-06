@@ -64,6 +64,9 @@ fn main() -> Result<(), io::Error>{
     let result5 = unsafe { ioctl(0, KDSETMODE as _, KD_TEXT)};
     if result5 == -1 { panic!("error fscreen info") }
 
+    println!("successfully left graphics mode back to text");
+    println!("width is ${}", vinfo.xres);
+    println!("height is ${}", vinfo.yres);
 
     Ok(())
 }
