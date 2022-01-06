@@ -5,7 +5,6 @@ use framebuffer::{Framebuffer, KdMode};
 //Algorithm copied from:
 //https://en.wikipedia.org/wiki/Mandelbrot_set
 fn main() {
-    /*
     let mut framebuffer = Framebuffer::new("/dev/fb0").unwrap();
 
     let w = framebuffer.var_screen_info.xres;
@@ -42,11 +41,11 @@ fn main() {
     }
 
     let _ = framebuffer.write_frame(&frame);
-    */
+
     println!("waiting");
     std::io::stdin().read_line(&mut String::new()).unwrap();
     println!("got return");
-    //let _ = Framebuffer::set_kd_mode(KdMode::Text).unwrap();
+    let _ = Framebuffer::set_kd_mode(KdMode::Text).unwrap();
 }
 /*use std::error::Error;
 use std::{thread, time};
