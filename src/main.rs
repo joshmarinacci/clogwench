@@ -43,9 +43,9 @@ fn main() {
             // p[0] = (125.0 * (it as f32 / max_it as f32)) as u8;
             // p[1] = (255.0 * (it as f32 / max_it as f32)) as u8;
             // p[2] = (75.0 * (it as f32 / max_it as f32)) as u8;
-            p[0] = 128;
+            p[0] = 0; //B
             p[1] = 0;
-            p[2] = 0;
+            p[2] = 128; //R
         }
     }
 
