@@ -1,5 +1,5 @@
 extern crate framebuffer;
-
+use std::process::{Command, Output, Stdio};
 use framebuffer::{Framebuffer, KdMode};
 
 fn fill_rect(frame: &mut Vec<u8>, w:u32, h:u32, line_length: u32, bytespp: u32) {
@@ -45,7 +45,25 @@ fn print_debug_info(framebuffer: &Framebuffer) {
 
 }
 
+fn start_process() {
+    println!("running some output");
+    let mut list_dir = Command::new("ls")
+        // .stdin(Stdio::null())
+        // .stdout(Stdio::null())
+        // .stdout(Stdio::inherit())
+        .arg("/")
+        // .env_clear()
+        // .env("PATH", "/bin")
+        .spawn()
+        .expect("ls failed to start")
+        ;
+
+    println!("spawned it");
+}
+
 fn main() {
+    start_process();
+    /*
     let mut framebuffer = Framebuffer::new("/dev/fb0").unwrap();
 
     let w = framebuffer.var_screen_info.xres;
@@ -59,5 +77,5 @@ fn main() {
     fill_rect(&mut frame,w,h, line_length, bytespp);
     let _ = framebuffer.write_frame(&frame);
     std::io::stdin().read_line(&mut String::new()).unwrap();
-    let _ = Framebuffer::set_kd_mode(KdMode::Text).unwrap();
+    let _ = Framebuffer::set_kd_mode(KdMode::Text).unwrap();*/
 }
