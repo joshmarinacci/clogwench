@@ -67,8 +67,9 @@ function fetch_to_file(src_url, dst_file) {
 }
 
 async function exec_command(s) {
-    let res = await execp(s,{ stdio:['ignore'], stderr:['ignore']})
-    // console.log("output is",res)
+    console.log("running",s)
+    let res = await execp(s)
+    console.log("output is",res)
     return res
 }
 
@@ -81,15 +82,20 @@ async function fetch_to_file_curl(KERNEL_URL, KERNEL_FILE) {
 async function fetch_images() {
     // await fetch_to_file_curl(KERNEL_URL,KERNEL_FILE)
     // await fetch_to_file_curl(PTB_URL, PTB_FILE)
-    await fetch_to_file_curl(IMAGE_URL, IMAGE_FILE)
-    await exec_command(`unzip ${IMAGE_FILE}`)
+    // await fetch_to_file_curl(IMAGE_URL, IMAGE_FILE)
+    // console.log("unziping")
+    // let cwd = process.cwd()
+    // process.chdir(TMP_DIR)
+    await exec_command('git clone https://github.com/dhruvvyas90/qemu-rpi-kernel')
+    // await exec_command(`unzip -d ${TMP_DIR} ${IMAGE_FILE}`)
+    // console.log("done unzipping")
+    // process.chdir(cwd)
 }
 
 if(os.type() === 'Darwin') {
     // assert(check_command_exists("brew &> /dev/null"),'Homebrew is missing. please install it')
     // install_qemu()
     fs.mkdirSync(TMP_DIR, {recursive:true})
-    // process.chdir(TMP_DIR)
     fetch_images().then(()=>{
         console.log("done with images")
     })
