@@ -3,7 +3,7 @@
 #adapted from https://graspingtech.com/ubuntu-desktop-18.04-virtual-machine-macos-qemu/
 qemu-system-x86_64 \
  -m 4G \
- -vga virtio \
+ -vga std \
  -display default,show-cursor=on \
  -usb \
  -device usb-tablet \

@@ -30,6 +30,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "framebuffer"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "878caaaf1bb92c9f707dc6eef90933e07e913dac4bb8e11e145eaabaa94ef149"
+dependencies = [
+ "errno",
+ "libc",
+ "memmap",
+]
+
+[[package]]
 name = "libc"
 version = "0.2.112"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -50,6 +61,7 @@ name = "test2"
 version = "0.1.0"
 dependencies = [
  "errno",
+ "framebuffer",
  "libc",
  "memmap",
 ]
