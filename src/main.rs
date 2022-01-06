@@ -46,6 +46,7 @@ fn main() {
     std::io::stdin().read_line(&mut String::new()).unwrap();
     println!("got return");
     let _ = Framebuffer::set_kd_mode(KdMode::Text).unwrap();
+    println!("cleaning up");
 }
 /*use std::error::Error;
 use std::{thread, time};
