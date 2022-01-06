@@ -24,6 +24,7 @@ fn main() -> Result<(), io::Error>{
     let result0 = unsafe { ioctl(tty.as_raw_fd(), KDSETMODE as _, KD_GRAPHICS)};
     if result0 == -1 { panic!("error switching tty info") }
 
+    println!("opening the graphics device fb0");
     //open fb0
     let device = OpenOptions::new()
         .read(true)

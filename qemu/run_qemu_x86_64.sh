@@ -17,4 +17,7 @@ qemu-system-x86_64 \
 # first create the server.qcow2
 # also download the torrent of the iso image
 # run it. choose all defaults. no extra snaps or updates.
-
+# now install rust and cargo
+# curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+# now run cargo build
+# now run cargo run
