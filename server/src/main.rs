@@ -48,7 +48,7 @@ fn print_debug_info(framebuffer: &Framebuffer) {
 // create simple app to print text which is launched by the server
 fn start_process() {
     println!("running some output");
-    let mut list_dir = Command::new("ls")
+    let mut list_dir = Command::new("../client/target/debug/drawrects")
         // .stdin(Stdio::null())
         // .stdout(Stdio::null())
         // .stdout(Stdio::inherit())
