@@ -1,10 +1,10 @@
 //https://downloads.raspberrypi.org/raspios_lite_armhf/images/raspios_lite_armhf-2021-01-12/2021-01-11-raspios-buster-armhf-lite.zip
 
 export const IMAGE='2021-10-30-raspios-bullseye-armhf-lite'
-// export const KERNEL='kernel-qemu-5.10.63-bullseye'
-export const KERNEL='kernel-qemu-4.19.50-buster'
-// export const PTB='versatile-pb-bullseye-5.10.63.dtb'
-export const PTB='versatile-pb-buster.dtb'
+export const KERNEL='kernel-qemu-5.10.63-bullseye'
+// export const KERNEL='kernel-qemu-4.19.50-buster'
+export const PTB='versatile-pb-bullseye-5.10.63.dtb'
+// export const PTB='versatile-pb-buster.dtb'
 // const TMP_DIR=`${process.env['HOME']}/qemu_vms`
 export const TMP_DIR=`qemu_vms`
 export const KERNEL_FILE=`${TMP_DIR}/${KERNEL}`
