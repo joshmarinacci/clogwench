@@ -16,6 +16,11 @@ const KDSETMODE: libc::c_ulong = 0x4B3A;
 const KD_TEXT: libc::c_ulong = 0x00;
 const KD_GRAPHICS: libc::c_ulong = 0x01;
 
+
+fn write_frame(frame:&[u8]) {
+
+}
+
 fn main() -> Result<(), io::Error>{
 
     println!("switching to graphics mode");
@@ -58,6 +63,15 @@ fn main() -> Result<(), io::Error>{
     println!("height is ${}", vinfo.yres);
     //println!("vinfo is ${}",vinfo);
 
+
+    let mut frame = vec![0u8; (finfo.line_length * vinfo.yres) as usize];
+    for x in frame.iter_mut() {
+        *x = 128
+    }
+    //let _ = write_frame(&frame);
+
+    println!("created a frame");
+
     //let location = (x+vinfo.xoffset) * (vinfo.bits_per_pixel/8) + (y+vinfo.yoffset) * finfo.line_length;
     //  *((uint32_t*)(fbp + location)) = pixel;
 
@@ -65,8 +79,8 @@ fn main() -> Result<(), io::Error>{
     if result5 == -1 { panic!("error fscreen info") }
 
     println!("successfully left graphics mode back to text");
-    println!("width is ${}", vinfo.xres);
-    println!("height is ${}", vinfo.yres);
+    println!("width is {}", vinfo.xres);
+    println!("height is {}", vinfo.yres);
 
     Ok(())
 }
