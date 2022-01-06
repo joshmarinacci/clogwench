@@ -61,7 +61,7 @@ fn main() -> Result<(), io::Error>{
     //let location = (x+vinfo.xoffset) * (vinfo.bits_per_pixel/8) + (y+vinfo.yoffset) * finfo.line_length;
     //  *((uint32_t*)(fbp + location)) = pixel;
 
-    let result5 = unsafe { ioctl(tty.as_raw_fd(), KDSETMODE as _, KD_TEXT)};
+    let result5 = unsafe { ioctl(0, KDSETMODE as _, KD_TEXT)};
     if result5 == -1 { panic!("error fscreen info") }
 
 
