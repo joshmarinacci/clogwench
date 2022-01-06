@@ -1,4 +1,5 @@
 use std::error::Error;
+use std::{thread, time};
 use std::fs::OpenOptions;
 use std::io;
 use std::os::unix::io::AsRawFd;
@@ -68,6 +69,9 @@ fn main() -> Result<(), io::Error>{
     for x in frame.iter_mut() {
         *x = 128
     }
+
+    let ten_millis = time::Duration::from_millis(2000);
+    thread::sleep(ten_millis);
     //let _ = write_frame(&frame);
 
     println!("created a frame");
