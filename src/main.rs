@@ -2,33 +2,7 @@ extern crate framebuffer;
 
 use framebuffer::{Framebuffer, KdMode};
 
-//Algorithm copied from:
-//https://en.wikipedia.org/wiki/Mandelbrot_set
-fn main() {
-    let mut framebuffer = Framebuffer::new("/dev/fb0").unwrap();
-
-    let w = framebuffer.var_screen_info.xres;
-    let h = framebuffer.var_screen_info.yres;
-    let line_length = framebuffer.fix_screen_info.line_length;
-    let bytespp = framebuffer.var_screen_info.bits_per_pixel / 8;
-    // let id_str = str::from_utf8(framebuffer.fix_screen_info.id);
-    let s = String::from_utf8_lossy(&framebuffer.fix_screen_info.id);
-
-    println!("id {}",s);
-    println!("x {} y {}",framebuffer.fix_screen_info.xpanstep, framebuffer.fix_screen_info.ypanstep);
-    println!("width {} height {}",framebuffer.var_screen_info.xres, framebuffer.var_screen_info.yres);
-    println!("bits per pixel {}",framebuffer.var_screen_info.bits_per_pixel);
-    println!("rotate {}",framebuffer.var_screen_info.rotate);
-    println!("xoff {} yoff {}",framebuffer.var_screen_info.xoffset, framebuffer.var_screen_info.yoffset);
-    println!("type {} {}", framebuffer.fix_screen_info.fb_type, framebuffer.fix_screen_info.type_aux);
-    println!("accell {}", framebuffer.fix_screen_info.accel);
-    println!("grayscale {}", framebuffer.var_screen_info.grayscale);
-
-
-    let mut frame = vec![0u8; (line_length * h) as usize];
-
-    let _ = Framebuffer::set_kd_mode(KdMode::Graphics).unwrap();
-
+fn fill_rect(frame: &mut Vec<u8>, w:u32, h:u32, line_length: u32, bytespp: u32) {
     for (r, line) in frame.chunks_mut(line_length as usize).enumerate() {
         for (c, p) in line.chunks_mut(bytespp as usize).enumerate() {
             let x0 = (c as f32 / w as f32) * 3.5 - 2.5;
@@ -55,15 +29,41 @@ fn main() {
             p[2] = 128; //R
         }
     }
-
-    let _ = framebuffer.write_frame(&frame);
-
-    println!("waiting");
-    std::io::stdin().read_line(&mut String::new()).unwrap();
-    println!("got return");
-    let _ = Framebuffer::set_kd_mode(KdMode::Text).unwrap();
-    println!("cleaning up");
 }
+
+fn print_debug_info(framebuffer: &Framebuffer) {
+    let s = String::from_utf8_lossy(&framebuffer.fix_screen_info.id);
+    println!("id {}",s);
+    println!("x {} y {}",framebuffer.fix_screen_info.xpanstep, framebuffer.fix_screen_info.ypanstep);
+    println!("width {} height {}",framebuffer.var_screen_info.xres, framebuffer.var_screen_info.yres);
+    println!("bits per pixel {}",framebuffer.var_screen_info.bits_per_pixel);
+    println!("rotate {}",framebuffer.var_screen_info.rotate);
+    println!("xoff {} yoff {}",framebuffer.var_screen_info.xoffset, framebuffer.var_screen_info.yoffset);
+    println!("type {} {}", framebuffer.fix_screen_info.fb_type, framebuffer.fix_screen_info.type_aux);
+    println!("accell {}", framebuffer.fix_screen_info.accel);
+    println!("grayscale {}", framebuffer.var_screen_info.grayscale);
+
+}
+
+//Algorithm copied from:
+//https://en.wikipedia.org/wiki/Mandelbrot_set
+fn main() {
+    let mut framebuffer = Framebuffer::new("/dev/fb0").unwrap();
+
+    let w = framebuffer.var_screen_info.xres;
+    let h = framebuffer.var_screen_info.yres;
+    let line_length = framebuffer.fix_screen_info.line_length;
+    let bytespp = framebuffer.var_screen_info.bits_per_pixel / 8;
+    print_debug_info(&framebuffer);
+
+    let mut frame = vec![0u8; (line_length * h) as usize];
+    let _ = Framebuffer::set_kd_mode(KdMode::Graphics).unwrap();
+    fill_rect(&mut frame,w,h, line_length, bytespp);
+    let _ = framebuffer.write_frame(&frame);
+    std::io::stdin().read_line(&mut String::new()).unwrap();
+    let _ = Framebuffer::set_kd_mode(KdMode::Text).unwrap();
+}
+
 /*use std::error::Error;
 use std::{thread, time};
 use std::fs::OpenOptions;
