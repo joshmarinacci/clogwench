@@ -20,6 +20,9 @@ fn main() {
     println!("bits per pixel {}",framebuffer.var_screen_info.bits_per_pixel);
     println!("rotate {}",framebuffer.var_screen_info.rotate);
     println!("xoff {} yoff {}",framebuffer.var_screen_info.xoffset, framebuffer.var_screen_info.yoffset);
+    println!("type {} {}", framebuffer.fix_screen_info.fb_type, framebuffer.fix_screen_info.type_aux);
+    println!("accell {}", framebuffer.fix_screen_info.accel);
+    println!("grayscale {}", framebuffer.var_screen_info.grayscale);
 
 
     let mut frame = vec![0u8; (line_length * h) as usize];
