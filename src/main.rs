@@ -44,6 +44,7 @@ fn print_debug_info(framebuffer: &Framebuffer) {
     println!("grayscale {}", framebuffer.var_screen_info.grayscale);
 
 }
+
 // create simple app to print text which is launched by the server
 fn start_process() {
     println!("running some output");
