@@ -1,14 +1,12 @@
 import child_process from 'child_process'
 import util from 'util'
+import {IMAGE, KERNEL, PTB} from './common.js'
 const execp = util.promisify(child_process.exec)
 
 
 const HOME=`${process.env['HOME']}`
 
-const IMAGE='2020-02-13-raspbian-buster-lite'
-const KERNEL='kernel-qemu-5.4.51-buster'
-const PTB='versatile-pb-buster-5.4.51.dtb'
-const TMP_DIR=`${HOME}/qemu_vms`
+const TMP_DIR=`./qemu_vms`
 const IMAGE_FILE=`${TMP_DIR}/${IMAGE}.img`
 const KERNEL_FILE=`${TMP_DIR}/${KERNEL}`
 const PTB_FILE=`${TMP_DIR}/${PTB}`

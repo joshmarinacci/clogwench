@@ -4,24 +4,17 @@ import assert from "assert"
 import * as child_process from 'child_process'
 import util from "util"
 import fs from 'fs'
+import {
+    IMAGE, IMAGE_FILE,
+    IMAGE_URL,
+    KERNEL_FILE,
+    KERNEL_URL,
+    PTB_FILE,
+    PTB_URL,
+    TMP_DIR
+} from './common.js'
 
 const execp = util.promisify(child_process.exec)
-
-const IMAGE='2020-02-13-raspbian-buster-lite'
-const KERNEL='kernel-qemu-5.4.51-buster'
-const PTB='versatile-pb-buster-5.4.51.dtb'
-
-// const TMP_DIR=`${process.env['HOME']}/qemu_vms`
-const TMP_DIR=`qemu_vms`
-const KERNEL_FILE=`${TMP_DIR}/${KERNEL}`
-const PTB_FILE=`${TMP_DIR}/${PTB}`
-
-//# commit hash to use for the https://github.com/dhruvvyas90/qemu-rpi-kernel/ repo:
-const  COMMIT_HASH='061a3853cf2e2390046d163d90181bde1c4cd78f'
-
-const IMAGE_URL=`https://downloads.raspberrypi.org/raspbian_lite/images/raspbian_lite-2020-02-14/${IMAGE}.zip`
-const KERNEL_URL="https://github.com/dhruvvyas90/qemu-rpi-kernel/blob/${COMMIT_HASH}/${KERNEL}?raw=true"
-const PTB_URL="https://github.com/dhruvvyas90/qemu-rpi-kernel/blob/${COMMIT_HASH}/${PTB}?raw=true"
 
 assert.equal(os.type(),"Darwin","we only support MacOS currently")
 
@@ -79,19 +72,24 @@ async function exec_command(s) {
     return res
 }
 
+async function fetch_to_file_curl(KERNEL_URL, KERNEL_FILE) {
+    console.log("curl to",KERNEL_URL, KERNEL_FILE)
+    await execp(`curl -sSL "${KERNEL_URL}" -o "${KERNEL_FILE}"`)
+    console.log("done downloading")
+}
+
 async function fetch_images() {
-    // await fetch_to_file(KERNEL_URL,KERNEL_FILE)
-    // await fetch_to_file(PTB_URL, PTB_FILE)
-    await fetch_to_file(IMAGE_URL, `${IMAGE}.zip`)
-    // await exec_command(`unzip ${IMAGE}.zip`)
-    // await exec_command(`${IMAGE}.zip`)
+    // await fetch_to_file_curl(KERNEL_URL,KERNEL_FILE)
+    // await fetch_to_file_curl(PTB_URL, PTB_FILE)
+    await fetch_to_file_curl(IMAGE_URL, IMAGE_FILE)
+    await exec_command(`unzip ${IMAGE_FILE}`)
 }
 
 if(os.type() === 'Darwin') {
     // assert(check_command_exists("brew &> /dev/null"),'Homebrew is missing. please install it')
     // install_qemu()
     fs.mkdirSync(TMP_DIR, {recursive:true})
-    process.chdir(TMP_DIR)
+    // process.chdir(TMP_DIR)
     fetch_images().then(()=>{
         console.log("done with images")
     })
