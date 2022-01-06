@@ -11,6 +11,10 @@ fn main() {
     let h = framebuffer.var_screen_info.yres;
     let line_length = framebuffer.fix_screen_info.line_length;
     let bytespp = framebuffer.var_screen_info.bits_per_pixel / 8;
+    // let id_str = str::from_utf8(framebuffer.fix_screen_info.id);
+    let s = String::from_utf8_lossy(&framebuffer.fix_screen_info.id);
+
+    println!("id {}",s);
     println!("x {} y {}",framebuffer.fix_screen_info.xpanstep, framebuffer.fix_screen_info.ypanstep);
     println!("width {} height {}",framebuffer.var_screen_info.xres, framebuffer.var_screen_info.yres);
     println!("bits per pixel {}",framebuffer.var_screen_info.bits_per_pixel);
@@ -44,7 +48,7 @@ fn main() {
             // p[1] = (255.0 * (it as f32 / max_it as f32)) as u8;
             // p[2] = (75.0 * (it as f32 / max_it as f32)) as u8;
             p[0] = 0; //B
-            p[1] = 0;
+            p[1] = 0; //G
             p[2] = 128; //R
         }
     }
