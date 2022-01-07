@@ -11,7 +11,7 @@ use std::thread::JoinHandle;
 use std::time::Duration;
 use framebuffer::{Framebuffer, KdMode};
 use serde::Deserialize;
-use common::{APICommand, ARGBColor, DrawRectCommand};
+use common::{APICommand, ARGBColor, DrawRectCommand, KeyDownEvent};
 use evdev::{Device, Key, EventType, InputEventKind};
 use ctrlc;
 
@@ -58,9 +58,8 @@ fn print_debug_info(framebuffer: &Framebuffer) {
 
 }
 
-// fn setup_listener() {
-//mut surf: &mut Surf
-fn setup_listener(arc: Arc<AtomicBool>) -> (JoinHandle<()>, Receiver<APICommand>) {
+
+fn setup_listener(arc: Arc<AtomicBool>, tx:Sender<APICommand>) -> JoinHandle<()> {
     fn handle_error(connection: io::Result<LocalSocketStream>) -> LocalSocketStream {
         match connection {
             Ok(val) => val,
@@ -70,7 +69,6 @@ fn setup_listener(arc: Arc<AtomicBool>) -> (JoinHandle<()>, Receiver<APICommand>
             }
         }
     }
-    let (tx, rx) = mpsc::channel();
 
     fs::remove_file("/tmp/teletype.sock");
     let listener =
@@ -85,8 +83,8 @@ fn setup_listener(arc: Arc<AtomicBool>) -> (JoinHandle<()>, Receiver<APICommand>
             .unwrap();
         let mut de = serde_json::Deserializer::from_reader(conn);
         loop {
-            if arc.load(Ordering::Relaxed) {
-                println!("its time to bail");
+            if arc.load(Ordering::Relaxed) == true {
+                println!("socket thread stopping");
                 break;
             }
             println!("server reading from socket");
@@ -95,7 +93,7 @@ fn setup_listener(arc: Arc<AtomicBool>) -> (JoinHandle<()>, Receiver<APICommand>
             tx.send(cmd).unwrap();
         }
     });
-    (handle,rx)
+    handle
 }
 
 
@@ -177,8 +175,8 @@ fn test_draw_rects(mut surf: &mut Surf) {
 fn dr(fb: &Framebuffer, frame: &mut Vec<u8>, x:i32, y:i32, w:i32, h:i32) {
 }
 
-fn sleep(ms:i32) {
-    thread::sleep(Duration::from_millis(1000));
+fn sleep(ms:u64) {
+    thread::sleep(Duration::from_millis(ms));
 }
 
 fn find_keyboard() -> Option<evdev::Device> {
@@ -195,72 +193,96 @@ fn main() {
     let should_stop:Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
     let ss2 = should_stop.clone();
 
+    let (tx, rx) = mpsc::channel::<APICommand>();
+
     let mut keyboard = find_keyboard().expect("couldnt find the keyboard");
     let ss3 = should_stop.clone();
+    let tx2 = tx.clone();
     thread::spawn(move || {
-        let mut go = true;
         loop {
-            if !go {
+            if ss3.load(Ordering::Relaxed) == true {
+                println!("keyboard thread stopping");
                 break;
             }
             for ev in keyboard.fetch_events().unwrap() {
                 // println!("{:?}", ev);
                 // println!("type {:?}", ev.event_type());
                 if let InputEventKind::Key(key) = ev.kind() {
-                    println!("a key was pressed: {}",key.code());
-                    if key == Key::KEY_ESC {
-                        println!("trying to escape");
-                        go = false;
-                        ss3.store(true, Ordering::Relaxed);
-                    }
+                //     if key == Key::KEY_ESC {
+                //         println!("trying to escape");
+                //         go = false;
+                //         ss3.store(true, Ordering::Relaxed);
+                //     }
+                //    println!("a key was pressed: {}",key.code());
+                    let cmd = APICommand::KeyDown(KeyDownEvent{
+                        original_timestamp:0,
+                        key:key.code() as i32,
+                    });
+                    tx2.send(cmd).unwrap();
                 }
             }
         }
     
     });
 
-    let mut framebuffer = Framebuffer::new("/dev/fb0").unwrap();
-    print_debug_info(&framebuffer);
-    let _ = Framebuffer::set_kd_mode(KdMode::Graphics).unwrap();
-    let mut surf:Surf = Surf::make(framebuffer);
-    test_draw_rects(&mut surf);
+   let mut framebuffer = Framebuffer::new("/dev/fb0").unwrap();
+   print_debug_info(&framebuffer);
+   let _ = Framebuffer::set_kd_mode(KdMode::Graphics).unwrap();
+   let mut surf:Surf = Surf::make(framebuffer);
+   test_draw_rects(&mut surf);
 
-    let (hand, rx) = setup_listener(should_stop.clone());
-    // println!("now done here");
+    let hand = setup_listener(should_stop.clone(), tx);
     let ch = start_process();
-//    std::io::stdin().read_line(&mut String::new()).unwrap();
+    let ss4 = should_stop.clone();
     thread::spawn(move ||{
         for cmd in rx {
-            if should_stop.load(Ordering::Relaxed) {
-                println!("it's time to stop");
+            if ss4.load(Ordering::Relaxed) == true {
+                println!("render thread stopping");
                 break;
             }
             match cmd {
                 APICommand::OpenWindowCommand(cm) => println!("open window"),
                 APICommand::DrawRectCommand(cm) => {
                     println!("draw rect");
-                    surf.rect(cm.x,cm.y,cm.w,cm.h, cm.color);
-                    surf.sync();
+                   surf.rect(cm.x,cm.y,cm.w,cm.h, cm.color);
+                   surf.sync();
                 },
                 APICommand::KeyUp(ku) => {
                     println!("key up");
                 },
                 APICommand::KeyDown(kd) => {
-                    println!("key down");
+                    println!("key down {}",kd.key);
+                    if kd.key == 1 { //wait for the ESC key
+                        ss4.store(true, Ordering::Relaxed);
+                    }
                 },
             }
         }
     });
 
-    // sleep(5000);
-    // println!("now waiting for the client to die");
-    // println!("server done");
-    // ctrlc::set_handler(move || {
-    //     let _ = Framebuffer::set_kd_mode(KdMode::Text).unwrap();
-    //     println!("got control C");
-    //     ss2.store(true, Ordering::Relaxed)
-    // }).expect("error setting control C handler");
-    hand.join().unwrap();
+    // control c handler
+    ctrlc::set_handler(move || {
+        ss2.store(true, Ordering::Relaxed)
+    }).expect("error setting control C handler");
+
+    //timeout thread
+    let timeout_handle = thread::spawn(move || {
+        let mut count = 0;
+        loop {
+            count = count + 1;
+            if count > 15 {
+                should_stop.store(false,Ordering::Relaxed);
+            }
+            println!("watchdog sleeping for 1000");
+            sleep(1000);
+            if should_stop.load(Ordering::Relaxed) == true {
+                println!("render thread stopping");
+                break;
+            }
+        }
+    });
+    timeout_handle.join().unwrap();
     let _ = Framebuffer::set_kd_mode(KdMode::Text).unwrap();
+    println!("all done now");
 }
 
