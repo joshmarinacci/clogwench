@@ -5,6 +5,7 @@ use std::process::{Command, Output, Stdio};
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
 use std::io::{self, prelude::*, BufReader};
+use std::thread;
 use std::time::Duration;
 use framebuffer::{Framebuffer, KdMode};
 use serde::Deserialize;
@@ -116,15 +117,38 @@ fn start_process() {
     println!("spawned it");
 }
 
+fn test_draw_rects(mut fb: Framebuffer) {
+    // let mut frame = fb.read_frame();
+    let w = fb.var_screen_info.xres;
+    let h = fb.var_screen_info.yres;
+    let line_length = fb.fix_screen_info.line_length;
+    let mut frame = vec![0u8; (line_length * h) as usize];
+    for i in 0..10 {
+        let n = i*4;
+        frame[n] = 0;
+        frame[n+1] = 255;
+        frame[n+2] = 0;
+        frame[n+3] = 255;
+    }
+    fb.write_frame(&frame);
+}
+
+fn sleep(ms:i32) {
+    thread::sleep(Duration::from_millis(1000));
+
+}
+
 
 fn main() {
-    start_process();
+    // start_process();
     let mut framebuffer = Framebuffer::new("/dev/fb0").unwrap();
     print_debug_info(&framebuffer);
     let _ = Framebuffer::set_kd_mode(KdMode::Graphics).unwrap();
+    test_draw_rects(framebuffer);
     // setup_listener();
-    setup_listener(framebuffer);
-    std::io::stdin().read_line(&mut String::new()).unwrap();
+    // setup_listener(framebuffer);
+    // std::io::stdin().read_line(&mut String::new()).unwrap();
+    sleep(1000);
     let _ = Framebuffer::set_kd_mode(KdMode::Text).unwrap();
     println!("server done");
 }
