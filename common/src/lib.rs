@@ -26,11 +26,13 @@ pub struct DrawRectCommand {
     pub color:ARGBColor,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
 pub struct KeyDownEvent {
     pub original_timestamp:i64,
     pub key:i32,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
 pub struct KeyUpEvent {
     pub original_timestamp:i64,
     pub key:i32,
@@ -45,6 +47,6 @@ pub struct OpenWindowCommand {
 pub enum APICommand {
     DrawRectCommand(DrawRectCommand),
     OpenWindowCommand(OpenWindowCommand),
-    KeyDownCommand(KeyDownCommand),
+    KeyDown(KeyDownEvent),
     KeyUp(KeyUpEvent),
 }

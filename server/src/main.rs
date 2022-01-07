@@ -12,6 +12,7 @@ use std::time::Duration;
 use framebuffer::{Framebuffer, KdMode};
 use serde::Deserialize;
 use common::{APICommand, ARGBColor, DrawRectCommand};
+use evdev::{Device, Key, EventType, InputEventKind};
 use ctrlc;
 
 fn fill_rect(frame: &mut Vec<u8>, w:u32, h:u32, line_length: u32, bytespp: u32) {
@@ -180,10 +181,43 @@ fn sleep(ms:i32) {
     thread::sleep(Duration::from_millis(1000));
 }
 
+fn find_keyboard() -> Option<evdev::Device> {
+    let devices = evdev::enumerate().collect::<Vec<_>>();
+    for (i, d) in devices.iter().enumerate() {
+        if d.supported_keys().map_or(false, |keys| keys.contains(Key::KEY_ENTER)) {
+            return devices.into_iter().nth(i);
+        }
+    }
+    None
+}
 
 fn main() {
     let should_stop:Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
     let ss2 = should_stop.clone();
+
+    let mut keyboard = find_keyboard().expect("couldnt find the keyboard");
+    let ss3 = should_stop.clone();
+    thread::spawn(move || {
+        let mut go = true;
+        loop {
+            if !go {
+                break;
+            }
+            for ev in keyboard.fetch_events().unwrap() {
+                // println!("{:?}", ev);
+                // println!("type {:?}", ev.event_type());
+                if let InputEventKind::Key(key) = ev.kind() {
+                    println!("a key was pressed: {}",key.code());
+                    if key == Key::KEY_ESC {
+                        println!("trying to escape");
+                        go = false;
+                        ss3.store(true, Ordering::Relaxed);
+                    }
+                }
+            }
+        }
+    
+    });
 
     let mut framebuffer = Framebuffer::new("/dev/fb0").unwrap();
     print_debug_info(&framebuffer);
@@ -192,9 +226,9 @@ fn main() {
     test_draw_rects(&mut surf);
 
     let (hand, rx) = setup_listener(should_stop.clone());
-    println!("now done here");
+    // println!("now done here");
     let ch = start_process();
-    // std::io::stdin().read_line(&mut String::new()).unwrap();
+//    std::io::stdin().read_line(&mut String::new()).unwrap();
     thread::spawn(move ||{
         for cmd in rx {
             if should_stop.load(Ordering::Relaxed) {
@@ -206,8 +240,14 @@ fn main() {
                 APICommand::DrawRectCommand(cm) => {
                     println!("draw rect");
                     surf.rect(cm.x,cm.y,cm.w,cm.h, cm.color);
-                    surf.sync()
-                }
+                    surf.sync();
+                },
+                APICommand::KeyUp(ku) => {
+                    println!("key up");
+                },
+                APICommand::KeyDown(kd) => {
+                    println!("key down");
+                },
             }
         }
     });
@@ -215,11 +255,12 @@ fn main() {
     // sleep(5000);
     // println!("now waiting for the client to die");
     // println!("server done");
-    ctrlc::set_handler(move || {
-        let _ = Framebuffer::set_kd_mode(KdMode::Text).unwrap();
-        println!("got control C");
-        ss2.store(true, Ordering::Relaxed)
-    }).expect("error setting control C handler");
+    // ctrlc::set_handler(move || {
+    //     let _ = Framebuffer::set_kd_mode(KdMode::Text).unwrap();
+    //     println!("got control C");
+    //     ss2.store(true, Ordering::Relaxed)
+    // }).expect("error setting control C handler");
     hand.join().unwrap();
+    let _ = Framebuffer::set_kd_mode(KdMode::Text).unwrap();
 }
 

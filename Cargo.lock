@@ -571,6 +571,7 @@ dependencies = [
  "common",
  "ctrlc",
  "errno",
+ "evdev",
  "framebuffer",
  "interprocess",
  "libc",
