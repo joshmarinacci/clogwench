@@ -5,9 +5,14 @@ add stuff
 
 __adapted from https://graspingtech.com/ubuntu-desktop-18.04-virtual-machine-macos-qemu/__
 
-* first create the server.qcow2
+* install home brew if you don't already have it
+* install qemu with `brew install qemu`
+* check that it works with `qemu-system-x86_64 --version`
+* go into qemu dir `cd qemu`
+* first create the server.qcow2 with `qemu-img create -f qcow2 server.qcow2 10G`
 * also download the torrent of the ubuntu iso. probably from [here](https://ubuntu.com/download/server)
-* run `qemu/run_qemu_x86_64.sh`. choose all defaults. no extra snaps or updates.
+* edit `run_qemu_x86_64.sh` to point `server.qcow2` and the iso file.
+* run `./run_qemu_x86_64.sh`. choose all defaults. no extra snaps or updates.
 * after install control-c to stop it
 * then run again without the -cdrom line
 * now log into the virtual server
