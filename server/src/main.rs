@@ -139,10 +139,10 @@ impl Surf {
         for j in 0..h {
             for i in 0..w {
                 let n = (((x+i) + (y+j)*ll) * 4) as usize;
-                self.frame[n] = color.a;
+                self.frame[n] = color.r;
                 self.frame[n + 1] = color.b;
                 self.frame[n + 2] = color.g;
-                self.frame[n + 3] = color.r;
+                self.frame[n + 3] = color.a;
             }
         }
     }
