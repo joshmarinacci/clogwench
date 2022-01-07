@@ -119,13 +119,13 @@ fn start_process() {
 fn main() {
     start_process();
 
-    let mut framebuffer = Framebuffer::new("/dev/fb0").unwrap();
-    print_debug_info(&framebuffer);
-
-    let _ = Framebuffer::set_kd_mode(KdMode::Graphics).unwrap();
-    setup_listener(framebuffer);
-    std::io::stdin().read_line(&mut String::new()).unwrap();
-    let _ = Framebuffer::set_kd_mode(KdMode::Text).unwrap();
+    // let mut framebuffer = Framebuffer::new("/dev/fb0").unwrap();
+    // print_debug_info(&framebuffer);
+    //
+    // let _ = Framebuffer::set_kd_mode(KdMode::Graphics).unwrap();
+    // setup_listener(framebuffer);
+    // std::io::stdin().read_line(&mut String::new()).unwrap();
+    // let _ = Framebuffer::set_kd_mode(KdMode::Text).unwrap();
     println!("server done");
 }
 
