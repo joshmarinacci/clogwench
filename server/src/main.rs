@@ -187,7 +187,10 @@ fn main() {
             }
             match cmd {
                 APICommand::OpenWindowCommand(cm) => println!("open window"),
-                APICommand::DrawRectCommand(cm) => println!("draw rect")
+                APICommand::DrawRectCommand(cm) => {
+                    println!("draw rect");
+                    surf.rect(cm.x,cm.y,cm.w,cm.h);
+                }
             }
         }
     });
