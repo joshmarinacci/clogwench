@@ -11,7 +11,7 @@ use std::thread::JoinHandle;
 use std::time::Duration;
 use framebuffer::{Framebuffer, KdMode};
 use serde::Deserialize;
-use common::{APICommand, DrawRectCommand};
+use common::{APICommand, ARGBColor, DrawRectCommand};
 use ctrlc;
 
 fn fill_rect(frame: &mut Vec<u8>, w:u32, h:u32, line_length: u32, bytespp: u32) {
@@ -134,15 +134,15 @@ impl Surf {
 }
 
 impl Surf {
-    fn rect(&mut self, x:i32, y:i32, w:i32, h:i32) {
+    fn rect(&mut self, x:i32, y:i32, w:i32, h:i32, color: ARGBColor) {
         let ll = (self.fb.fix_screen_info.line_length/4) as i32;
         for j in 0..h {
             for i in 0..w {
                 let n = (((x+i) + (y+j)*ll) * 4) as usize;
-                self.frame[n] = 0;
-                self.frame[n + 1] = 255;
-                self.frame[n + 2] = 0;
-                self.frame[n + 3] = 255;
+                self.frame[n] = color.a;
+                self.frame[n + 1] = color.r;
+                self.frame[n + 2] = color.g;
+                self.frame[n + 3] = color.a;
             }
         }
     }
@@ -151,11 +151,11 @@ impl Surf {
     }
 }
 
-fn test_draw_rects(mut surf: &mut Surf) {
-    surf.rect(10, 10, 10, 10);
-    surf.rect( 100, 100, 10, 10);
-    surf.sync();
-}
+// fn test_draw_rects(mut surf: &mut Surf) {
+//     surf.rect(10, 10, 10, 10, );
+//     surf.rect(100, 100, 10, 10, );
+//     surf.sync();
+// }
 
 fn dr(fb: &Framebuffer, frame: &mut Vec<u8>, x:i32, y:i32, w:i32, h:i32) {
 }
@@ -173,7 +173,7 @@ fn main() {
     print_debug_info(&framebuffer);
     let _ = Framebuffer::set_kd_mode(KdMode::Graphics).unwrap();
     let mut surf:Surf = Surf::make(framebuffer);
-    test_draw_rects(&mut surf);
+    // test_draw_rects(&mut surf);
 
     let (hand, rx) = setup_listener(should_stop.clone());
     println!("now done here");
@@ -189,7 +189,7 @@ fn main() {
                 APICommand::OpenWindowCommand(cm) => println!("open window"),
                 APICommand::DrawRectCommand(cm) => {
                     println!("draw rect");
-                    surf.rect(cm.x,cm.y,cm.w,cm.h);
+                    surf.rect(cm.x,cm.y,cm.w,cm.h, cm.color);
                     surf.sync()
                 }
             }
