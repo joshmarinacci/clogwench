@@ -2,13 +2,13 @@ use interprocess::local_socket::LocalSocketStream;
 use std::io::{self, prelude::*, BufReader};
 use std::thread;
 use std::time::Duration;
-
-use common::{APICommand, DrawRectCommand, OpenWindowCommand};
-
+use common::{APICommand, ARGBColor, DrawRectCommand, OpenWindowCommand};
 use serde::{Deserialize, Serialize};
+use rand::prelude::*;
 
 
 fn main()  {
+    let mut rng = rand::thread_rng();
     let mut conn = BufReader::new(
         LocalSocketStream::connect("/tmp/teletype.sock").expect("failed to connect"),
     );
@@ -20,10 +20,16 @@ fn main()  {
         count = count + 1;
         let cmd = if count % 2 == 0 {
             APICommand::DrawRectCommand(DrawRectCommand{
-                x: 1,
-                y: 2,
-                w: 3,
-                h: 4
+                x: rng.gen_range(0..100),
+                y: rng.gen_range(0..100),
+                w: 100,
+                h: 100,
+                color: ARGBColor {
+                    r: rng.gen_range(0..255),
+                    g: rng.gen_range(0..255),
+                    b: rng.gen_range(0..255),
+                    a: 255
+                }
             })
         } else {
             APICommand::OpenWindowCommand(OpenWindowCommand{

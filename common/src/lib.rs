@@ -9,6 +9,13 @@ mod tests {
     }
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ARGBColor {
+    pub r:u8,
+    pub g:u8,
+    pub b:u8,
+    pub a:u8,
+}
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct DrawRectCommand {
@@ -16,6 +23,7 @@ pub struct DrawRectCommand {
     pub y:i32,
     pub w:i32,
     pub h:i32,
+    pub color:ARGBColor,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
