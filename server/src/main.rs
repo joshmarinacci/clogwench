@@ -117,20 +117,27 @@ fn start_process() {
     println!("spawned it");
 }
 
+
 fn test_draw_rects(mut fb: Framebuffer) {
     // let mut frame = fb.read_frame();
     let w = fb.var_screen_info.xres;
     let h = fb.var_screen_info.yres;
     let line_length = fb.fix_screen_info.line_length;
     let mut frame = vec![0u8; (line_length * h) as usize];
-    for i in 0..10 {
-        let n = i*4;
-        frame[n] = 0;
-        frame[n+1] = 255;
-        frame[n+2] = 0;
-        frame[n+3] = 255;
-    }
+    dr(&fb,&mut frame, 10, 10);
     fb.write_frame(&frame);
+}
+
+fn dr(fb: &Framebuffer, frame: &mut Vec<u8>, w:i32, h:i32) {
+    for j in 0..h {
+        for i in 0..w {
+            let n = ((i + j*w) * 4) as usize;
+            frame[n] = 0;
+            frame[n + 1] = 255;
+            frame[n + 2] = 0;
+            frame[n + 3] = 255;
+        }
+    }
 }
 
 fn sleep(ms:i32) {
@@ -148,7 +155,7 @@ fn main() {
     // setup_listener();
     // setup_listener(framebuffer);
     // std::io::stdin().read_line(&mut String::new()).unwrap();
-    sleep(1000);
+    sleep(3000);
     let _ = Framebuffer::set_kd_mode(KdMode::Text).unwrap();
     println!("server done");
 }
