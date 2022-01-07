@@ -53,12 +53,12 @@ fn print_debug_info(framebuffer: &Framebuffer) {
 
 }
 
-fn setup_listener() {
-// fn setup_listener(mut framebuffer: Framebuffer) {
-//     let w = framebuffer.var_screen_info.xres;
-//     let h = framebuffer.var_screen_info.yres;
-//     let line_length = framebuffer.fix_screen_info.line_length;
-//     let bytespp = framebuffer.var_screen_info.bits_per_pixel / 8;
+// fn setup_listener() {
+fn setup_listener(mut framebuffer: Framebuffer) {
+    let w = framebuffer.var_screen_info.xres;
+    let h = framebuffer.var_screen_info.yres;
+    let line_length = framebuffer.fix_screen_info.line_length;
+    let bytespp = framebuffer.var_screen_info.bits_per_pixel / 8;
 
     fn handle_error(connection: io::Result<LocalSocketStream>) -> LocalSocketStream {
         match connection {
@@ -83,14 +83,14 @@ fn setup_listener() {
     let mut buffer = String::new();
     let mut de = serde_json::Deserializer::from_reader(conn);
 
-    // let mut frame = vec![0u8; (line_length * h) as usize];
-    // fill_rect(&mut frame,w,h, line_length, bytespp);
+    let mut frame = vec![0u8; (line_length * h) as usize];
+    fill_rect(&mut frame,w,h, line_length, bytespp);
 
     loop {
         println!("server reading from socket");
         let cmd:APICommand =APICommand::deserialize(&mut de).unwrap();
         println!("server is getting results {:?}",cmd);
-        // let _ = framebuffer.write_frame(&frame);
+        let _ = framebuffer.write_frame(&frame);
         match cmd {
             APICommand::OpenWindowCommand(cm) => println!("open window"),
             APICommand::DrawRectCommand(cm) => println!("draw redct"),
@@ -119,13 +119,13 @@ fn start_process() {
 
 fn main() {
     start_process();
-    // let mut framebuffer = Framebuffer::new("/dev/fb0").unwrap();
-    // print_debug_info(&framebuffer);
-    // let _ = Framebuffer::set_kd_mode(KdMode::Graphics).unwrap();
-    setup_listener();
-    // setup_listener(framebuffer);
-    // std::io::stdin().read_line(&mut String::new()).unwrap();
-    // let _ = Framebuffer::set_kd_mode(KdMode::Text).unwrap();
+    let mut framebuffer = Framebuffer::new("/dev/fb0").unwrap();
+    print_debug_info(&framebuffer);
+    let _ = Framebuffer::set_kd_mode(KdMode::Graphics).unwrap();
+    // setup_listener();
+    setup_listener(framebuffer);
+    std::io::stdin().read_line(&mut String::new()).unwrap();
+    let _ = Framebuffer::set_kd_mode(KdMode::Text).unwrap();
     println!("server done");
 }
 
