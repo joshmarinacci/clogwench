@@ -17,3 +17,14 @@ pub struct DrawRectCommand {
     pub w:i32,
     pub h:i32,
 }
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct OpenWindowCommand {
+    pub name:i32,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum APICommand {
+    DrawRectCommand(DrawRectCommand),
+    OpenWindowCommand(OpenWindowCommand),
+}

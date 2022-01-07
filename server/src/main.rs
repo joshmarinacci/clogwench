@@ -8,7 +8,7 @@ use std::io::{self, prelude::*, BufReader};
 use std::time::Duration;
 use framebuffer::{Framebuffer, KdMode};
 use serde::Deserialize;
-use common::DrawRectCommand;
+use common::{APICommand, DrawRectCommand};
 
 fn fill_rect(frame: &mut Vec<u8>, w:u32, h:u32, line_length: u32, bytespp: u32) {
     for (r, line) in frame.chunks_mut(line_length as usize).enumerate() {
@@ -78,12 +78,12 @@ fn setup_listener() {
     let mut de = serde_json::Deserializer::from_reader(conn);
     loop {
         println!("server reading from socket");
-        let rect:DrawRectCommand = DrawRectCommand::deserialize(&mut de).unwrap();
-        println!("server is getting results {:?}",rect);
-        // io::stdout()
-        //     .write_all(buffer.as_ref())
-        //     .expect("failed to write line to stdout");
-        // buffer.clear();
+        let cmd:APICommand =APICommand::deserialize(&mut de).unwrap();
+        println!("server is getting results {:?}",cmd);
+        match cmd {
+            APICommand::OpenWindowCommand(cm) => println!("open window"),
+            APICommand::DrawRectCommand(cm) => println!("draw redct"),
+        }
     }
 }
 
