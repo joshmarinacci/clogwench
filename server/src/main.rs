@@ -117,29 +117,44 @@ fn start_process() {
     println!("spawned it");
 }
 
+struct Surf {
+    fb:Framebuffer,
+    frame: Vec<u8>,
+}
+
+impl Surf {
+    fn rect(&mut self, x:i32, y:i32, w:i32, h:i32) {
+        let ll = (self.fb.fix_screen_info.line_length/4) as i32;
+        for j in 0..h {
+            for i in 0..w {
+                let n = (((x+i) + (y+j)*ll) * 4) as usize;
+                self.frame[n] = 0;
+                self.frame[n + 1] = 255;
+                self.frame[n + 2] = 0;
+                self.frame[n + 3] = 255;
+            }
+        }
+    }
+    fn sync(&mut self) {
+        self.fb.write_frame(&self.frame);
+    }
+}
 
 fn test_draw_rects(mut fb: Framebuffer) {
-    // let mut frame = fb.read_frame();
     let w = fb.var_screen_info.xres;
     let h = fb.var_screen_info.yres;
     let line_length = fb.fix_screen_info.line_length;
-    let mut frame = vec![0u8; (line_length * h) as usize];
-    dr(&fb,&mut frame, 10, 10, 10, 10);
-    dr(&fb,&mut frame, 100, 100, 10, 10);
-    fb.write_frame(&frame);
+    let mut surf = Surf {
+        fb: fb,
+        frame: vec![0u8; (line_length * h) as usize]
+    };
+    // let mut frame = fb.read_frame();
+    surf.rect(10, 10, 10, 10);
+    surf.rect( 100, 100, 10, 10);
+    surf.sync();
 }
 
 fn dr(fb: &Framebuffer, frame: &mut Vec<u8>, x:i32, y:i32, w:i32, h:i32) {
-    let ll = (fb.fix_screen_info.line_length/4) as i32;
-    for j in 0..h {
-        for i in 0..w {
-            let n = (((x+i) + (y+j)*ll) * 4) as usize;
-            frame[n] = 0;
-            frame[n + 1] = 255;
-            frame[n + 2] = 0;
-            frame[n + 3] = 255;
-        }
-    }
 }
 
 fn sleep(ms:i32) {
@@ -157,7 +172,7 @@ fn main() {
     // setup_listener();
     // setup_listener(framebuffer);
     // std::io::stdin().read_line(&mut String::new()).unwrap();
-    sleep(3000);
+    sleep(5000);
     let _ = Framebuffer::set_kd_mode(KdMode::Text).unwrap();
     println!("server done");
 }
