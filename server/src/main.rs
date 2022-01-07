@@ -140,9 +140,9 @@ impl Surf {
             for i in 0..w {
                 let n = (((x+i) + (y+j)*ll) * 4) as usize;
                 self.frame[n] = color.a;
-                self.frame[n + 1] = color.r;
+                self.frame[n + 1] = color.b;
                 self.frame[n + 2] = color.g;
-                self.frame[n + 3] = color.a;
+                self.frame[n + 3] = color.r;
             }
         }
     }
@@ -151,11 +151,21 @@ impl Surf {
     }
 }
 
-// fn test_draw_rects(mut surf: &mut Surf) {
-//     surf.rect(10, 10, 10, 10, );
-//     surf.rect(100, 100, 10, 10, );
-//     surf.sync();
-// }
+fn test_draw_rects(mut surf: &mut Surf) {
+    surf.rect(10, 10, 10, 10, ARGBColor{
+        r: 255,
+        g: 0,
+        b: 0,
+        a: 255
+    });
+    surf.rect(100, 100, 10, 10, ARGBColor{
+        r: 0,
+        g: 255,
+        b: 0,
+        a: 255
+    });
+    surf.sync();
+}
 
 fn dr(fb: &Framebuffer, frame: &mut Vec<u8>, x:i32, y:i32, w:i32, h:i32) {
 }
@@ -173,7 +183,7 @@ fn main() {
     print_debug_info(&framebuffer);
     let _ = Framebuffer::set_kd_mode(KdMode::Graphics).unwrap();
     let mut surf:Surf = Surf::make(framebuffer);
-    // test_draw_rects(&mut surf);
+    test_draw_rects(&mut surf);
 
     let (hand, rx) = setup_listener(should_stop.clone());
     println!("now done here");
