@@ -123,6 +123,19 @@ struct Surf {
 }
 
 impl Surf {
+    fn make(fb: Framebuffer) -> Surf {
+        let w = fb.var_screen_info.xres;
+        let h = fb.var_screen_info.yres;
+        let line_length = fb.fix_screen_info.line_length;
+        let mut surf = Surf {
+            fb: fb,
+            frame: vec![0u8; (line_length * h) as usize]
+        };
+        surf
+    }
+}
+
+impl Surf {
     fn rect(&mut self, x:i32, y:i32, w:i32, h:i32) {
         let ll = (self.fb.fix_screen_info.line_length/4) as i32;
         for j in 0..h {
@@ -141,14 +154,7 @@ impl Surf {
 }
 
 fn test_draw_rects(mut fb: Framebuffer) {
-    let w = fb.var_screen_info.xres;
-    let h = fb.var_screen_info.yres;
-    let line_length = fb.fix_screen_info.line_length;
-    let mut surf = Surf {
-        fb: fb,
-        frame: vec![0u8; (line_length * h) as usize]
-    };
-    // let mut frame = fb.read_frame();
+    let mut surf:Surf = Surf::make(fb);
     surf.rect(10, 10, 10, 10);
     surf.rect( 100, 100, 10, 10);
     surf.sync();
