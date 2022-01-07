@@ -8,6 +8,7 @@ use rand::prelude::*;
 
 
 fn main()  {
+    thread::sleep(Duration::from_millis(1000));
     let mut rng = rand::thread_rng();
     let mut conn = BufReader::new(
         LocalSocketStream::connect("/tmp/teletype.sock").expect("failed to connect"),
