@@ -196,8 +196,8 @@ fn main() {
     // println!("now waiting for the client to die");
     // println!("server done");
     ctrlc::set_handler(move || {
-        println!("got control C");
         let _ = Framebuffer::set_kd_mode(KdMode::Text).unwrap();
+        println!("got control C");
         ss2.store(true, Ordering::Relaxed)
     }).expect("error setting control C handler");
     hand.join().unwrap();
