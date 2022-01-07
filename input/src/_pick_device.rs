@@ -1,4 +1,5 @@
 use evdev;
+use std::io::Write;
 
 pub fn pick_device() -> evdev::Device {
     let mut args = std::env::args_os();

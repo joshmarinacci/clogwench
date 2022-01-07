@@ -19,6 +19,7 @@ __adapted from https://graspingtech.com/ubuntu-desktop-18.04-virtual-machine-mac
 
 
 `sudo usermod -aG video <username>`
+`sudo usermod -aG input <username>`
 
 ```
 qemu-system-x86_64 \
