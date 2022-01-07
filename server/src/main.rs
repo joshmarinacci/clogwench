@@ -158,10 +158,16 @@ fn test_draw_rects(mut surf: &mut Surf) {
         b: 0,
         a: 255
     });
-    surf.rect(100, 100, 10, 10, ARGBColor{
+    surf.rect(10, 30, 10, 10, ARGBColor{
         r: 0,
         g: 255,
         b: 0,
+        a: 255
+    });
+    surf.rect(10, 50, 10, 10, ARGBColor{
+        r: 0,
+        g: 0,
+        b: 255,
         a: 255
     });
     surf.sync();
