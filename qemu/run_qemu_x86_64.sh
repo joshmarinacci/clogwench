@@ -10,8 +10,9 @@ qemu-system-x86_64 \
  -machine type=q35,accel=hvf \
  -smp 2 \
  -drive file=server.qcow2,if=virtio \
+ -net user,hostfwd=tcp::2222-:22 -net nic \
  -cpu Nehalem
-# -cdrom ubuntu-21.10-live-server-amd64.iso \
+# -cdrom ubuntu-20.04.3-live-server-amd64.iso \
 
 
 # first create the server.qcow2
