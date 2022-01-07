@@ -1,6 +1,14 @@
 extern crate framebuffer;
+
+use interprocess::local_socket::{LocalSocketListener, LocalSocketStream};
 use std::process::{Command, Output, Stdio};
+use std::sync::mpsc;
+use std::sync::mpsc::{Receiver, Sender};
+use std::io::{self, prelude::*, BufReader};
+use std::time::Duration;
 use framebuffer::{Framebuffer, KdMode};
+use serde::Deserialize;
+use common::DrawRectCommand;
 
 fn fill_rect(frame: &mut Vec<u8>, w:u32, h:u32, line_length: u32, bytespp: u32) {
     for (r, line) in frame.chunks_mut(line_length as usize).enumerate() {
@@ -45,10 +53,45 @@ fn print_debug_info(framebuffer: &Framebuffer) {
 
 }
 
+fn setup_listener() {
+    fn handle_error(connection: io::Result<LocalSocketStream>) -> LocalSocketStream {
+        match connection {
+            Ok(val) => val,
+            Err(error) => {
+                eprintln!("\n");
+                panic!("Incoming connection failed: {}", error);
+            }
+        }
+    }
+
+    let listener =
+        LocalSocketListener::bind("/tmp/teletype.sock").expect("failed to set up server");
+    eprintln!("Teletype server listening for connections.");
+    let mut conn = listener
+        .incoming()
+        .next()
+        .map(handle_error)
+        .map(BufReader::new)
+        .unwrap();
+    // let mut our_turn = false;
+    let mut buffer = String::new();
+    let mut de = serde_json::Deserializer::from_reader(conn);
+    loop {
+        println!("server reading from socket");
+        let rect:DrawRectCommand = DrawRectCommand::deserialize(&mut de).unwrap();
+        println!("server is getting results {:?}",rect);
+        // io::stdout()
+        //     .write_all(buffer.as_ref())
+        //     .expect("failed to write line to stdout");
+        // buffer.clear();
+    }
+}
+
+
 // create simple app to print text which is launched by the server
 fn start_process() {
     println!("running some output");
-    let mut list_dir = Command::new("../client/target/debug/drawrects")
+    let mut list_dir = Command::new("../target/debug/drawrects")
         // .stdin(Stdio::null())
         // .stdout(Stdio::null())
         // .stdout(Stdio::inherit())
@@ -62,8 +105,32 @@ fn start_process() {
     println!("spawned it");
 }
 
+
 fn main() {
     start_process();
+    setup_listener();
+    // let (tx,rx):(Sender<DrawRectCommand>,Receiver<DrawRectCommand>) = mpsc::channel();
+    // let child = thread::spawn(move ||{
+    //     loop {
+    //         println!("child sending draw rect");
+    //         let dr = DrawRectCommand {
+    //             x: 1,
+    //             y: 2,
+    //             w: 3,
+    //             h: 4
+    //         };
+    //         tx.send(dr).unwrap();
+    //         thread::sleep(Duration::from_millis(1000))
+    //     }
+    // });
+    // println!("server is waiting for child to end");
+    // for received in rx {
+    //     println!("got {:?}",received)
+    // }
+    //child.join().unwrap();
+    println!("server done")
+
+    //start_process();
     /*
     let mut framebuffer = Framebuffer::new("/dev/fb0").unwrap();
 
@@ -80,3 +147,4 @@ fn main() {
     std::io::stdin().read_line(&mut String::new()).unwrap();
     let _ = Framebuffer::set_kd_mode(KdMode::Text).unwrap();*/
 }
+
