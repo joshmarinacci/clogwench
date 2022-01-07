@@ -1,15 +1,18 @@
 extern crate framebuffer;
 
 use interprocess::local_socket::{LocalSocketListener, LocalSocketStream};
-use std::process::{Command, Output, Stdio};
-use std::sync::mpsc;
+use std::process::{Child, Command, Output, Stdio};
+use std::sync::{Arc, mpsc};
 use std::sync::mpsc::{Receiver, Sender};
 use std::io::{self, prelude::*, BufReader};
-use std::thread;
+use std::{fs, thread};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::thread::JoinHandle;
 use std::time::Duration;
 use framebuffer::{Framebuffer, KdMode};
 use serde::Deserialize;
 use common::{APICommand, DrawRectCommand};
+use ctrlc;
 
 fn fill_rect(frame: &mut Vec<u8>, w:u32, h:u32, line_length: u32, bytespp: u32) {
     for (r, line) in frame.chunks_mut(line_length as usize).enumerate() {
@@ -55,12 +58,8 @@ fn print_debug_info(framebuffer: &Framebuffer) {
 }
 
 // fn setup_listener() {
-fn setup_listener(mut framebuffer: Framebuffer) {
-    let w = framebuffer.var_screen_info.xres;
-    let h = framebuffer.var_screen_info.yres;
-    let line_length = framebuffer.fix_screen_info.line_length;
-    let bytespp = framebuffer.var_screen_info.bits_per_pixel / 8;
-
+//mut surf: &mut Surf
+fn setup_listener(arc: Arc<AtomicBool>) -> (JoinHandle<()>, Receiver<APICommand>) {
     fn handle_error(connection: io::Result<LocalSocketStream>) -> LocalSocketStream {
         match connection {
             Ok(val) => val,
@@ -70,38 +69,37 @@ fn setup_listener(mut framebuffer: Framebuffer) {
             }
         }
     }
+    let (tx, rx) = mpsc::channel();
 
+    fs::remove_file("/tmp/teletype.sock");
     let listener =
         LocalSocketListener::bind("/tmp/teletype.sock").expect("failed to set up server");
     eprintln!("Teletype server listening for connections.");
-    let mut conn = listener
-        .incoming()
-        .next()
-        .map(handle_error)
-        .map(BufReader::new)
-        .unwrap();
-    // let mut our_turn = false;
-    let mut buffer = String::new();
-    let mut de = serde_json::Deserializer::from_reader(conn);
-
-    let mut frame = vec![0u8; (line_length * h) as usize];
-    fill_rect(&mut frame,w,h, line_length, bytespp);
-
-    loop {
-        println!("server reading from socket");
-        let cmd:APICommand =APICommand::deserialize(&mut de).unwrap();
-        println!("server is getting results {:?}",cmd);
-        let _ = framebuffer.write_frame(&frame);
-        match cmd {
-            APICommand::OpenWindowCommand(cm) => println!("open window"),
-            APICommand::DrawRectCommand(cm) => println!("draw redct"),
+    let handle = thread::spawn(move ||{
+        let mut conn = listener
+            .incoming()
+            .next()
+            .map(handle_error)
+            .map(BufReader::new)
+            .unwrap();
+        let mut de = serde_json::Deserializer::from_reader(conn);
+        loop {
+            if arc.load(Ordering::Relaxed) {
+                println!("its time to bail");
+                break;
+            }
+            println!("server reading from socket");
+            let cmd:APICommand =APICommand::deserialize(&mut de).unwrap();
+            println!("server is getting results {:?}",cmd);
+            tx.send(cmd).unwrap();
         }
-    }
+    });
+    (handle,rx)
 }
 
 
 // create simple app to print text which is launched by the server
-fn start_process() {
+fn start_process() -> Child {
     println!("running some output");
     let mut list_dir = Command::new("../target/debug/drawrects")
         // .stdin(Stdio::null())
@@ -113,8 +111,8 @@ fn start_process() {
         .spawn()
         .expect("ls failed to start")
         ;
-
     println!("spawned it");
+    list_dir
 }
 
 struct Surf {
@@ -153,8 +151,7 @@ impl Surf {
     }
 }
 
-fn test_draw_rects(mut fb: Framebuffer) {
-    let mut surf:Surf = Surf::make(fb);
+fn test_draw_rects(mut surf: &mut Surf) {
     surf.rect(10, 10, 10, 10);
     surf.rect( 100, 100, 10, 10);
     surf.sync();
@@ -165,21 +162,44 @@ fn dr(fb: &Framebuffer, frame: &mut Vec<u8>, x:i32, y:i32, w:i32, h:i32) {
 
 fn sleep(ms:i32) {
     thread::sleep(Duration::from_millis(1000));
-
 }
 
 
 fn main() {
-    // start_process();
+    let should_stop:Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
+    let ss2 = should_stop.clone();
+
     let mut framebuffer = Framebuffer::new("/dev/fb0").unwrap();
     print_debug_info(&framebuffer);
     let _ = Framebuffer::set_kd_mode(KdMode::Graphics).unwrap();
-    test_draw_rects(framebuffer);
-    // setup_listener();
-    // setup_listener(framebuffer);
+    let mut surf:Surf = Surf::make(framebuffer);
+    test_draw_rects(&mut surf);
+
+    let (hand, rx) = setup_listener(should_stop.clone());
+    println!("now done here");
+    let ch = start_process();
     // std::io::stdin().read_line(&mut String::new()).unwrap();
-    sleep(5000);
-    let _ = Framebuffer::set_kd_mode(KdMode::Text).unwrap();
-    println!("server done");
+    thread::spawn(move ||{
+        for cmd in rx {
+            if should_stop.load(Ordering::Relaxed) {
+                println!("it's time to stop");
+                break;
+            }
+            match cmd {
+                APICommand::OpenWindowCommand(cm) => println!("open window"),
+                APICommand::DrawRectCommand(cm) => println!("draw rect")
+            }
+        }
+    });
+
+    // sleep(5000);
+    // println!("now waiting for the client to die");
+    // println!("server done");
+    ctrlc::set_handler(move || {
+        println!("got control C");
+        let _ = Framebuffer::set_kd_mode(KdMode::Text).unwrap();
+        ss2.store(true, Ordering::Relaxed)
+    }).expect("error setting control C handler");
+    hand.join().unwrap();
 }
 
