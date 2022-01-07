@@ -190,6 +190,7 @@ fn main() {
                 APICommand::DrawRectCommand(cm) => {
                     println!("draw rect");
                     surf.rect(cm.x,cm.y,cm.w,cm.h);
+                    surf.sync()
                 }
             }
         }
