@@ -129,9 +129,10 @@ fn test_draw_rects(mut fb: Framebuffer) {
 }
 
 fn dr(fb: &Framebuffer, frame: &mut Vec<u8>, w:i32, h:i32) {
+    let ll = fb.fix_screen_info.line_length as i32;
     for j in 0..h {
         for i in 0..w {
-            let n = ((i + j*w) * 4) as usize;
+            let n = ((i + j*ll) * 4) as usize;
             frame[n] = 0;
             frame[n + 1] = 255;
             frame[n + 2] = 0;
