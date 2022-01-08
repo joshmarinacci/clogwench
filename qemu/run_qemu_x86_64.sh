@@ -13,6 +13,7 @@ qemu-system-x86_64 \
  -net user,hostfwd=tcp::2222-:22 -net nic \
  -cpu Nehalem
 # -cdrom ubuntu-20.04.3-live-server-amd64.iso \
+# -device usb-mouse \
 
 
 # first create the server.qcow2
