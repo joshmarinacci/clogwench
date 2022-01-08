@@ -1,15 +1,10 @@
 // cli/"tui" shared between the evtest examples
 mod _pick_device;
-use evdev::{Device, Key, EventType, InputEventKind, RelativeAxisType};
+use evdev::{Key, RelativeAxisType};
 
-fn dump_inputs() {
-    let mut devices = evdev::enumerate().collect::<Vec<_>>();
-    for (i, d) in devices.iter().enumerate() {
-    }
-}
 
 fn find_keyboard() -> Option<evdev::Device> {
-    let mut devices = evdev::enumerate().collect::<Vec<_>>();
+    let devices = evdev::enumerate().collect::<Vec<_>>();
     for (i, d) in devices.iter().enumerate() {
         if d.supported_keys().map_or(false, |keys| keys.contains(Key::KEY_ENTER)) {
             // println!("found a keyboard");
@@ -36,7 +31,7 @@ fn find_keyboard() -> Option<evdev::Device> {
 fn print_all_devices() {
     let mut devices = evdev::enumerate().collect::<Vec<_>>();
     devices.reverse();
-    for (i, d) in devices.iter().enumerate() {
+    for (_i, d) in devices.iter().enumerate() {
         println!("name:{} path:{} unique_name:{} id:{}",
             d.name().unwrap_or("Unnamed device"), 
             d.physical_path().unwrap_or("unknown path"),
@@ -52,10 +47,10 @@ fn print_all_devices() {
         if d.supported_keys().map_or(false, |keys| keys.contains(Key::KEY_ENTER)) {
             println!("can emit an enter key");
         }
-        for (ii, ax) in d.supported_relative_axes().iter().enumerate() {
+        for (_ii, ax) in d.supported_relative_axes().iter().enumerate() {
             println!("rel ax {:?}",ax);
         }
-        for (ii, ax) in d.supported_absolute_axes().iter().enumerate() {
+        for (_ii, ax) in d.supported_absolute_axes().iter().enumerate() {
             println!("abs ax {:?}",ax);
         }
         if d.supported_relative_axes().map_or(false, |axes| axes.contains(RelativeAxisType::REL_X)) {
@@ -65,8 +60,8 @@ fn print_all_devices() {
 }
 
 fn main() {
-    print_all_devices();
     println!("input devices");
+    print_all_devices();
 //    let mut keyboard = find_keyboard().expect("couldnt find the keyboard");
 //    println!("found the keyboard {}",keyboard);
 //    let keybd = Device::open(keybd_path).expect("Couldn't open the keyboard.");
