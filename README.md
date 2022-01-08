@@ -16,18 +16,18 @@ __adapted from https://graspingtech.com/ubuntu-desktop-18.04-virtual-machine-mac
 * after install control-c to stop it
 * then run again without the -cdrom line
 * now log into the virtual server
-* install some deps: `sudo apt-get install curl build-essential make gcc -y`
+* you can ssh to the virtual server with  `-net user,hostfwd=tcp::2222-:22 -net nic \` added to the `./run_qemu_x86_64.sh` file.
+* install some deps: `sudo apt-get install curl git build-essential make gcc -y`
 * now install rust and cargo. `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
 * now log out and back into the virtual server
-* now run `cargo build`
-* now run `cargo run` it will probably fail if you don't have root privs.
 * now check out the code with `git clone https://github.com/joshmarinacci/clogwench.git`
+* now run `cargo build`
+* now run `cargo run` it will probably fail if you don't have root privs. add privs with
+* `sudo usermod -aG video <username>`
+* `sudo usermod -aG input <username>`
 
 
-you can ssh to the virtual server with  -net user,hostfwd=tcp::2222-:22 -net nic \
-
-`sudo usermod -aG video <username>`
-`sudo usermod -aG input <username>`
+* You can run it on a real raspberry pi by following the same steps, just without the QEmu parts. Once you can SSH into your pi (or do it directly on the device), run the same steps to install rust and the source, add your user to the root privs, then start it.
 
 ```
 qemu-system-x86_64 \
