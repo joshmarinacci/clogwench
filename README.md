@@ -21,7 +21,10 @@ __adapted from https://graspingtech.com/ubuntu-desktop-18.04-virtual-machine-mac
 * now log out and back into the virtual server
 * now run `cargo build`
 * now run `cargo run` it will probably fail if you don't have root privs.
+* now check out the code with `git clone https://github.com/joshmarinacci/clogwench.git`
 
+
+you can ssh to the virtual server with  -net user,hostfwd=tcp::2222-:22 -net nic \
 
 `sudo usermod -aG video <username>`
 `sudo usermod -aG input <username>`
