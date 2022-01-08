@@ -109,7 +109,7 @@ fn start_process() -> Child {
         // .env_clear()
         // .env("PATH", "/bin")
         .spawn()
-        .expect("ls failed to start")
+        .expect("child process failed to start")
         ;
     println!("spawned it");
     list_dir
@@ -152,12 +152,20 @@ fn find_keyboard() -> Option<evdev::Device> {
 }
 
 fn find_mouse() -> Option<evdev::Device> {
-    let devices = evdev::enumerate().collect::<Vec<_>>();
+    let mut devices = evdev::enumerate().collect::<Vec<_>>();
+    devices.reverse();    
     for (i, d) in devices.iter().enumerate() {
-        if d.supported_relative_axes().map_or(false, |axes| axes.contains(RelativeAxisType::REL_X)) {
-            println!("found a device with relative input");
+        for typ in d.supported_events().iter() {
+            println!("   type {:?}",typ);
         }
-        return devices.into_iter().nth(i);
+        if d.supported_events().contains(EventType::ABSOLUTE) {
+            println!("found a device with absolute input: {}", d.name().unwrap_or("Unnamed device"));
+            return devices.into_iter().nth(i);
+        }
+        // if d.supported_relative_axes().map_or(false, |axes| axes.contains(RelativeAxisType::REL_X)) {
+        //     println!("found a device with relative input: {}", d.name().unwrap_or("Unnamed device"));
+        //     return devices.into_iter().nth(i);
+        // }
     }
     None
 }
@@ -167,7 +175,6 @@ fn main() {
     let ss2 = should_stop.clone();
 
     let (tx, rx) = mpsc::channel::<APICommand>();
-
     let mut keyboard = find_keyboard().expect("Couldn't find the keyboard");
     let mut mouse = find_mouse().expect("Couldn't find the mouse");
     setup_evdev_watcher(keyboard, should_stop.clone(),tx.clone());
