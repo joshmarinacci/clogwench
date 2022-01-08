@@ -4,15 +4,15 @@ use interprocess::local_socket::{LocalSocketListener, LocalSocketStream};
 use std::process::{Child, Command, Output, Stdio};
 use std::sync::{Arc, mpsc};
 use std::sync::mpsc::{Receiver, Sender};
-use std::io::{self, BufReader, prelude::*};
+use std::io::{self, BufReader};
 use std::{fs, thread};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::JoinHandle;
 use std::time::Duration;
 use framebuffer::{Framebuffer, KdMode};
 use serde::Deserialize;
-use common::{APICommand, ARGBColor, DrawRectCommand, KeyDownEvent};
-use evdev::{Device, EventType, InputEventKind, Key, RelativeAxisType};
+use common::{APICommand, ARGBColor, KeyDownEvent, MouseMoveEvent};
+use evdev::{Device, EventType, InputEventKind, Key, AbsoluteAxisType};
 use ctrlc;
 use surf::Surf;
 
@@ -198,9 +198,11 @@ fn main() {
             match cmd {
                 APICommand::OpenWindowCommand(cm) => println!("open window"),
                 APICommand::DrawRectCommand(cm) => {
+                  println!("draw rect");    
                    println!("draw rect");
-                   surf.rect(cm.x,cm.y,cm.w,cm.h, cm.color);
-                   surf.sync();
+                  println!("draw rect");    
+                  surf.rect(cm.x,cm.y,cm.w,cm.h, cm.color);
+                  surf.sync();
                 },
                 APICommand::KeyUp(ku) => {
                     println!("key up");
@@ -215,7 +217,15 @@ fn main() {
                     println!("mouse move {:?}",mme)
                 },
                 APICommand::MouseMove(mme) => {
-                    println!("mouse move {:?}",mme)
+                    let color = ARGBColor{
+                        r: 0,
+                        g: 255,
+                        b: 255,
+                        a: 255
+                    };                    
+                    surf.rect(mme.x/40,mme.y/40,10,10, color);
+                    surf.sync();
+                    //println!("mouse move {:?},{:?}",(mme.x/10),(mme.y/10))
                 },
                 APICommand::MouseUp(mme) => {
                     println!("mouse move {:?}",mme)
@@ -252,6 +262,8 @@ fn main() {
 
 fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender<APICommand>) {
     thread::spawn(move || {
+        let mut cx = 0;
+        let mut cy = 0;
         loop {
             if stop.load(Ordering::Relaxed) == true {
                 println!("keyboard thread stopping");
@@ -259,28 +271,38 @@ fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender<API
             }
             for ev in device.fetch_events().unwrap() {
                 // println!("{:?}", ev);
-                println!("type {:?}", ev.event_type());
+                //println!("type {:?}", ev.event_type());
                 match ev.kind() {
                     InputEventKind::Key(key) => {
                         let cmd = APICommand::KeyDown(KeyDownEvent{
                             original_timestamp:0,
                             key:key.code() as i32,
                         });
-                        tx.send(cmd).unwrap();
+                        tx.send(cmd).unwrap()
                     },
                     InputEventKind::RelAxis(rel) => {
-                        println!("mouse event");
+                        //println!("mouse event {:?}",rel)
+                    },
+                    InputEventKind::AbsAxis(abs) => {
+                        // println!("abs event {:?} {:?}",ev.value(), abs);
+                        match abs {
+                            AbsoluteAxisType::ABS_X => cx = ev.value(),
+                            AbsoluteAxisType::ABS_Y => cy = ev.value(),
+                            _ => {
+                                println!("unknown aboslute axis type")
+                            }
+                        }
+                        let cmd = APICommand::MouseMove(MouseMoveEvent{
+                            original_timestamp:0,
+                            button:0,
+                            x:cx,
+                            y:cy
+                        });
+                        tx.send(cmd).unwrap()
+                        //stop.store(true,Ordering::Relaxed);
                     },
                     _ => {}
                 }
-                // if let InputEventKind::Key(key) = ev.kind() {
-                    //     if key == Key::KEY_ESC {
-                    //         println!("trying to escape");
-                    //         go = false;
-                    //         ss3.store(true, Ordering::Relaxed);
-                    //     }
-                    //    println!("a key was pressed: {}",key.code());
-                // }
             }
         }
     });
