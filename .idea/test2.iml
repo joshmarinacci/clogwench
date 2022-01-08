@@ -6,6 +6,7 @@
       <sourceFolder url="file://$MODULE_DIR$/server/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/common/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/input/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/test-server/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/temp" />
       <excludeFolder url="file://$MODULE_DIR$/.tmp" />
       <excludeFolder url="file://$MODULE_DIR$/tmp" />

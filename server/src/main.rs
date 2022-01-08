@@ -179,7 +179,7 @@ fn main() {
         loop {
             count = count + 1;
             if count > 15 {
-                should_stop.store(false,Ordering::Relaxed);
+                should_stop.store(true,Ordering::Relaxed);
             }
             println!("watchdog sleeping for 1000");
             sleep(1000);
