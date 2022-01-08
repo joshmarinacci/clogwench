@@ -1,7 +1,7 @@
 use std::io::Write;
 use std::net::TcpStream;
 use std::sync::mpsc;
-use std::sync::mpsc::{Receiver, Sender};
+use std::sync::mpsc::{IntoIter, Iter, Receiver, Sender, TryIter};
 use std::thread;
 use serde::Deserialize;
 use common::{APICommand, ARGBColor, DrawRectCommand, OpenWindowCommand};
@@ -13,11 +13,17 @@ struct ClientConnection {
 }
 
 impl ClientConnection {
+    pub(crate) fn send(&self, cmd: APICommand) {
+        self.tx.send(cmd).unwrap();
+    }
+}
+
+impl ClientConnection {
     pub fn init() -> Option<ClientConnection> {
         let (in_tx, in_rx) = mpsc::channel::<APICommand>();
         let (out_tx, out_rx) = mpsc::channel::<APICommand>();
         match TcpStream::connect("localhost:3333") {
-            Ok(mut stream) => {
+            Ok(stream) => {
                 println!("connected to the server");
                 let mut stream1 = stream.try_clone().unwrap();
                 let stream2 = stream.try_clone().unwrap();
@@ -62,7 +68,7 @@ impl ClientConnection {
         }
     }
 }
-fn redraw(mut client: &Sender<APICommand>, x: i32, y: i32, w:i32, h:i32) {
+fn redraw(client: &ClientConnection, x: i32, y: i32, w:i32, h:i32) {
     let white:ARGBColor = ARGBColor{
         r: 255,
         g: 255,
@@ -101,18 +107,18 @@ fn main() {
     let mut x = 50;
     let mut y = 50;
 
-    let mut client = ClientConnection::init().expect("Can't connect to the server");
+    let client = ClientConnection::init().expect("Can't connect to the server");
     //open window and wait
-    client.tx.send(APICommand::OpenWindowCommand(OpenWindowCommand{ name: 0 }));
-    redraw(&client.tx,x,y,w,h);
+    client.send(APICommand::OpenWindowCommand(OpenWindowCommand{ name: 0 }));
+    redraw(&client,x,y,w,h);
 
-    for cmd in client.rx {
+    for cmd in &client.rx {
         println!("got an event {:?}",cmd);
         match cmd {
             APICommand::KeyDown(kd) => {
                 println!("got a keydown event");
                 x += 1;
-                redraw(&client.tx,x,y,w,h)
+                redraw(&client,x,y,w,h)
             }
             _ => {}
         }
