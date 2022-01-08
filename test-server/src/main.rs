@@ -1,4 +1,4 @@
-use std::io::Read;
+use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use serde::Deserialize;
 use serde_json;
@@ -8,7 +8,7 @@ use std::sync::mpsc::{Receiver, Sender};
 use std::thread;
 use std::thread::JoinHandle;
 use std::time::Duration;
-use common::{APICommand, };
+use common::{APICommand, KeyDownEvent};
 use ctrlc;
 use structopt::StructOpt;
 use log::{info, warn, error,log};
@@ -24,7 +24,7 @@ fn main() {
 
     let (tx, rx) = mpsc::channel::<APICommand>();
 
-    start_network_server(stop.clone(), tx);
+    start_network_server(stop.clone(), tx, args.keyboard);
     start_event_processor(stop.clone(), rx);
     // let ch = start_process();
     let timeout_handle = start_timeout(stop.clone(), args.timeout);
@@ -32,13 +32,6 @@ fn main() {
     info!("all done now");
 }
 
-fn init_setup() -> Cli {
-    let args:Cli = Cli::from_args();
-    let loglevel = if args.debug { "debug"} else { "error"};
-    env_logger::Builder::from_env(Env::default().default_filter_or(loglevel)).init();
-    info!("running with args {:?}",args);
-    return args;
-}
 
 fn start_event_processor(stop: Arc<AtomicBool>, rx: Receiver<APICommand>) -> JoinHandle<()> {
     return thread::spawn(move || {
@@ -48,7 +41,8 @@ fn start_event_processor(stop: Arc<AtomicBool>, rx: Receiver<APICommand>) -> Joi
     });
 }
 
-fn start_network_server(stop: Arc<AtomicBool>, tx: Sender<APICommand>) -> JoinHandle<()> {
+fn start_network_server(stop: Arc<AtomicBool>, tx: Sender<APICommand>, fake_keyboard
+: bool) -> JoinHandle<()> {
     return thread::spawn(move || {
         info!("starting network connection");
         let port = 3333;
@@ -63,7 +57,13 @@ fn start_network_server(stop: Arc<AtomicBool>, tx: Sender<APICommand>) -> JoinHa
                     info!("got a new connection");
                     let txx = tx.clone();
                     let stop2 = stop.clone();
-                    thread::spawn(move||handle_client(stream,txx,stop2));
+                    let stream2 = stream.try_clone().unwrap();
+                    thread::spawn(move||handle_client(stream2,txx,stop2, fake_keyboard));
+                    let stop3 = stop.clone();
+                    if fake_keyboard {
+                        info!("going to send out fake keyboard events");
+                        thread::spawn(move||send_fake_keyboard(stream, stop3));
+                    }
                 }
                 Err(e) => {
                     error!("error: {}",e);
@@ -74,7 +74,21 @@ fn start_network_server(stop: Arc<AtomicBool>, tx: Sender<APICommand>) -> JoinHa
     })
 }
 
-fn handle_client(mut stream: TcpStream, tx: Sender<APICommand>, stop: Arc<AtomicBool>) {
+fn send_fake_keyboard(mut stream: TcpStream, stop3: Arc<AtomicBool>) {
+    loop {
+        if stop3.load(Ordering::Relaxed) { break;}
+        let cmd:APICommand = APICommand::KeyDown(KeyDownEvent{
+            original_timestamp: 0,
+            key: 1
+        });
+        let data = serde_json::to_string(&cmd).unwrap();
+        info!("sending fake event {:?}",cmd);
+        stream.write_all(data.as_ref()).expect("failed to send rect");
+        thread::sleep(Duration::from_millis(1000));
+    }
+}
+
+fn handle_client(mut stream: TcpStream, tx: Sender<APICommand>, stop: Arc<AtomicBool>, fake_keyboard: bool) {
     let mut de = serde_json::Deserializer::from_reader(stream);
     loop {
         if stop.load(Ordering::Relaxed) == true {
@@ -111,14 +125,23 @@ fn start_timeout(stop: Arc<AtomicBool>, max_seconds:u32) -> JoinHandle<()> {
 }
 
 #[derive(StructOpt, Debug)]
-#[structopt(name = "example", about = "An example of StructOpt usage.")]
+#[structopt(name = "test-server", about = "simulates receiving and sending server events")]
 struct Cli {
     #[structopt(short, long)]
     debug:bool,
     #[structopt(short, long, default_value="60")]
     timeout:u32,
+    #[structopt(short, long)]
+    keyboard:bool,
 }
 
+fn init_setup() -> Cli {
+    let args:Cli = Cli::from_args();
+    let loglevel = if args.debug { "debug"} else { "error"};
+    env_logger::Builder::from_env(Env::default().default_filter_or(loglevel)).init();
+    info!("running with args {:?}",args);
+    return args;
+}
 
 
 fn setup_c_handler(stop: Arc<AtomicBool>) {
