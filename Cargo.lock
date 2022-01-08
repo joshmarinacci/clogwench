@@ -152,12 +152,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "drawrects"
+name = "demo-moveplayer"
 version = "0.1.0"
 dependencies = [
  "common",
- "interprocess",
- "rand",
  "serde",
  "serde_json",
 ]
@@ -667,6 +665,17 @@ dependencies = [
  "itoa",
  "ryu",
  "serde",
+]
+
+[[package]]
+name = "simple-client"
+version = "0.1.0"
+dependencies = [
+ "common",
+ "interprocess",
+ "rand",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

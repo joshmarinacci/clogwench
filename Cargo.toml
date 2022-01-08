@@ -4,6 +4,7 @@ members = [
     "client",
     "server",
     "test-server",
+    "demo-moveplayer",
     "input",
     "common"
 ]
