@@ -38,23 +38,24 @@ fn print_all_devices() {
             d.unique_name().unwrap_or("unknown uname"),
             d.input_id().vendor(), 
         );
-        for typ in d.supported_events().iter() {
-            println!("   type {:?}",typ);
-        }
-        for typ in d.supported_keys().iter() {
-            println!("   key {:?}",typ);
-        }
+        println!("   types: {:?}", d.supported_events());
+        //for typ in d.supported_events().iter() {
+        //    println!("   type {:?}",typ);
+        //}
+        //for typ in d.supported_keys().iter() {
+        //    println!("   key {:?}",typ);
+        //}
         if d.supported_keys().map_or(false, |keys| keys.contains(Key::KEY_ENTER)) {
-            println!("can emit an enter key");
+            println!("   can emit an enter key");
         }
         for (_ii, ax) in d.supported_relative_axes().iter().enumerate() {
-            println!("rel ax {:?}",ax);
+            println!("   rel ax {:?}",ax);
         }
         for (_ii, ax) in d.supported_absolute_axes().iter().enumerate() {
-            println!("abs ax {:?}",ax);
+            println!("   abs ax {:?}",ax);
         }
         if d.supported_relative_axes().map_or(false, |axes| axes.contains(RelativeAxisType::REL_X)) {
-            println!("can emit X relative access");
+            println!("   can emit X relative access");
         }
     }
 }

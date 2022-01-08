@@ -12,40 +12,12 @@ use std::time::Duration;
 use framebuffer::{Framebuffer, KdMode};
 use serde::Deserialize;
 use common::{APICommand, ARGBColor, KeyDownEvent, MouseMoveEvent};
-use evdev::{Device, EventType, InputEventKind, Key, AbsoluteAxisType};
+use evdev::{Device, EventType, InputEventKind, Key, AbsoluteAxisType, RelativeAxisType};
 use ctrlc;
 use surf::Surf;
 
 mod surf;
 
-// fn fill_rect(frame: &mut Vec<u8>, w:u32, h:u32, line_length: u32, bytespp: u32) {
-//     for (r, line) in frame.chunks_mut(line_length as usize).enumerate() {
-//         for (c, p) in line.chunks_mut(bytespp as usize).enumerate() {
-//             let x0 = (c as f32 / w as f32) * 3.5 - 2.5;
-//             let y0 = (r as f32 / h as f32) * 2.0 - 1.0;
-//
-//             let mut it = 0;
-//             let max_it = 200;
-//
-//             let mut x = 0.0;
-//             let mut y = 0.0;
-//
-//             while x * x + y * y < 4.0 && it < max_it {
-//                 let xtemp = x * x - y * y + x0;
-//                 y = 2.0 * x * y + y0;
-//                 x = xtemp;
-//                 it += 1;
-//             }
-//
-//             // p[0] = (125.0 * (it as f32 / max_it as f32)) as u8;
-//             // p[1] = (255.0 * (it as f32 / max_it as f32)) as u8;
-//             // p[2] = (75.0 * (it as f32 / max_it as f32)) as u8;
-//             p[0] = 0; //B
-//             p[1] = 0; //G
-//             p[2] = 128; //R
-//         }
-//     }
-// }
 
 fn print_debug_info(framebuffer: &Framebuffer) {
     let s = String::from_utf8_lossy(&framebuffer.fix_screen_info.id);
@@ -142,9 +114,11 @@ fn sleep(ms:u64) {
 }
 
 fn find_keyboard() -> Option<evdev::Device> {
-    let devices = evdev::enumerate().collect::<Vec<_>>();
+    let mut devices = evdev::enumerate().collect::<Vec<_>>();
+    devices.reverse();
     for (i, d) in devices.iter().enumerate() {
         if d.supported_keys().map_or(false, |keys| keys.contains(Key::KEY_ENTER)) {
+            println!("found keyboard device {}",d.name().unwrap_or("Unnamed device"));
             return devices.into_iter().nth(i);
         }
     }
@@ -157,6 +131,10 @@ fn find_mouse() -> Option<evdev::Device> {
     for (i, d) in devices.iter().enumerate() {
         for typ in d.supported_events().iter() {
             println!("   type {:?}",typ);
+        }
+        if d.supported_events().contains(EventType::RELATIVE) {
+            println!("found a device with relative input {}", d.name().unwrap_or("unnamed device"));
+            return devices.into_iter().nth(i);
         }
         if d.supported_events().contains(EventType::ABSOLUTE) {
             println!("found a device with absolute input: {}", d.name().unwrap_or("Unnamed device"));
@@ -180,11 +158,11 @@ fn main() {
     setup_evdev_watcher(keyboard, should_stop.clone(),tx.clone());
     setup_evdev_watcher(mouse, should_stop.clone(),tx.clone());
 
-   let mut framebuffer = Framebuffer::new("/dev/fb0").unwrap();
-   print_debug_info(&framebuffer);
-   let _ = Framebuffer::set_kd_mode(KdMode::Graphics).unwrap();
-   let mut surf:Surf = Surf::make(framebuffer);
-   test_draw_rects(&mut surf);
+    let mut framebuffer = Framebuffer::new("/dev/fb0").unwrap();
+    print_debug_info(&framebuffer);
+    let _ = Framebuffer::set_kd_mode(KdMode::Graphics).unwrap();
+    let mut surf:Surf = Surf::make(framebuffer);
+    //    test_draw_rects(&mut surf);
 
     let hand = setup_listener(should_stop.clone(), tx);
     let ch = start_process();
@@ -250,8 +228,14 @@ fn make_drawing_thread(mut surf: Surf, stop: Arc<AtomicBool>, rx: Receiver<APICo
                         b: 255,
                         a: 255
                     };
-                    surf.clear();
-                    surf.rect(mme.x/40,mme.y/40,10,10, color);
+                    //surf.clear();
+                    let mut x = mme.x;
+                    if(x < 0) {x = 0;}
+                    if(x > 500) {x = 500;}
+                    let mut y = mme.y;
+                    if(y < 0) {y = 0;}
+                    if(y > 500) {y = 500;}
+                    surf.rect(x,y,10,10, color);
                     surf.sync();
                     //println!("mouse move {:?},{:?}",(mme.x/10),(mme.y/10))
                 },
@@ -274,9 +258,10 @@ fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender<API
             }
             for ev in device.fetch_events().unwrap() {
                 // println!("{:?}", ev);
-                //println!("type {:?}", ev.event_type());
+                println!("type {:?}", ev.event_type());
                 match ev.kind() {
                     InputEventKind::Key(key) => {
+                        println!("   evdev:key {}",key.code());
                         let cmd = APICommand::KeyDown(KeyDownEvent{
                             original_timestamp:0,
                             key:key.code() as i32,
@@ -284,13 +269,28 @@ fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender<API
                         tx.send(cmd).unwrap()
                     },
                     InputEventKind::RelAxis(rel) => {
-                        //println!("mouse event {:?}",rel)
+                        println!("mouse event {:?} {}",rel, ev.value());
+                        match rel {
+                            RelativeAxisType::REL_X => cx += ev.value(),
+                            RelativeAxisType::REL_Y => cy += ev.value(),
+                            _ => {
+                                println!("unknown relative axis type");
+                            }
+                        }
+                        println!("cursor {} , {}",cx, cy);
+                        let cmd = APICommand::MouseMove(MouseMoveEvent{
+                            original_timestamp:0,
+                            button:0,
+                            x:cx,
+                            y:cy
+                        });
+                        tx.send(cmd).unwrap()
                     },
                     InputEventKind::AbsAxis(abs) => {
                         // println!("abs event {:?} {:?}",ev.value(), abs);
                         match abs {
-                            AbsoluteAxisType::ABS_X => cx = ev.value(),
-                            AbsoluteAxisType::ABS_Y => cy = ev.value(),
+                            AbsoluteAxisType::ABS_X => cx = ev.value()/10,
+                            AbsoluteAxisType::ABS_Y => cy = ev.value()/10,
                             _ => {
                                 println!("unknown aboslute axis type")
                             }
