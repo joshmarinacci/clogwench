@@ -154,7 +154,9 @@ fn find_keyboard() -> Option<evdev::Device> {
 fn find_mouse() -> Option<evdev::Device> {
     let devices = evdev::enumerate().collect::<Vec<_>>();
     for (i, d) in devices.iter().enumerate() {
-        if d.supported_keys().map_or(false, |keys| keys.contains(Key::BTN_0)) {
+        if d.supported_events().contains(EventType::RELATIVE) {
+        // if d.supported_keys().map_or(false, |keys| keys.contains(Key::BTN_0)) {
+            println!("found a device with relative input");
             return devices.into_iter().nth(i);
         }
     }
