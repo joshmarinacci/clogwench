@@ -1,6 +1,12 @@
 // cli/"tui" shared between the evtest examples
 mod _pick_device;
-use evdev::{Device, Key, EventType, InputEventKind};
+use evdev::{Device, Key, EventType, InputEventKind, RelativeAxisType};
+
+fn dump_inputs() {
+    let mut devices = evdev::enumerate().collect::<Vec<_>>();
+    for (i, d) in devices.iter().enumerate() {
+    }
+}
 
 fn find_keyboard() -> Option<evdev::Device> {
     let mut devices = evdev::enumerate().collect::<Vec<_>>();
@@ -40,16 +46,29 @@ fn print_all_devices() {
         for typ in d.supported_events().iter() {
             println!("   type {:?}",typ);
         }
+        for typ in d.supported_keys().iter() {
+            println!("   key {:?}",typ);
+        }
         if d.supported_keys().map_or(false, |keys| keys.contains(Key::KEY_ENTER)) {
             println!("can emit an enter key");
+        }
+        for (ii, ax) in d.supported_relative_axes().iter().enumerate() {
+            println!("rel ax {:?}",ax);
+        }
+        for (ii, ax) in d.supported_absolute_axes().iter().enumerate() {
+            println!("abs ax {:?}",ax);
+        }
+        if d.supported_relative_axes().map_or(false, |axes| axes.contains(RelativeAxisType::REL_X)) {
+            println!("can emit X relative access");
         }
     }
 }
 
 fn main() {
+    print_all_devices();
     println!("input devices");
-    let mut keyboard = find_keyboard().expect("couldnt find the keyboard");
-    println!("found the keyboard {}",keyboard);
+//    let mut keyboard = find_keyboard().expect("couldnt find the keyboard");
+//    println!("found the keyboard {}",keyboard);
 //    let keybd = Device::open(keybd_path).expect("Couldn't open the keyboard.");
 //    let mut d = _pick_device::pick_device();
     // let device = Device::open("/dev/input/event1").unwrap();
@@ -60,22 +79,22 @@ fn main() {
     // }
 
     // println!("{}", d);
-    println!("Events:");
-    let mut go = true;
-    loop {
-        if !go {
-            break;
-        }
-        for ev in keyboard.fetch_events().unwrap() {
-            // println!("{:?}", ev);
-            // println!("type {:?}", ev.event_type());
-            if let InputEventKind::Key(key) = ev.kind() {
-                println!("a key was pressed: {}",key.code());
-                if key == Key::KEY_ESC {
-                    println!("trying to escape");
-                    go = false
-                }
-            }
-        }
-    }
+//    println!("Events:");
+//    let mut go = true;
+    // loop {
+    //     if !go {
+    //         break;
+    //     }
+    //     for ev in keyboard.fetch_events().unwrap() {
+    //         // println!("{:?}", ev);
+    //         // println!("type {:?}", ev.event_type());
+    //         if let InputEventKind::Key(key) = ev.kind() {
+    //             println!("a key was pressed: {}",key.code());
+    //             if key == Key::KEY_ESC {
+    //                 println!("trying to escape");
+    //                 go = false
+    //             }
+    //         }
+    //     }
+    // }
 }
