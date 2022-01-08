@@ -39,6 +39,31 @@ pub struct KeyUpEvent {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+pub struct MouseDownEvent {
+    pub original_timestamp:i64,
+    pub button:i32,
+    pub x:i32,
+    pub y:i32,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct MouseMoveEvent {
+    pub original_timestamp:i64,
+    pub button:i32,
+    pub x:i32,
+    pub y:i32,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct MouseUpEvent {
+    pub original_timestamp:i64,
+    pub button:i32,
+    pub x:i32,
+    pub y:i32,
+}
+
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct OpenWindowCommand {
     pub name:i32,
 }
@@ -49,4 +74,7 @@ pub enum APICommand {
     OpenWindowCommand(OpenWindowCommand),
     KeyDown(KeyDownEvent),
     KeyUp(KeyUpEvent),
+    MouseDown(MouseDownEvent),
+    MouseMove(MouseMoveEvent),
+    MouseUp(MouseUpEvent),
 }

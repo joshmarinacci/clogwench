@@ -4,7 +4,7 @@ use interprocess::local_socket::{LocalSocketListener, LocalSocketStream};
 use std::process::{Child, Command, Output, Stdio};
 use std::sync::{Arc, mpsc};
 use std::sync::mpsc::{Receiver, Sender};
-use std::io::{self, prelude::*, BufReader};
+use std::io::{self, BufReader, prelude::*};
 use std::{fs, thread};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::JoinHandle;
@@ -12,8 +12,11 @@ use std::time::Duration;
 use framebuffer::{Framebuffer, KdMode};
 use serde::Deserialize;
 use common::{APICommand, ARGBColor, DrawRectCommand, KeyDownEvent};
-use evdev::{Device, Key, EventType, InputEventKind};
+use evdev::{Device, EventType, InputEventKind, Key};
 use ctrlc;
+use surf::Surf;
+
+mod surf;
 
 fn fill_rect(frame: &mut Vec<u8>, w:u32, h:u32, line_length: u32, bytespp: u32) {
     for (r, line) in frame.chunks_mut(line_length as usize).enumerate() {
@@ -58,7 +61,6 @@ fn print_debug_info(framebuffer: &Framebuffer) {
 
 }
 
-
 fn setup_listener(arc: Arc<AtomicBool>, tx:Sender<APICommand>) -> JoinHandle<()> {
     fn handle_error(connection: io::Result<LocalSocketStream>) -> LocalSocketStream {
         match connection {
@@ -96,7 +98,6 @@ fn setup_listener(arc: Arc<AtomicBool>, tx:Sender<APICommand>) -> JoinHandle<()>
     handle
 }
 
-
 // create simple app to print text which is launched by the server
 fn start_process() -> Child {
     println!("running some output");
@@ -112,42 +113,6 @@ fn start_process() -> Child {
         ;
     println!("spawned it");
     list_dir
-}
-
-struct Surf {
-    fb:Framebuffer,
-    frame: Vec<u8>,
-}
-
-impl Surf {
-    fn make(fb: Framebuffer) -> Surf {
-        let w = fb.var_screen_info.xres;
-        let h = fb.var_screen_info.yres;
-        let line_length = fb.fix_screen_info.line_length;
-        let mut surf = Surf {
-            fb: fb,
-            frame: vec![0u8; (line_length * h) as usize]
-        };
-        surf
-    }
-}
-
-impl Surf {
-    fn rect(&mut self, x:i32, y:i32, w:i32, h:i32, color: ARGBColor) {
-        let ll = (self.fb.fix_screen_info.line_length/4) as i32;
-        for j in 0..h {
-            for i in 0..w {
-                let n = (((x+i) + (y+j)*ll) * 4) as usize;
-                self.frame[n] = color.b;
-                self.frame[n + 1] = color.g;
-                self.frame[n + 2] = color.r;
-                self.frame[n + 3] = color.a;
-            }
-        }
-    }
-    fn sync(&mut self) {
-        self.fb.write_frame(&self.frame);
-    }
 }
 
 fn test_draw_rects(mut surf: &mut Surf) {
@@ -172,9 +137,6 @@ fn test_draw_rects(mut surf: &mut Surf) {
     surf.sync();
 }
 
-fn dr(fb: &Framebuffer, frame: &mut Vec<u8>, x:i32, y:i32, w:i32, h:i32) {
-}
-
 fn sleep(ms:u64) {
     thread::sleep(Duration::from_millis(ms));
 }
@@ -189,41 +151,26 @@ fn find_keyboard() -> Option<evdev::Device> {
     None
 }
 
+fn find_mouse() -> Option<evdev::Device> {
+    let devices = evdev::enumerate().collect::<Vec<_>>();
+    for (i, d) in devices.iter().enumerate() {
+        if d.supported_keys().map_or(false, |keys| keys.contains(Key::BTN_0)) {
+            return devices.into_iter().nth(i);
+        }
+    }
+    None
+}
+
 fn main() {
     let should_stop:Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
     let ss2 = should_stop.clone();
 
     let (tx, rx) = mpsc::channel::<APICommand>();
 
-    let mut keyboard = find_keyboard().expect("couldnt find the keyboard");
-    let ss3 = should_stop.clone();
-    let tx2 = tx.clone();
-    thread::spawn(move || {
-        loop {
-            if ss3.load(Ordering::Relaxed) == true {
-                println!("keyboard thread stopping");
-                break;
-            }
-            for ev in keyboard.fetch_events().unwrap() {
-                // println!("{:?}", ev);
-                // println!("type {:?}", ev.event_type());
-                if let InputEventKind::Key(key) = ev.kind() {
-                //     if key == Key::KEY_ESC {
-                //         println!("trying to escape");
-                //         go = false;
-                //         ss3.store(true, Ordering::Relaxed);
-                //     }
-                //    println!("a key was pressed: {}",key.code());
-                    let cmd = APICommand::KeyDown(KeyDownEvent{
-                        original_timestamp:0,
-                        key:key.code() as i32,
-                    });
-                    tx2.send(cmd).unwrap();
-                }
-            }
-        }
-    
-    });
+    let mut keyboard = find_keyboard().expect("Couldn't find the keyboard");
+    let mut mouse = find_mouse().expect("Couldn't find the mouse");
+    setup_evdev_watcher(keyboard, should_stop.clone(),tx.clone());
+    setup_evdev_watcher(mouse, should_stop.clone(),tx.clone());
 
    let mut framebuffer = Framebuffer::new("/dev/fb0").unwrap();
    print_debug_info(&framebuffer);
@@ -256,6 +203,15 @@ fn main() {
                         ss4.store(true, Ordering::Relaxed);
                     }
                 },
+                APICommand::MouseDown(mme) => {
+                    println!("mouse move {:?}",mme)
+                },
+                APICommand::MouseMove(mme) => {
+                    println!("mouse move {:?}",mme)
+                },
+                APICommand::MouseUp(mme) => {
+                    println!("mouse move {:?}",mme)
+                },
             }
         }
     });
@@ -284,5 +240,41 @@ fn main() {
     timeout_handle.join().unwrap();
     let _ = Framebuffer::set_kd_mode(KdMode::Text).unwrap();
     println!("all done now");
+}
+
+fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender<APICommand>) {
+    thread::spawn(move || {
+        loop {
+            if stop.load(Ordering::Relaxed) == true {
+                println!("keyboard thread stopping");
+                break;
+            }
+            for ev in device.fetch_events().unwrap() {
+                // println!("{:?}", ev);
+                // println!("type {:?}", ev.event_type());
+                match ev.kind() {
+                    InputEventKind::Key(key) => {
+                        let cmd = APICommand::KeyDown(KeyDownEvent{
+                            original_timestamp:0,
+                            key:key.code() as i32,
+                        });
+                        tx.send(cmd).unwrap();
+                    },
+                    InputEventKind::RelAxis(rel) => {
+                        println!("mouse event");
+                    },
+                    _ => {}
+                }
+                // if let InputEventKind::Key(key) = ev.kind() {
+                    //     if key == Key::KEY_ESC {
+                    //         println!("trying to escape");
+                    //         go = false;
+                    //         ss3.store(true, Ordering::Relaxed);
+                    //     }
+                    //    println!("a key was pressed: {}",key.code());
+                // }
+            }
+        }
+    });
 }
 
