@@ -12,7 +12,7 @@ use std::time::Duration;
 use framebuffer::{Framebuffer, KdMode};
 use serde::Deserialize;
 use common::{APICommand, ARGBColor, DrawRectCommand, KeyDownEvent};
-use evdev::{Device, EventType, InputEventKind, Key};
+use evdev::{Device, EventType, InputEventKind, Key, RelativeAxisType};
 use ctrlc;
 use surf::Surf;
 
@@ -154,11 +154,10 @@ fn find_keyboard() -> Option<evdev::Device> {
 fn find_mouse() -> Option<evdev::Device> {
     let devices = evdev::enumerate().collect::<Vec<_>>();
     for (i, d) in devices.iter().enumerate() {
-        if d.supported_events().contains(EventType::RELATIVE) {
-        // if d.supported_keys().map_or(false, |keys| keys.contains(Key::BTN_0)) {
+        if d.supported_relative_axes().map_or(false, |axes| axes.contains(RelativeAxisType::REL_X)) {
             println!("found a device with relative input");
-            return devices.into_iter().nth(i);
         }
+        return devices.into_iter().nth(i);
     }
     None
 }
@@ -192,7 +191,7 @@ fn main() {
             match cmd {
                 APICommand::OpenWindowCommand(cm) => println!("open window"),
                 APICommand::DrawRectCommand(cm) => {
-                    println!("draw rect");
+                   println!("draw rect");
                    surf.rect(cm.x,cm.y,cm.w,cm.h, cm.color);
                    surf.sync();
                 },
@@ -253,7 +252,7 @@ fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender<API
             }
             for ev in device.fetch_events().unwrap() {
                 // println!("{:?}", ev);
-                // println!("type {:?}", ev.event_type());
+                println!("type {:?}", ev.event_type());
                 match ev.kind() {
                     InputEventKind::Key(key) => {
                         let cmd = APICommand::KeyDown(KeyDownEvent{
