@@ -35,4 +35,13 @@ impl Surf {
     pub fn sync(&mut self) {
         self.fb.write_frame(&self.frame);
     }
+    pub fn clear(&mut self) {
+        let black = ARGBColor {
+            r: 0,
+            g: 0,
+            b: 0,
+            a: 255
+        };
+        self.rect(0, 0, self.fb.var_screen_info.xres as i32, self.fb.var_screen_info.yres as i32, black);
+    }
 }

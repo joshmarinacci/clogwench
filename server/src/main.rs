@@ -18,34 +18,34 @@ use surf::Surf;
 
 mod surf;
 
-fn fill_rect(frame: &mut Vec<u8>, w:u32, h:u32, line_length: u32, bytespp: u32) {
-    for (r, line) in frame.chunks_mut(line_length as usize).enumerate() {
-        for (c, p) in line.chunks_mut(bytespp as usize).enumerate() {
-            let x0 = (c as f32 / w as f32) * 3.5 - 2.5;
-            let y0 = (r as f32 / h as f32) * 2.0 - 1.0;
-
-            let mut it = 0;
-            let max_it = 200;
-
-            let mut x = 0.0;
-            let mut y = 0.0;
-
-            while x * x + y * y < 4.0 && it < max_it {
-                let xtemp = x * x - y * y + x0;
-                y = 2.0 * x * y + y0;
-                x = xtemp;
-                it += 1;
-            }
-
-            // p[0] = (125.0 * (it as f32 / max_it as f32)) as u8;
-            // p[1] = (255.0 * (it as f32 / max_it as f32)) as u8;
-            // p[2] = (75.0 * (it as f32 / max_it as f32)) as u8;
-            p[0] = 0; //B
-            p[1] = 0; //G
-            p[2] = 128; //R
-        }
-    }
-}
+// fn fill_rect(frame: &mut Vec<u8>, w:u32, h:u32, line_length: u32, bytespp: u32) {
+//     for (r, line) in frame.chunks_mut(line_length as usize).enumerate() {
+//         for (c, p) in line.chunks_mut(bytespp as usize).enumerate() {
+//             let x0 = (c as f32 / w as f32) * 3.5 - 2.5;
+//             let y0 = (r as f32 / h as f32) * 2.0 - 1.0;
+//
+//             let mut it = 0;
+//             let max_it = 200;
+//
+//             let mut x = 0.0;
+//             let mut y = 0.0;
+//
+//             while x * x + y * y < 4.0 && it < max_it {
+//                 let xtemp = x * x - y * y + x0;
+//                 y = 2.0 * x * y + y0;
+//                 x = xtemp;
+//                 it += 1;
+//             }
+//
+//             // p[0] = (125.0 * (it as f32 / max_it as f32)) as u8;
+//             // p[1] = (255.0 * (it as f32 / max_it as f32)) as u8;
+//             // p[2] = (75.0 * (it as f32 / max_it as f32)) as u8;
+//             p[0] = 0; //B
+//             p[1] = 0; //G
+//             p[2] = 128; //R
+//         }
+//     }
+// }
 
 fn print_debug_info(framebuffer: &Framebuffer) {
     let s = String::from_utf8_lossy(&framebuffer.fix_screen_info.id);
@@ -153,7 +153,7 @@ fn find_keyboard() -> Option<evdev::Device> {
 
 fn find_mouse() -> Option<evdev::Device> {
     let mut devices = evdev::enumerate().collect::<Vec<_>>();
-    devices.reverse();    
+    devices.reverse();
     for (i, d) in devices.iter().enumerate() {
         for typ in d.supported_events().iter() {
             println!("   type {:?}",typ);
@@ -188,51 +188,7 @@ fn main() {
 
     let hand = setup_listener(should_stop.clone(), tx);
     let ch = start_process();
-    let ss4 = should_stop.clone();
-    thread::spawn(move ||{
-        for cmd in rx {
-            if ss4.load(Ordering::Relaxed) == true {
-                println!("render thread stopping");
-                break;
-            }
-            match cmd {
-                APICommand::OpenWindowCommand(cm) => println!("open window"),
-                APICommand::DrawRectCommand(cm) => {
-                  println!("draw rect");    
-                   println!("draw rect");
-                  println!("draw rect");    
-                  surf.rect(cm.x,cm.y,cm.w,cm.h, cm.color);
-                  surf.sync();
-                },
-                APICommand::KeyUp(ku) => {
-                    println!("key up");
-                },
-                APICommand::KeyDown(kd) => {
-                    println!("key down {}",kd.key);
-                    if kd.key == 1 { //wait for the ESC key
-                        ss4.store(true, Ordering::Relaxed);
-                    }
-                },
-                APICommand::MouseDown(mme) => {
-                    println!("mouse move {:?}",mme)
-                },
-                APICommand::MouseMove(mme) => {
-                    let color = ARGBColor{
-                        r: 0,
-                        g: 255,
-                        b: 255,
-                        a: 255
-                    };                    
-                    surf.rect(mme.x/40,mme.y/40,10,10, color);
-                    surf.sync();
-                    //println!("mouse move {:?},{:?}",(mme.x/10),(mme.y/10))
-                },
-                APICommand::MouseUp(mme) => {
-                    println!("mouse move {:?}",mme)
-                },
-            }
-        }
-    });
+    let drawing_thread = make_drawing_thread(surf,should_stop.clone(),rx);
 
     // control c handler
     ctrlc::set_handler(move || {
@@ -258,6 +214,53 @@ fn main() {
     timeout_handle.join().unwrap();
     let _ = Framebuffer::set_kd_mode(KdMode::Text).unwrap();
     println!("all done now");
+}
+
+fn make_drawing_thread(mut surf: Surf, stop: Arc<AtomicBool>, rx: Receiver<APICommand>) -> JoinHandle<()> {
+    return thread::spawn(move ||{
+        for cmd in rx {
+            if stop.load(Ordering::Relaxed) == true {
+                println!("render thread stopping");
+                break;
+            }
+            match cmd {
+                APICommand::OpenWindowCommand(cm) => {
+                    // println!("open window")
+                },
+                APICommand::DrawRectCommand(cm) => {
+                    surf.rect(cm.x,cm.y,cm.w,cm.h, cm.color);
+                    surf.sync();
+                },
+                APICommand::KeyUp(ku) => {
+                    // println!("key up");
+                },
+                APICommand::KeyDown(kd) => {
+                    // println!("key down {}",kd.key);
+                    if kd.key == 1 { //wait for the ESC key
+                        stop.store(true, Ordering::Relaxed);
+                    }
+                },
+                APICommand::MouseDown(mme) => {
+                    // println!("mouse move {:?}",mme)
+                },
+                APICommand::MouseMove(mme) => {
+                    let color = ARGBColor{
+                        r: 0,
+                        g: 255,
+                        b: 255,
+                        a: 255
+                    };
+                    surf.clear();
+                    surf.rect(mme.x/40,mme.y/40,10,10, color);
+                    surf.sync();
+                    //println!("mouse move {:?},{:?}",(mme.x/10),(mme.y/10))
+                },
+                APICommand::MouseUp(mme) => {
+                    // println!("mouse move {:?}",mme)
+                },
+            }
+        }
+    });
 }
 
 fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender<APICommand>) {
