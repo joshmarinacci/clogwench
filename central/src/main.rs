@@ -211,8 +211,12 @@ fn start_router(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, state: Arc
                     });
                     state.lock().unwrap().send_to_wm(msg.source, resp.clone())
                 }
-
-
+                APICommand::DrawRectCommand(cmd) => {
+                    state.lock().unwrap().send_to_all_wm(APICommand::DrawRectCommand(cmd));
+                },
+                APICommand::KeyDown(kde) => {
+                    state.lock().unwrap().send_to_app(kde.app_id,APICommand::KeyDown(kde))
+                },
                 _ => {
                     warn!("message not handled {:?}",msg);
                 }

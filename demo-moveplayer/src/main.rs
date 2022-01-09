@@ -9,18 +9,20 @@ use common::client::ClientConnection;
 use common::events::KeyCode;
 use uuid::Uuid;
 
-fn redraw(client: &ClientConnection, x: i32, y: i32, w:i32, h:i32) {
+fn redraw(client: &ClientConnection, appid: Uuid, winid: Uuid, x: i32, y: i32, w:i32, h:i32) {
     //draw background and wait
     client.send(APICommand::DrawRectCommand(DrawRectCommand{
+        app_id:appid,
+        window_id:winid,
         rect: Rect { x:0, y:0, w, h},
         color: WHITE,
-        window_id: Default::default()
     }));
     //draw player and wait
     client.send(APICommand::DrawRectCommand(DrawRectCommand{
+        app_id:appid,
+        window_id:winid,
         rect:Rect{ x, y, w:10, h:10},
         color: BLACK,
-        window_id: Default::default()
     }));
 }
 fn main() {
@@ -29,7 +31,6 @@ fn main() {
     let mut x = 50;
     let mut y = 50;
     let mut appid = Uuid::new_v4();
-    let mut winid = Uuid::new_v4();
 
     let client = ClientConnection::init().expect("Can't connect to the linux-wm");
     //open window and wait
@@ -46,6 +47,7 @@ fn main() {
         window_type: String::from("plain"),
         bounds: Rect::from_ints(x,y,w,h),
         }));
+    let mut winid = Uuid::new_v4();
     match resp2 {
         Ok(APICommand::OpenWindowResponse(wininfo)) => {
             winid = wininfo.window_id
@@ -54,7 +56,7 @@ fn main() {
             panic!("error. response should have been from the app connect")
         }
     }
-    redraw(&client,x,y,w,h);
+    redraw(&client,appid, winid, x,y,w,h);
 
     for cmd in &client.rx {
         println!("got an event {:?}",cmd);
@@ -66,7 +68,7 @@ fn main() {
                     KeyCode::ARROW_LEFT => x -= 1,
                     _ => {}
                 }
-                redraw(&client,x,y,w,h)
+                redraw(&client, appid , winid , x, y, w, h)
             }
             _ => {}
         }

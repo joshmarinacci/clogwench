@@ -19,6 +19,7 @@ use structopt::StructOpt;
 use uuid::Uuid;
 
 use common::{APICommand, HelloWindowManager, IncomingMessage, Rect};
+use common::APICommand::KeyDown;
 use common::events::{KeyCode, KeyDownEvent, MouseDownEvent};
 
 
@@ -70,7 +71,6 @@ fn main() {
                 thread::sleep(Duration::from_millis(1000))
             }
             info!("watchdog thread ending");
-            drop(tx_out);
         }
     });
 
@@ -80,7 +80,7 @@ fn main() {
     }
 
     //event processing thread
-    // let event_thread_handler = start_event_processor(stop.clone(), rx_in);
+    let event_thread_handler = start_event_processor(stop.clone(), rx_in, tx_out.clone());
         //draw commands. can immediately draw to the fake screen
         //app added, add to own app list
         //window added, add to own app window list
@@ -91,38 +91,39 @@ fn main() {
         //can all state live on this thread?
 
 
-    // let state:Arc<Mutex<CentralState>> = Arc::new(Mutex::new(CentralState::init()));
-
-    // let screen = start_headless_screen(Rect::from_ints(0, 0, 640, 480));
-    // start_network_server(stop.clone(), tx, state.clone());
-    // start_event_processor(stop.clone(), rx, state.clone());
-    //
-    //
-    // let timeout_handle = start_timeout(stop.clone(), args.timeout);
-    // timeout_handle.join().unwrap();
     info!("waiting for the watch dog");
     watchdog.join();
     info!("all done now");
 }
 
 struct InternalState {
-    windows:Vec<Window>,
+    apps:Vec<App>,
+}
+
+impl InternalState {
+    pub(crate) fn find_app(&mut self, app_id: Uuid) -> Option<&mut App> {
+        self.apps.iter_mut().find(|a|a.id == app_id)
+    }
 }
 
 impl InternalState {
     fn init() -> InternalState {
         InternalState {
-            windows: vec![]
+            apps: vec![]
         }
     }
 }
 
+struct App {
+    id:Uuid,
+    windows:Vec<Window>,
+}
 struct Window {
     id:Uuid,
     bounds:Rect,
 }
 
-fn start_event_processor(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>) -> JoinHandle<()> {
+fn start_event_processor(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, tx_out: Sender<OutgoingMessage>) -> JoinHandle<()> {
     return thread::spawn(move || {
         info!("event thread starting");
         let mut state = InternalState::init();
@@ -130,24 +131,46 @@ fn start_event_processor(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>) -
             if stop.load(Ordering::Relaxed) { break; }
             info!("processing event {:?}",cmd);
             match cmd.command {
+                APICommand::AppConnectResponse(res) => {
+                    info!("adding an app {}",res.app_id);
+                    let app = App {
+                        id:res.app_id,
+                        windows: vec![]
+                    };
+                    state.apps.push(app);
+                },
                 APICommand::OpenWindowResponse(ow) => {
                     info!("adding a window to the app");
                     let win = Window {
                         id:ow.window_id,
                         bounds:ow.bounds,
                     };
-                    state.windows.push(win);
+                    if let Some(app) = state.find_app(ow.app_id) {
+                        app.windows.push(win);
+                    }
                 },
                 APICommand::DrawRectCommand(dr) => {
                     info!("drawing a rect");
-                    // if let Some(app) = state.lock().unwrap().find_app_by_id(cmd.source) {
-                    //     wm.lookup_surface_for_window(dr.window)
-                    //         .unwrap().fill_rect(&dr.rect,&dr.color);
-                    //     wm.refresh();
-                    // }
                 },
                 APICommand::KeyDown(kd) => {
-                    info!("key down")
+                    info!("key down");
+                    //now send to a random app's random window, if any
+                    if !state.apps.is_empty() {
+                        let app = &state.apps[0];
+                        if !app.windows.is_empty() {
+                            let win = &app.windows[0];
+                            let msg = OutgoingMessage {
+                                recipient: app.id,
+                                command: KeyDown(KeyDownEvent{
+                                    app_id: app.id,
+                                    window_id: win.id,
+                                    original_timestamp: 0,
+                                    key: kd.key
+                                })
+                            };
+                            tx_out.send(msg).unwrap();
+                        }
+                    }
                 },
                 APICommand::KeyUp(ku) => {
                     info!("key down")
@@ -164,7 +187,7 @@ fn start_event_processor(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>) -
                 _ => {}
             };
         }
-        info!("even thread ending");
+        info!("event thread ending");
     });
 }
 
@@ -191,7 +214,7 @@ fn start_network_client(stop: Arc<AtomicBool>,
                         if stop.load(Ordering::Relaxed) { break; }
                         match IncomingMessage::deserialize(&mut de) {
                             Ok(cmd) => {
-                                info!("received command {:?}", cmd);
+                                // info!("received command {:?}", cmd);
                                 in_tx.send(cmd);
                             }
                             Err(e) => {
@@ -243,6 +266,8 @@ fn send_fake_keyboard(stop: Arc<AtomicBool>, sender: Sender<IncomingMessage>) {
             loop {
                 if stop.load(Ordering::Relaxed) { break; }
                 let command: APICommand = APICommand::KeyDown(KeyDownEvent {
+                    app_id: Default::default(),
+                    window_id: Default::default(),
                     original_timestamp: 0,
                     key: KeyCode::ARROW_RIGHT
                 });

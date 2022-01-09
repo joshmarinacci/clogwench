@@ -52,6 +52,7 @@ pub struct HelloWindowManagerResponse {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DrawRectCommand {
+    pub app_id:Uuid,
     pub window_id:Uuid,
     pub rect:Rect,
     pub color:ARGBColor,

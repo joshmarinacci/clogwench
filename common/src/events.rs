@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum KeyCode {
@@ -15,6 +16,8 @@ pub enum KeyCode {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct KeyDownEvent {
+    pub app_id:Uuid,
+    pub window_id:Uuid,
     pub original_timestamp:i64,
     pub key:KeyCode
 }
