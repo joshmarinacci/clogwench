@@ -1,3 +1,4 @@
+use std::collections::hash_map::{IntoIter, IntoValues};
 use std::collections::HashMap;
 use std::net::TcpStream;
 use std::slice::IterMut;
@@ -11,6 +12,7 @@ use crate::events::{KeyDownEvent, KeyUpEvent};
 
 pub mod client;
 pub mod events;
+pub mod graphics;
 
 
 #[cfg(test)]
@@ -35,11 +37,9 @@ pub const WHITE:ARGBColor = ARGBColor { r: 255, g: 255, b: 255, a: 255 };
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct DrawRectCommand {
-    pub x:i32,
-    pub y:i32,
-    pub w:i32,
-    pub h:i32,
+    pub rect:Rect,
     pub color:ARGBColor,
+    pub window:Uuid,
 }
 
 
@@ -67,7 +67,7 @@ pub struct IncomingMessage {
     pub command:APICommand,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Copy, Clone)]
 pub struct Rect {
     pub x:i32,
     pub y:i32,
@@ -114,14 +114,12 @@ impl App {
 
 
 pub struct CentralState {
-    apps:Vec<App>,
     appmap:HashMap<Uuid,App>
 }
 
 impl CentralState {
     pub fn init() -> CentralState {
         CentralState {
-            apps: vec![],
             appmap: Default::default()
         }
     }
@@ -134,10 +132,10 @@ impl CentralState {
         }
     }
     pub fn add_app(&mut self, app:App) {
-        self.apps.push(app);
+        self.appmap.insert(app.id,app);
     }
-    pub fn app_list(&mut self) -> IterMut<App> {
-        self.apps.iter_mut()
+    pub fn app_list(&mut self) -> std::collections::hash_map::IterMut<'_, Uuid, App> {
+        self.appmap.iter_mut()
     }
     pub fn find_app_by_id(&mut self, id:Uuid) -> Option<&App> {
         self.appmap.get(&id)

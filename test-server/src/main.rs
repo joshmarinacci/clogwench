@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::io::Write;
 use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, mpsc, Mutex};
@@ -16,8 +17,74 @@ use serde_json;
 use structopt::StructOpt;
 use uuid::Uuid;
 
-use common::{APICommand, App, CentralState, IncomingMessage, Window};
+use common::{APICommand, App, ARGBColor, CentralState, IncomingMessage, Rect, Window};
 use common::events::{KeyCode, KeyDownEvent};
+use common::graphics::{Screen, Surface};
+
+struct HeadlessScreen {
+    bounds:Rect,
+}
+impl HeadlessScreen {
+    fn init(rect:Rect) -> HeadlessScreen {
+        HeadlessScreen {
+            bounds: rect,
+        }
+    }
+}
+impl Screen for HeadlessScreen {
+    fn get_bounds(&self) -> &Rect {
+        return &self.bounds;
+    }
+}
+
+struct HeadlessSurface {
+    bounds:Rect
+}
+impl HeadlessSurface {
+    pub fn init(rect:Rect) -> HeadlessSurface {
+        HeadlessSurface {
+            bounds:rect,
+        }
+    }
+}
+impl Surface for HeadlessSurface {
+    fn get_bounds(&self) -> &Rect {
+        return &self.bounds
+    }
+    fn fill_rect(&self, rect: &Rect, color: &ARGBColor) {
+    }
+}
+
+struct WindowManager {
+    surface_map:HashMap<Uuid, Box<dyn Surface>>,
+}
+
+impl WindowManager {
+    pub(crate) fn lookup_surface_for_window(&self, win_id: Uuid) -> Option<&Box<dyn Surface>> {
+        self.surface_map.get(&win_id)
+    }
+    pub fn refresh(&self) {
+        for val in self.surface_map.values() {
+            let rect = val.get_bounds();
+            info!("drawing a surface {:?}",rect);
+        }
+    }
+}
+
+impl WindowManager {
+    pub(crate) fn add_window(&mut self, win: &Window) {
+        let surf = HeadlessSurface::init(win.bounds.clone());
+        self.surface_map.insert(win.id,Box::new(surf));
+    }
+}
+
+impl WindowManager {
+    pub fn init() -> WindowManager {
+        WindowManager {
+            surface_map: Default::default(),
+        }
+    }
+}
 
 fn main() {
     let args:Cli = init_setup();
@@ -29,9 +96,9 @@ fn main() {
 
     let state:Arc<Mutex<CentralState>> = Arc::new(Mutex::new(CentralState::init()));
 
+    let screen = start_headless_screen(Rect::from_ints(0, 0, 640, 480));
     start_network_server(stop.clone(), tx, state.clone());
     start_event_processor(stop.clone(), rx, state.clone());
-    // let ch = start_process();
 
     if args.keyboard {
         send_fake_keyboard(state.clone(), stop.clone());
@@ -42,12 +109,17 @@ fn main() {
     info!("all done now");
 }
 
+fn start_headless_screen(rect: Rect) -> HeadlessScreen {
+    return HeadlessScreen::init(rect)
+}
+
 
 fn start_event_processor(stop: Arc<AtomicBool>,
                          rx: Receiver<IncomingMessage>,
                          state: Arc<Mutex<CentralState>>
 ) -> JoinHandle<()> {
     return thread::spawn(move || {
+        let mut wm = WindowManager::init();
         for cmd in rx {
             if stop.load(Ordering::Relaxed) { break; }
             info!("processing event {:?}",cmd);
@@ -55,9 +127,33 @@ fn start_event_processor(stop: Arc<AtomicBool>,
                 APICommand::OpenWindowCommand(ow) => {
                     info!("adding a window to the app");
                     let win = Window::from_rect(ow.bounds);
+                    wm.add_window(&win);
                     state.lock().unwrap().add_window(cmd.appid,win);
-                }
-                _ => {}
+                    wm.refresh();
+                },
+                APICommand::DrawRectCommand(dr) => {
+                    info!("drawing a rect");
+                    if let Some(app) = state.lock().unwrap().find_app_by_id(cmd.appid) {
+                        wm.lookup_surface_for_window(dr.window)
+                            .unwrap().fill_rect(&dr.rect,&dr.color);
+                        wm.refresh();
+                    }
+                },
+                APICommand::KeyDown(kd) => {
+                    info!("key down")
+                },
+                APICommand::KeyUp(ku) => {
+                    info!("key down")
+                },
+                APICommand::MouseDown(ku) => {
+                    info!("mouse down")
+                },
+                APICommand::MouseMove(ku) => {
+                    info!("mouse move")
+                },
+                APICommand::MouseUp(ku) => {
+                    info!("mouse up")
+                },
             };
         }
     });
@@ -103,7 +199,7 @@ fn send_fake_keyboard(state: Arc<Mutex<CentralState>>, stop: Arc<AtomicBool>) {
                 let data = serde_json::to_string(&cmd).unwrap();
                 info!("sending fake event {:?}",cmd);
                 {
-                    for app in state.lock().unwrap().app_list() {
+                    for (uuid, mut app) in state.lock().unwrap().app_list() {
                         app.connection.write_all(data.as_ref()).expect("failed to send rect");
                     }
                 }
@@ -171,7 +267,6 @@ fn init_setup() -> Cli {
     info!("running with args {:?}",args);
     return args;
 }
-
 
 fn setup_c_handler(stop: Arc<AtomicBool>) {
     ctrlc::set_handler(move || {

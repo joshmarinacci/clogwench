@@ -3,7 +3,7 @@ use std::io::{self, prelude::*, BufReader};
 use std::net::TcpStream;
 use std::{env, thread};
 use std::time::Duration;
-use common::{APICommand, ARGBColor, DrawRectCommand, OpenWindowCommand};
+use common::{APICommand, ARGBColor, DrawRectCommand, OpenWindowCommand, Rect};
 use serde::{Deserialize, Serialize};
 use rand::prelude::*;
 
@@ -19,7 +19,9 @@ fn main()  {
                 let mut rng = rand::thread_rng();
                 for i in 0..5 {
                     let cmd = APICommand::OpenWindowCommand(OpenWindowCommand{
-                        name: rng.gen_range(0..5)
+                        name: rng.gen_range(0..5),
+                        window_type: "plain".to_string(),
+                        bounds: Rect::from_ints(0,0,20,30),
                     });
                     let data = serde_json::to_string(&cmd).unwrap();
                     println!("sending data {:?}",data);
