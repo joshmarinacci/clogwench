@@ -68,12 +68,41 @@ pub struct IncomingMessage {
 }
 
 #[derive(Serialize, Deserialize, Debug, Copy, Clone)]
+pub struct Point {
+    pub x:i32,
+    pub y:i32,
+}
+
+impl Point {
+    pub fn add(&self, pt:Point) -> Point {
+        Point::init(self.x + pt.x, self.y + pt.y)
+    }
+}
+
+impl Point {
+    pub fn init(x:i32,y:i32) -> Point {
+        Point {
+            x,
+            y
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Copy, Clone)]
 pub struct Rect {
     pub x:i32,
     pub y:i32,
     pub w:i32,
     pub h:i32,
 }
+
+impl Rect {
+    pub fn set_position(&mut self, pos: &Point) {
+        self.x = pos.x;
+        self.y = pos.y;
+    }
+}
+
 impl Rect {
     pub fn from_ints(x:i32,y:i32,w:i32,h:i32) -> Rect {
         Rect {

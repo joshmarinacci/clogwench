@@ -17,8 +17,8 @@ use serde_json;
 use structopt::StructOpt;
 use uuid::Uuid;
 
-use common::{APICommand, App, ARGBColor, CentralState, IncomingMessage, Rect, Window};
-use common::events::{KeyCode, KeyDownEvent};
+use common::{APICommand, App, ARGBColor, CentralState, IncomingMessage, Rect, Window, Point};
+use common::events::{KeyCode, KeyDownEvent, MouseDownEvent};
 use common::graphics::{Screen, Surface};
 
 struct HeadlessScreen {
@@ -55,34 +55,78 @@ impl Surface for HeadlessSurface {
     }
 }
 
+struct ComStream {
+}
+
+struct WindowSurface {
+    window:Window,
+    surface:HeadlessSurface,
+    comm:CommStream,
+}
+
 struct WindowManager {
-    surface_map:HashMap<Uuid, Box<dyn Surface>>,
+    focused_window:Option<WindowSurface>,
+    screen:HeadlessScreen,
+    surface_order:Vec<WindowSurface>,
+    last_position:Point,
 }
 
 impl WindowManager {
-    pub(crate) fn lookup_surface_for_window(&self, win_id: Uuid) -> Option<&Box<dyn Surface>> {
-        self.surface_map.get(&win_id)
-    }
-    pub fn refresh(&self) {
-        for val in self.surface_map.values() {
-            let rect = val.get_bounds();
-            info!("drawing a surface {:?}",rect);
-        }
-    }
-}
-
-impl WindowManager {
-    pub(crate) fn add_window(&mut self, win: &Window) {
-        let surf = HeadlessSurface::init(win.bounds.clone());
-        self.surface_map.insert(win.id,Box::new(surf));
-    }
-}
-
-impl WindowManager {
-    pub fn init() -> WindowManager {
+    pub fn init(screen:HeadlessScreen) -> WindowManager {
         WindowManager {
-            surface_map: Default::default(),
+            focused_window: None,
+            screen,
+            surface_order: Default::default(),
+            last_position:Point::init(30, 30),
         }
+    }
+
+    // position when automatically when created
+    pub fn add_window(&mut self, win: Window) {
+        let surf = HeadlessSurface::init(win.bounds.clone());
+        let mut ws = WindowSurface {
+            window: win,
+            surface: surf,
+            comm: ()
+        };
+        self.last_position = self.last_position.add(Point::make(100, 0));
+        ws.window.bounds.set_position(&self.last_position);
+        self.surface_order.push(ws);
+    }
+
+    // dispatch keyboard event to the focused window, if any
+    pub fn dispatch_keyboard(&self, ev:KeyDownEvent) {
+        if let Some(win) = &self.focused_window {
+            win.comm.dispatch(ev)
+        }
+    }
+
+    // redraw all windows to the screen
+    pub fn redraw_screen(&self) {
+        for ws in self.surface_order {
+            self.screen.composite(ws.surface);
+            info!("drawing a surface {:?}",ws.surface.bounds);
+        }
+    }
+
+    // find window that the mouse is in
+    pub fn mouse_down(&mut self, ev: MouseDownEvent) {
+        // if window found, then set it as focused
+        for ws in self.surface_order {
+            if ws.bounds.contains(ev.position) {
+                // raise window to the top
+                self.focused_window = Some(ws);
+                self.raise_window_to_top(ws);
+                // trigger a refresh
+                self.redraw_screen()
+            }
+        }
+    }
+
+    fn raise_window_to_top(&mut self, ws:WindowSurface) {
+        let n = self.surface_order.index_of(ws);
+        self.surface_order.remove(n);
+        self.surface_order.push(ws);
     }
 }
 
@@ -146,7 +190,8 @@ fn start_event_processor(stop: Arc<AtomicBool>,
                     info!("key down")
                 },
                 APICommand::MouseDown(ku) => {
-                    info!("mouse down")
+                    info!("mouse down");
+                    wm.mouse_down(ku);
                 },
                 APICommand::MouseMove(ku) => {
                     info!("mouse move")
