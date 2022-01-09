@@ -21,7 +21,7 @@ mod tests {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ARGBColor {
     pub r:u8,
     pub g:u8,
@@ -33,51 +33,57 @@ pub const BLACK:ARGBColor = ARGBColor { r: 0, g: 0, b: 0, a: 255 };
 pub const WHITE:ARGBColor = ARGBColor { r: 255, g: 255, b: 255, a: 255 };
 
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct HelloApp {
 
 }
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct HelloAppResponse {
-    pub id:Uuid,
+    pub app_id:Uuid,
 }
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct HelloWindowManager {
 
 }
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct HelloWindowManagerResponse {
-    pub id:Uuid,
+    pub wm_id:Uuid,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DrawRectCommand {
+    pub window_id:Uuid,
     pub rect:Rect,
     pub color:ARGBColor,
-    pub window:Uuid,
 }
 
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct OpenWindowCommand {
-    pub name:i32,
     pub window_type:String,
     pub bounds:Rect,
 }
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct OpenWindowResponse {
-    pub id:Uuid,
+    pub app_id:Uuid,
+    pub window_id:Uuid,
+    pub window_type:String,
+    pub bounds:Rect,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum APICommand {
     AppConnect(HelloApp),
     AppConnectResponse(HelloAppResponse),
+
     WMConnect(HelloWindowManager),
     WMConnectResponse(HelloWindowManagerResponse),
-    DrawRectCommand(DrawRectCommand),
+
     OpenWindowCommand(OpenWindowCommand),
     OpenWindowResponse(OpenWindowResponse),
+
+    DrawRectCommand(DrawRectCommand),
+
     KeyDown(KeyDownEvent),
     KeyUp(KeyUpEvent),
     MouseDown(crate::events::MouseDownEvent),
@@ -85,7 +91,7 @@ pub enum APICommand {
     MouseUp(crate::events::MouseUpEvent),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct IncomingMessage {
     pub source:Uuid,
     pub command:APICommand,

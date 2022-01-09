@@ -14,13 +14,13 @@ fn redraw(client: &ClientConnection, x: i32, y: i32, w:i32, h:i32) {
     client.send(APICommand::DrawRectCommand(DrawRectCommand{
         rect: Rect { x:0, y:0, w, h},
         color: WHITE,
-        window: Default::default()
+        window_id: Default::default()
     }));
     //draw player and wait
     client.send(APICommand::DrawRectCommand(DrawRectCommand{
         rect:Rect{ x, y, w:10, h:10},
         color: BLACK,
-        window: Default::default()
+        window_id: Default::default()
     }));
 }
 fn main() {
@@ -36,20 +36,19 @@ fn main() {
     let resp: Result<APICommand, RecvError> = client.send_and_wait(APICommand::AppConnect(HelloApp{}));
     match resp {
         Ok(APICommand::AppConnectResponse(appinfo)) => {
-            appid = appinfo.id
+            appid = appinfo.app_id
         }
         _ => {
             panic!("error. response should have been from the app connect")
         }
     }
     let resp2: Result<APICommand, RecvError> = client.send_and_wait(APICommand::OpenWindowCommand(OpenWindowCommand{
-        name: 0,
         window_type: String::from("plain"),
         bounds: Rect::from_ints(x,y,w,h),
         }));
     match resp2 {
         Ok(APICommand::OpenWindowResponse(wininfo)) => {
-            winid = wininfo.id
+            winid = wininfo.window_id
         }
         _ => {
             panic!("error. response should have been from the app connect")
