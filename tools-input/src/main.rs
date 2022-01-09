@@ -13,10 +13,10 @@ fn find_keyboard() -> Option<evdev::Device> {
             // return Some(d)
         }
         // println!("name:{} path:{} unique_name:{} id:{}",
-        //     d.name().unwrap_or("Unnamed device"), 
+        //     d.name().unwrap_or("Unnamed device"),
         //     d.physical_path().unwrap_or("unknown path"),
         //     d.unique_name().unwrap_or("unknown uname"),
-        //     d.input_id().vendor(), 
+        //     d.input_id().vendor(),
         // );
         // for typ in d.supported_events().iter() {
         //     println!("   type {:?}",typ);
@@ -33,10 +33,10 @@ fn print_all_devices() {
     devices.reverse();
     for (_i, d) in devices.iter().enumerate() {
         println!("name:{} path:{} unique_name:{} id:{}",
-            d.name().unwrap_or("Unnamed device"), 
+            d.name().unwrap_or("Unnamed device"),
             d.physical_path().unwrap_or("unknown path"),
             d.unique_name().unwrap_or("unknown uname"),
-            d.input_id().vendor(), 
+            d.input_id().vendor(),
         );
         println!("   types: {:?}", d.supported_events());
         //for typ in d.supported_events().iter() {
@@ -61,13 +61,13 @@ fn print_all_devices() {
 }
 
 fn main() {
-    println!("input devices");
+    println!("tools-input devices");
     print_all_devices();
 //    let mut keyboard = find_keyboard().expect("couldnt find the keyboard");
 //    println!("found the keyboard {}",keyboard);
 //    let keybd = Device::open(keybd_path).expect("Couldn't open the keyboard.");
 //    let mut d = _pick_device::pick_device();
-    // let device = Device::open("/dev/input/event1").unwrap();
+    // let device = Device::open("/dev/tools-input/event1").unwrap();
     // if device.supported_keys().map_or(false, |keys| keys.contains(Key::KEY_ENTER)) {
         // println!("are you prepared to ENTER the world of evdev?");
     // } else {

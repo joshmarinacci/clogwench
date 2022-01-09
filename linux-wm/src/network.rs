@@ -14,7 +14,7 @@ pub fn start_network_server(stop:Arc<AtomicBool>, tx:Sender<APICommand>, app_lis
         info!("starting network connection");
         let port = 3333;
         let listener = TcpListener::bind(format!("0.0.0.0:{}",port)).expect("Couldn't bind to port");
-        info!("server listening on port {}",port);
+        info!("linux-wm listening on port {}",port);
         for stream in listener.incoming() {
             if stop.load(Ordering::Relaxed) { break; }
             match stream {
@@ -42,11 +42,11 @@ fn handle_client(stream:TcpStream, stop:Arc<AtomicBool>, tx:Sender<APICommand>) 
             if stop.load(Ordering::Relaxed) { break; }
             match APICommand::deserialize(&mut de) {
                 Ok(cmd) => {
-                    info!("server received command {:?}",cmd);
+                    info!("linux-wm received command {:?}",cmd);
                     tx.send(cmd).unwrap();
                 }
                 Err(e) => {
-                    error!("error deserializing from client {:?}",e);
+                    error!("error deserializing from demo-clickgrid {:?}",e);
                     break;
                 }
             }

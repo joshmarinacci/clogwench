@@ -1,21 +1,26 @@
 use std::io::Write;
 use std::net::TcpStream;
 use std::sync::mpsc;
-use std::sync::mpsc::{IntoIter, Iter, Receiver, Sender, TryIter};
+use std::sync::mpsc::{IntoIter, Iter, Receiver, RecvError, Sender, TryIter};
 use std::thread;
 use serde::Deserialize;
-use common::{APICommand, ARGBColor, BLACK, DrawRectCommand, OpenWindowCommand, Rect, WHITE};
+use common::{APICommand, ARGBColor, BLACK, DrawRectCommand, HelloApp, OpenWindowCommand, Rect, WHITE};
 use common::client::ClientConnection;
 use common::events::KeyCode;
+use uuid::Uuid;
 
 fn redraw(client: &ClientConnection, x: i32, y: i32, w:i32, h:i32) {
     //draw background and wait
     client.send(APICommand::DrawRectCommand(DrawRectCommand{
-        x:0, y:0, w, h, color: WHITE,
+        rect: Rect { x:0, y:0, w, h},
+        color: WHITE,
+        window: Default::default()
     }));
     //draw player and wait
     client.send(APICommand::DrawRectCommand(DrawRectCommand{
-        x, y, w:10, h:10, color: BLACK,
+        rect:Rect{ x, y, w:10, h:10},
+        color: BLACK,
+        window: Default::default()
     }));
 }
 fn main() {
@@ -23,14 +28,33 @@ fn main() {
     let h = 100;
     let mut x = 50;
     let mut y = 50;
+    let mut appid = Uuid::new_v4();
+    let mut winid = Uuid::new_v4();
 
-    let client = ClientConnection::init().expect("Can't connect to the server");
+    let client = ClientConnection::init().expect("Can't connect to the linux-wm");
     //open window and wait
-    client.send(APICommand::OpenWindowCommand(OpenWindowCommand{
+    let resp: Result<APICommand, RecvError> = client.send_and_wait(APICommand::AppConnect(HelloApp{}));
+    match resp {
+        Ok(APICommand::AppConnectResponse(appinfo)) => {
+            appid = appinfo.id
+        }
+        _ => {
+            panic!("error. response should have been from the app connect")
+        }
+    }
+    let resp2: Result<APICommand, RecvError> = client.send_and_wait(APICommand::OpenWindowCommand(OpenWindowCommand{
         name: 0,
         window_type: String::from("plain"),
         bounds: Rect::from_ints(x,y,w,h),
         }));
+    match resp2 {
+        Ok(APICommand::OpenWindowResponse(wininfo)) => {
+            winid = wininfo.id
+        }
+        _ => {
+            panic!("error. response should have been from the app connect")
+        }
+    }
     redraw(&client,x,y,w,h);
 
     for cmd in &client.rx {

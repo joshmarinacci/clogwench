@@ -1,10 +1,11 @@
 [workspace]
 
 members = [
-    "client",
-    "server",
-    "test-server",
+    "demo-clickgrid",
+    "linux-wm",
+    "test-wm",
     "demo-moveplayer",
-    "input",
+    "central",
+    "tools-input",
     "common"
 ]

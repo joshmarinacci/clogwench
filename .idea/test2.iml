@@ -2,18 +2,19 @@
 <module type="WEB_MODULE" version="4">
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$">
-      <sourceFolder url="file://$MODULE_DIR$/client/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/server/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/common/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/input/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/test-server/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/demo-moveplayer/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/central/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/demo-clickgrid/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/linux-wm/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/test-wm/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/tools-input/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/temp" />
       <excludeFolder url="file://$MODULE_DIR$/.tmp" />
       <excludeFolder url="file://$MODULE_DIR$/tmp" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
-      <excludeFolder url="file://$MODULE_DIR$/client/target" />
-      <excludeFolder url="file://$MODULE_DIR$/server/target" />
+      <excludeFolder url="file://$MODULE_DIR$/linux-wm/target" />
+      <excludeFolder url="file://$MODULE_DIR$/demo-clickgrid/target" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

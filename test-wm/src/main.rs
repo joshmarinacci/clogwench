@@ -212,7 +212,7 @@ fn start_network_server(stop: Arc<AtomicBool>,
         info!("starting network connection");
         let port = 3333;
         let listener = TcpListener::bind(format!("0.0.0.0:{}",port)).unwrap();
-        info!("server listening on port {}",port);
+        info!("linux-wm listening on port {}",port);
         for stream in listener.incoming() {
             if stop.load(Ordering::Relaxed) { break; }
             match stream {
@@ -260,17 +260,17 @@ fn handle_client(stream: TcpStream, tx: Sender<IncomingMessage>, stop: Arc<Atomi
         let mut de = serde_json::Deserializer::from_reader(stream);
         loop {
             if stop.load(Ordering::Relaxed) == true {
-                info!("client thread stopping");
+                info!("demo-clickgrid thread stopping");
                 break;
             }
             match APICommand::deserialize(&mut de) {
                 Ok(cmd) => {
-                    //info!("server received command {:?}",cmd);
+                    //info!("linux-wm received command {:?}",cmd);
                     let im = IncomingMessage { appid, command:cmd, };
                     tx.send(im).unwrap();
                 }
                 Err(e) => {
-                    error!("error deserializing from client {:?}",e);
+                    error!("error deserializing from demo-clickgrid {:?}",e);
                     break;
                 }
             }
@@ -295,7 +295,7 @@ fn start_timeout(stop: Arc<AtomicBool>, max_seconds:u32) -> JoinHandle<()> {
 }
 
 #[derive(StructOpt, Debug)]
-#[structopt(name = "test-server", about = "simulates receiving and sending server events")]
+#[structopt(name = "test-wm", about = "simulates receiving and sending linux-wm events")]
 struct Cli {
     #[structopt(short, long)]
     debug:bool,

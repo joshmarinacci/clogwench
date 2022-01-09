@@ -49,7 +49,7 @@ fn print_debug_info(framebuffer: &Framebuffer) {
 
 }
 
-// create simple app to print text which is launched by the server
+// create simple app to print text which is launched by the linux-wm
 fn start_process() -> Child {
     println!("running some output");
     let mut list_dir = Command::new("../target/debug/drawrects")
@@ -189,7 +189,7 @@ fn make_drawing_thread(mut surf: Surf,
 
 
 #[derive(StructOpt, Debug)]
-#[structopt(name = "test-server", about = "simulates receiving and sending server events")]
+#[structopt(name = "test-wm", about = "simulates receiving and sending linux-wm events")]
 struct Cli {
     #[structopt(short, long)]
     debug:bool,

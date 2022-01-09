@@ -1,7 +1,7 @@
 use std::sync::mpsc;
 use std::net::TcpStream;
 use std::thread;
-use std::sync::mpsc::{Receiver, Sender};
+use std::sync::mpsc::{Receiver, RecvError, Sender};
 use serde::Deserialize;
 use std::io::Write;
 use crate::APICommand;
@@ -16,6 +16,10 @@ impl ClientConnection {
     pub fn send(&self, cmd: APICommand) {
         self.tx.send(cmd).unwrap();
     }
+    pub fn send_and_wait(&self, cmd:APICommand) -> Result<APICommand, RecvError> {
+        self.send(cmd);
+        self.rx.recv()
+    }
 }
 
 impl ClientConnection {
@@ -24,7 +28,7 @@ impl ClientConnection {
         let (out_tx, out_rx) = mpsc::channel::<APICommand>();
         match TcpStream::connect("localhost:3333") {
             Ok(master_stream) => {
-                println!("connected to the server");
+                println!("connected to the linux-wm");
 
                 //receiving thread
                 let receiving_handle = thread::spawn({
@@ -35,11 +39,11 @@ impl ClientConnection {
                         loop {
                             match APICommand::deserialize(&mut de) {
                                 Ok(cmd) => {
-                                    println!("client received command {:?}", cmd);
+                                    println!("demo-clickgrid received command {:?}", cmd);
                                     in_tx.send(cmd);
                                 }
                                 Err(e) => {
-                                    println!("error deserializing from client {:?}", e);
+                                    println!("error deserializing from demo-clickgrid {:?}", e);
                                     break;
                                 }
                             }

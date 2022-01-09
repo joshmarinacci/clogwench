@@ -28,15 +28,15 @@ pub fn find_mouse() -> Option<evdev::Device> {
             println!("   type {:?}",typ);
         }
         if d.supported_events().contains(EventType::RELATIVE) {
-            println!("found a device with relative input {}", d.name().unwrap_or("unnamed device"));
+            println!("found a device with relative tools-input {}", d.name().unwrap_or("unnamed device"));
             return devices.into_iter().nth(i);
         }
         if d.supported_events().contains(EventType::ABSOLUTE) {
-            println!("found a device with absolute input: {}", d.name().unwrap_or("Unnamed device"));
+            println!("found a device with absolute tools-input: {}", d.name().unwrap_or("Unnamed device"));
             return devices.into_iter().nth(i);
         }
         // if d.supported_relative_axes().map_or(false, |axes| axes.contains(RelativeAxisType::REL_X)) {
-        //     println!("found a device with relative input: {}", d.name().unwrap_or("Unnamed device"));
+        //     println!("found a device with relative tools-input: {}", d.name().unwrap_or("Unnamed device"));
         //     return devices.into_iter().nth(i);
         // }
     }

@@ -1,6 +1,3 @@
-use std::collections::hash_map::{IntoIter, IntoValues};
-use std::collections::HashMap;
-use std::net::TcpStream;
 use std::slice::IterMut;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -35,6 +32,24 @@ pub struct ARGBColor {
 pub const BLACK:ARGBColor = ARGBColor { r: 0, g: 0, b: 0, a: 255 };
 pub const WHITE:ARGBColor = ARGBColor { r: 255, g: 255, b: 255, a: 255 };
 
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct HelloApp {
+
+}
+#[derive(Serialize, Deserialize, Debug)]
+pub struct HelloAppResponse {
+    pub id:Uuid,
+}
+#[derive(Serialize, Deserialize, Debug)]
+pub struct HelloWindowManager {
+
+}
+#[derive(Serialize, Deserialize, Debug)]
+pub struct HelloWindowManagerResponse {
+
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct DrawRectCommand {
     pub rect:Rect,
@@ -49,11 +64,20 @@ pub struct OpenWindowCommand {
     pub window_type:String,
     pub bounds:Rect,
 }
+#[derive(Serialize, Deserialize, Debug)]
+pub struct OpenWindowResponse {
+    pub id:Uuid,
+}
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum APICommand {
+    AppConnect(HelloApp),
+    AppConnectResponse(HelloAppResponse),
+    WMConnect(HelloWindowManager),
+    WMConnectResponse(HelloWindowManagerResponse),
     DrawRectCommand(DrawRectCommand),
     OpenWindowCommand(OpenWindowCommand),
+    OpenWindowResponse(OpenWindowResponse),
     KeyDown(KeyDownEvent),
     KeyUp(KeyUpEvent),
     MouseDown(crate::events::MouseDownEvent),
@@ -110,7 +134,7 @@ impl Rect {
         }
     }
 }
-
+/*
 pub struct Window {
     pub id:Uuid,
     pub bounds:Rect,
@@ -170,3 +194,4 @@ impl CentralState {
         self.appmap.get(&id)
     }
 }
+*/

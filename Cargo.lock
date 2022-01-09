@@ -105,6 +105,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "22a9137b95ea06864e018375b72adfb7db6e6f68cfc8df5a04d00288050485ee"
 
 [[package]]
+name = "central"
+version = "0.1.0"
+dependencies = [
+ "common",
+ "ctrlc",
+ "env_logger",
+ "log",
+ "serde",
+ "serde_json",
+ "structopt",
+ "uuid",
+]
+
+[[package]]
 name = "cfg-if"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -160,6 +174,7 @@ dependencies = [
  "common",
  "serde",
  "serde_json",
+ "uuid",
 ]
 
 [[package]]

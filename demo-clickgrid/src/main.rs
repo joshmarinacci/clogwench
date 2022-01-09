@@ -12,7 +12,7 @@ use rand::prelude::*;
 fn main()  {
     match TcpStream::connect("localhost:3333") {
         Ok(mut stream) => {
-            println!("connected to the server");
+            println!("connected to the linux-wm");
             let mut stream1 = stream.try_clone().unwrap();
             let hand1 = thread::spawn(move||{
                 println!("sending thread starting");
@@ -35,10 +35,10 @@ fn main()  {
                 loop {
                     match APICommand::deserialize(&mut de) {
                         Ok(cmd) => {
-                            println!("client received command {:?}", cmd);
+                            println!("demo-clickgrid received command {:?}", cmd);
                         }
                         Err(e) => {
-                            println!("error deserializing from client {:?}", e);
+                            println!("error deserializing from demo-clickgrid {:?}", e);
                         }
                     }
                 }
