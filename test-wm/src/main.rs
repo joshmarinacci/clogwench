@@ -35,12 +35,10 @@ fn main() {
 
     let stop:Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
     setup_c_handler(stop.clone());
-    let (tx_in, rx_in) = mpsc::channel::<IncomingMessage>();
-    let (tx_out, rx_out) =mpsc::channel::<OutgoingMessage>();
-    //make thread for incoming messages:
-    let network_thread_handler = start_network_client(stop.clone(), tx_in.clone(), rx_out)
-        .expect("error connecting to the central server");
+
     //open network connection
+    let conn = start_wm_network_connection(stop.clone())
+        .expect("error connecting to the central server");
 
     //send hello window manager
     let msg = OutgoingMessage {
@@ -48,39 +46,25 @@ fn main() {
         command: APICommand::WMConnect(HelloWindowManager {
         })
     };
-    tx_out.send(msg).unwrap();
-    let resp = rx_in.recv().unwrap();
-    let mut selfid = Uuid::new_v4();
-    if let APICommand::WMConnectResponse(res) = resp.command {
+    conn.tx_out.send(msg).unwrap();
+
+    let resp = conn.rx_in.recv().unwrap();
+    let selfid = if let APICommand::WMConnectResponse(res) = resp.command {
         info!("got response back from the server {:?}",res);
-        selfid = res.wm_id;
+        res.wm_id
     } else {
         panic!("did not get the window manager connect response. gah!");
-    }
+    };
 
-    let watchdog = thread::spawn({
-        let stop = stop.clone();
-        move ||{
-            info!("watchdog thread starting");
-            loop {
-                if stop.load(Ordering::Relaxed) {
-                    info!("shutting down the network");
-                    network_thread_handler.stream.shutdown(Shutdown::Both).unwrap();
-                    break;
-                }
-                thread::sleep(Duration::from_millis(1000))
-            }
-            info!("watchdog thread ending");
-        }
-    });
+    let watchdog = make_watchdog(stop.clone(),conn.stream.try_clone().unwrap());
 
     //make thread for fake incoming events. sends to the main event thread
     if args.keyboard {
-        let input_thread_handler = send_fake_keyboard(stop.clone(), tx_in.clone());
+        let input_thread_handler = send_fake_keyboard(stop.clone(), conn.tx_in.clone());
     }
 
     //event processing thread
-    let event_thread_handler = start_event_processor(stop.clone(), rx_in, tx_out.clone());
+    let event_thread_handler = start_event_processor(stop.clone(), conn.rx_in, conn.tx_out.clone());
         //draw commands. can immediately draw to the fake screen
         //app added, add to own app list
         //window added, add to own app window list
@@ -89,11 +73,26 @@ fn main() {
         //on mouse press, maybe change the focused window
         //on mouse press, send to window under the cursor
         //can all state live on this thread?
-
-
     info!("waiting for the watch dog");
     watchdog.join();
     info!("all done now");
+}
+
+fn make_watchdog(stop: Arc<AtomicBool>, stream: TcpStream) -> JoinHandle<()> {
+    thread::spawn({
+        move ||{
+            info!("watchdog thread starting");
+            loop {
+                if stop.load(Ordering::Relaxed) {
+                    info!("shutting down the network");
+                    stream.shutdown(Shutdown::Both).unwrap();
+                    break;
+                }
+                thread::sleep(Duration::from_millis(1000))
+            }
+            info!("watchdog thread ending");
+        }
+    })
 }
 
 struct InternalState {
@@ -195,18 +194,22 @@ struct CentralConnection {
     stream: TcpStream,
     recv_thread: JoinHandle<()>,
     send_thread: JoinHandle<()>,
+    tx_out: Sender<OutgoingMessage>,
+    rx_in: Receiver<IncomingMessage>,
+    tx_in: Sender<IncomingMessage>,
 }
 
-fn start_network_client(stop: Arc<AtomicBool>,
-                        in_tx: Sender<IncomingMessage>,
-                        out_rx: Receiver<OutgoingMessage>) -> Option<CentralConnection> {
+fn start_wm_network_connection(stop: Arc<AtomicBool>) -> Option<CentralConnection> {
     match TcpStream::connect("localhost:3334") {
         Ok(mut master_stream) => {
+            let (tx_in, rx_in) = mpsc::channel::<IncomingMessage>();
+            let (tx_out, rx_out) =mpsc::channel::<OutgoingMessage>();
             println!("connected to the linux-wm");
             //receiving thread
             let receiving_handle = thread::spawn({
                 let mut stream = master_stream.try_clone().unwrap();
                 let stop = stop.clone();
+                let tx_in = tx_in.clone();
                 move || {
                     info!("receiving thread starting");
                     let mut de = serde_json::Deserializer::from_reader(stream);
@@ -215,7 +218,7 @@ fn start_network_client(stop: Arc<AtomicBool>,
                         match IncomingMessage::deserialize(&mut de) {
                             Ok(cmd) => {
                                 // info!("received command {:?}", cmd);
-                                in_tx.send(cmd);
+                                tx_in.send(cmd);
                             }
                             Err(e) => {
                                 error!("error deserializing {:?}", e);
@@ -233,7 +236,7 @@ fn start_network_client(stop: Arc<AtomicBool>,
                 let stop = stop.clone();
                 move || {
                     info!("sending thread starting");
-                    for out in out_rx {
+                    for out in rx_out {
                         if stop.load(Ordering::Relaxed) { break; }
                         let im = IncomingMessage {
                             source: Default::default(),
@@ -251,12 +254,14 @@ fn start_network_client(stop: Arc<AtomicBool>,
                 stream: master_stream,
                 send_thread:sending_handle,
                 recv_thread:receiving_handle,
+                tx_in:tx_in,
+                rx_in:rx_in,
+                tx_out:tx_out,
             })
 
         }
         _ => None
     }
-
 }
 
 
@@ -280,22 +285,6 @@ fn send_fake_keyboard(stop: Arc<AtomicBool>, sender: Sender<IncomingMessage>) {
         }
     });
 
-}
-
-fn start_timeout(stop: Arc<AtomicBool>, max_seconds:u32) -> JoinHandle<()> {
-    return thread::spawn(move || {
-        info!("timeout will end in {} seconds",max_seconds);
-        let mut count = 0;
-        loop {
-            count = count + 1;
-            if count > max_seconds {
-                info!("timeout triggered");
-                stop.store(true,Ordering::Relaxed);
-            }
-            thread::sleep(Duration::from_millis(1000));
-            if stop.load(Ordering::Relaxed) == true { break; }
-        }
-    });
 }
 
 #[derive(StructOpt, Debug)]
