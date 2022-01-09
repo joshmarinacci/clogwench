@@ -47,7 +47,7 @@ pub struct HelloWindowManager {
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct HelloWindowManagerResponse {
-
+    pub id:Uuid,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -87,7 +87,7 @@ pub enum APICommand {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct IncomingMessage {
-    pub appid:Uuid,
+    pub source:Uuid,
     pub command:APICommand,
 }
 

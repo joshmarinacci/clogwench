@@ -9,8 +9,9 @@ use env_logger::Env;
 use log::{error, info, warn};
 use serde::Deserialize;
 use uuid::Uuid;
-use common::{APICommand, HelloAppResponse, IncomingMessage, OpenWindowCommand, OpenWindowResponse, Rect};
+use common::{APICommand, HelloAppResponse, HelloWindowManagerResponse, IncomingMessage, OpenWindowCommand, OpenWindowResponse, Rect};
 use structopt::StructOpt;
+use common::APICommand::WMConnectResponse;
 
 struct Window {
     id:Uuid,
@@ -53,12 +54,11 @@ impl CentralState {
         app.windows.push(win);
         return winid
     }
-    fn add_wm_from_stream(&mut self, stream:TcpStream) {
-        let wm = WM {
-            id: Uuid::new_v4(),
-            stream
-        };
-        self.wms.push(wm)
+    fn add_wm_from_stream(&mut self, stream:TcpStream, sender: Sender<IncomingMessage>, stop: Arc<AtomicBool>) {
+        let id = Uuid::new_v4();
+        self.wms.push(WM{id,stream});
+        let win = self.wms.iter().find(|w|w.id == id).unwrap();
+        self.spawn_wm_handler(id.clone(),win.stream.try_clone().unwrap(),sender,stop);
     }
     fn spawn_app_handler(&self, uuid: Uuid, stream: TcpStream, sender: Sender<IncomingMessage>, stop: Arc<AtomicBool>) -> JoinHandle<()> {
         thread::spawn(move || {
@@ -71,7 +71,7 @@ impl CentralState {
                 match APICommand::deserialize(&mut de) {
                     Ok(cmd) => {
                         info!("central received command {:?}",cmd);
-                        let im = IncomingMessage { appid:uuid, command:cmd, };
+                        let im = IncomingMessage { source:uuid, command:cmd, };
                         sender.send(im).unwrap();
                     }
                     Err(e) => {
@@ -83,10 +83,38 @@ impl CentralState {
             }
         })
     }
+    fn spawn_wm_handler(&self, id: Uuid, stream: TcpStream, sender: Sender<IncomingMessage>, stop: Arc<AtomicBool>) -> JoinHandle<()> {
+        thread::spawn(move ||{
+            let mut de = serde_json::Deserializer::from_reader(stream);
+            loop {
+                if stop.load(Ordering::Relaxed) == true {
+                    info!("wm thread stopping");
+                    break;
+                }
+                match APICommand::deserialize(&mut de) {
+                    Ok(cmd) => {
+                        info!("central received command {:?}",cmd);
+                        let im = IncomingMessage { source:id, command:cmd, };
+                        sender.send(im).unwrap();
+                    }
+                    Err(e) => {
+                        error!("error deserializing from window manager {:?}",e);
+                        stop.store(true,Ordering::Relaxed);
+                        break;
+                    }
+                }
+            }
+        })
+    }
     fn send_to_app(&mut self, id:Uuid, resp:APICommand) {
         let data = serde_json::to_string(&resp).unwrap();
         let mut app = self.apps.iter_mut().find(|a|a.id == id).unwrap();
         app.stream.write_all(data.as_ref()).expect("failed to send rect");
+    }
+    fn send_to_wm(&mut self, id:Uuid, resp:APICommand) {
+        let data = serde_json::to_string(&resp).unwrap();
+        let mut wm = self.wms.iter_mut().find(|a|a.id == id).unwrap();
+        wm.stream.write_all(data.as_ref()).expect("failed to send rect");
     }
 }
 
@@ -121,7 +149,7 @@ the central server manages system state and routes messages between apps and the
     setup_c_handler(stop.clone());
     let (tx, rx) = mpsc::channel::<IncomingMessage>();
     let app_network_thread = start_app_interface(stop.clone(), tx.clone(), state.clone());
-    // let wm_network_thread = start_wm_interface(stop.clone(), tx.clone(), state.clone());
+    let wm_network_thread = start_wm_interface(stop.clone(), tx.clone(), state.clone());
     // wm_network_thread.join();
     let router_thread = start_router(stop.clone(),rx,state.clone());
     app_network_thread.join();
@@ -134,20 +162,27 @@ fn start_router(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, state: Arc
             info!("incoming message {:?}",msg);
             match msg.command {
                 APICommand::AppConnect(ap) => {
-                    info!("app connected {}",msg.appid);
+                    info!("app connected {}",msg.source);
                     let resp = APICommand::AppConnectResponse(HelloAppResponse{
-                        id: msg.appid
+                        id: msg.source
                     });
-                    state.lock().unwrap().send_to_app(msg.appid,resp);
+                    state.lock().unwrap().send_to_app(msg.source, resp);
                 },
                 APICommand::OpenWindowCommand(ow) => {
                     info!("opening window");
-                    let winid = state.lock().unwrap().add_window_to_app(msg.appid,ow);
+                    let winid = state.lock().unwrap().add_window_to_app(msg.source, ow);
                     let resp = APICommand::OpenWindowResponse(OpenWindowResponse{
                         id: winid,
                     });
-                    state.lock().unwrap().send_to_app(msg.appid,resp);
+                    state.lock().unwrap().send_to_app(msg.source, resp);
                 },
+                APICommand::WMConnect(cmd) => {
+                    info!("Window manager connected {}",msg.source);
+                    let resp = APICommand::WMConnectResponse(HelloWindowManagerResponse{
+                        id:msg.source
+                    });
+                    state.lock().unwrap().send_to_wm(msg.source, resp)
+                }
 
 
                 _ => {
@@ -222,8 +257,8 @@ fn start_wm_interface(stop:Arc<AtomicBool>,
             if stop.load(Ordering::Relaxed) { break; }
             match stream {
                 Ok(stream) => {
-                    info!("got a new connection");
-                    state.lock().unwrap().add_wm_from_stream(stream.try_clone().unwrap());
+                    info!("got a new wm connection");
+                    state.lock().unwrap().add_wm_from_stream(stream.try_clone().unwrap(),tx.clone(),stop.clone());
                     // let wm = WM::init_from_stream(stream.try_clone().unwrap(),state.clone(),tx.clone());
                     // wm.start();
                     // handle_client(stream.try_clone().unwrap(),tx.clone(),stop.clone(),state.clone(),app.id);

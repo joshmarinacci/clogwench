@@ -136,6 +136,21 @@ fn main() {
     let stop:Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
     setup_c_handler(stop.clone());
 
+    //open network connection
+    //send hello window manager
+    //make thread for incoming messages:
+        //passed commands to the main event thread
+    //make thread for fake incoming events. sends to the main event thread
+    //event processing thread
+        //draw commands. can immediately draw to the fake screen
+        //app added, add to own app list
+        //window added, add to own app window list
+        //key pressed in event thread
+        //on keypress, send to app owner of focused window
+        //on mouse press, maybe change the focused window
+        //on mouse press, send to window under the cursor
+        //can all state live on this thread?
+
     let (tx, rx) = mpsc::channel::<IncomingMessage>();
 
     let state:Arc<Mutex<CentralState>> = Arc::new(Mutex::new(CentralState::init()));
@@ -172,12 +187,12 @@ fn start_event_processor(stop: Arc<AtomicBool>,
                     info!("adding a window to the app");
                     let win = Window::from_rect(ow.bounds);
                     wm.add_window(&win);
-                    state.lock().unwrap().add_window(cmd.appid,win);
+                    state.lock().unwrap().add_window(cmd.source, win);
                     wm.refresh();
                 },
                 APICommand::DrawRectCommand(dr) => {
                     info!("drawing a rect");
-                    if let Some(app) = state.lock().unwrap().find_app_by_id(cmd.appid) {
+                    if let Some(app) = state.lock().unwrap().find_app_by_id(cmd.source) {
                         wm.lookup_surface_for_window(dr.window)
                             .unwrap().fill_rect(&dr.rect,&dr.color);
                         wm.refresh();
@@ -266,7 +281,7 @@ fn handle_client(stream: TcpStream, tx: Sender<IncomingMessage>, stop: Arc<Atomi
             match APICommand::deserialize(&mut de) {
                 Ok(cmd) => {
                     //info!("linux-wm received command {:?}",cmd);
-                    let im = IncomingMessage { appid, command:cmd, };
+                    let im = IncomingMessage { source: appid, command:cmd, };
                     tx.send(im).unwrap();
                 }
                 Err(e) => {
