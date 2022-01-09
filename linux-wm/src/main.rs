@@ -31,11 +31,6 @@ mod network;
 mod surf;
 mod input;
 
-pub struct App {
-    connection:TcpStream,
-    pub receiver_handle: JoinHandle<()>,
-}
-
 fn print_debug_info(framebuffer: &Framebuffer) {
     let s = String::from_utf8_lossy(&framebuffer.fix_screen_info.id);
     println!("id {}",s);
@@ -147,6 +142,14 @@ impl InternalState {
             apps: vec![]
         }
     }
+}
+struct App {
+    id:Uuid,
+    windows:Vec<Window>,
+}
+struct Window {
+    id:Uuid,
+    bounds:Rect,
 }
 
 
