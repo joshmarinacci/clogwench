@@ -140,6 +140,15 @@ impl Rect {
             x,y,w,h
         }
     }
+    pub fn clamp(&self, pt:&Point) -> Point {
+        let mut x = pt.x;
+        let mut y = pt.y;
+        if(x < self.x) { x = self.x }
+        if(y < self.y) { y = self.y }
+        if(x > self.x+self.w) { x = self.x+self.w };
+        if(y > self.y + self.h) { y = self.y + self.h; }
+        return Point::init(x,y);
+    }
 }
 /*
 pub struct Window {

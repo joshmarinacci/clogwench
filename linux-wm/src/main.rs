@@ -3,9 +3,9 @@ extern crate framebuffer;
 use std::{fs, thread};
 use std::io::{self, BufReader};
 use std::io::Write;
-use std::net::{TcpListener, TcpStream};
+use std::net::{TcpStream};
 use std::process::{Child, Command, Output, Stdio};
-use std::sync::{Arc, mpsc, Mutex};
+use std::sync::{Arc};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread::JoinHandle;
@@ -16,7 +16,6 @@ use env_logger;
 use env_logger::Env;
 use evdev::{AbsoluteAxisType, Device, EventType, InputEventKind, Key, RelativeAxisType};
 use framebuffer::{Framebuffer, KdMode};
-use interprocess::local_socket::{LocalSocketListener, LocalSocketStream};
 use log::{error, info, log, warn};
 use serde::Deserialize;
 use structopt::StructOpt;
@@ -78,7 +77,7 @@ fn main() {
     let conn = network::start_wm_network_connection(stop.clone())
         .expect("error connecting to the central server");
     //send hello window manager
-    let msg = OutgoingMessage {
+    let msg = network::OutgoingMessage {
         recipient: Default::default(),
         command: APICommand::WMConnect(HelloWindowManager {
         })
@@ -98,7 +97,7 @@ fn main() {
     input::setup_evdev_watcher(keyboard, stop.clone(), conn.tx_in.clone());
     input::setup_evdev_watcher(mouse, stop.clone(), conn.tx_in.clone());
 
-
+    
     let mut framebuffer = Framebuffer::new("/dev/fb0").unwrap();
     print_debug_info(&framebuffer);
     let _ = Framebuffer::set_kd_mode(KdMode::Graphics).unwrap();
@@ -106,7 +105,7 @@ fn main() {
     //let ch = start_process();
     surf.sync();
     let drawing_thread = make_drawing_thread(surf,stop.clone(),conn.rx_in);
-
+    
     let timeout_handle = start_timeout(stop.clone(),args.timeout);
     timeout_handle.join().unwrap();
     let _ = Framebuffer::set_kd_mode(KdMode::Text).unwrap();
@@ -181,7 +180,7 @@ fn make_drawing_thread(mut surf: Surf,
                         a: 255
                     };
                     let bounds = Rect::from_ints(0,0,500,500);
-                    let pt = bounds.clamp(Point::init(mme.x,mme.y));
+                    let pt = bounds.clamp(&Point::init(mme.x,mme.y));
                     // //surf.clear();
                     let cursor = Rect::from_ints(pt.x,pt.y,10,10);
                     surf.rect(cursor, color);

@@ -2,12 +2,13 @@ use std::io::Write;
 use std::net::{TcpListener, TcpStream};
 use std::thread::JoinHandle;
 use common::{APICommand, IncomingMessage};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::sync::mpsc::{Receiver, Sender};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, mpsc, Mutex};
 use std::thread;
 use log::{info, warn, error,log};
+use uuid::Uuid;
 use crate::App;
 
 pub fn start_network_server(stop:Arc<AtomicBool>, tx:Sender<APICommand>, app_list: Arc<Mutex<Vec<App>>>) -> JoinHandle<()> {
@@ -57,9 +58,9 @@ fn handle_client(stream:TcpStream, stop:Arc<AtomicBool>, tx:Sender<APICommand>) 
 
 
 #[derive(Serialize, Deserialize, Debug)]
-struct OutgoingMessage {
-    recipient:Uuid,
-    command:APICommand,
+pub struct OutgoingMessage {
+    pub recipient:Uuid,
+    pub command:APICommand,
 }
 
 

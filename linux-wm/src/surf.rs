@@ -20,11 +20,11 @@ impl Surf {
 }
 
 impl Surf {
-    pub fn rect(&mut self, x: Rect, y: ARGBColor) {
+    pub fn rect(&mut self, rect: Rect, color: ARGBColor) {
         let ll = (self.fb.fix_screen_info.line_length/4) as i32;
-        for j in 0..h {
-            for i in 0..w {
-                let n = (((x+i) + (y+j)*ll) * 4) as usize;
+        for j in 0..rect.h {
+            for i in 0..rect.w {
+                let n = (((rect.x+i) + (rect.y+j)*ll) * 4) as usize;
                 self.frame[n] = color.b;
                 self.frame[n + 1] = color.g;
                 self.frame[n + 2] = color.r;
@@ -36,6 +36,6 @@ impl Surf {
         self.fb.write_frame(&self.frame);
     }
     pub fn clear(&mut self) {
-        self.rect(Rect::from_ints(0, 0, self.fb.var_screen_info.xres, self.fb.var_screen_info.yres as i32),BLACK);
+        self.rect(Rect::from_ints(0, 0, self.fb.var_screen_info.xres as i32, self.fb.var_screen_info.yres as i32),BLACK);
     }
 }
