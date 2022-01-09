@@ -1,19 +1,21 @@
-use std::io::{Write};
+use std::io::Write;
 use std::net::{TcpListener, TcpStream};
-use serde::Deserialize;
-use serde_json;
 use std::sync::{Arc, mpsc, Mutex};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread;
 use std::thread::JoinHandle;
 use std::time::Duration;
-use common::{APICommand, KeyDownEvent};
+
 use ctrlc;
-use structopt::StructOpt;
-use log::{info, error};
 use env_logger;
 use env_logger::Env;
+use log::{error, info};
+use serde::Deserialize;
+use serde_json;
+use structopt::StructOpt;
+
+use common::{APICommand, KeyDownEvent};
 
 pub struct App {
     connection:TcpStream,
@@ -47,6 +49,7 @@ fn start_event_processor(stop: Arc<AtomicBool>, rx: Receiver<APICommand>) -> Joi
     return thread::spawn(move || {
         for cmd in rx {
             info!("processing event {:?}",cmd);
+            if stop.load(Ordering::Relaxed) { break; }
         }
     });
 }
@@ -93,7 +96,7 @@ fn send_fake_keyboard(app_list: Arc<Mutex<Vec<App>>>, stop: Arc<AtomicBool>) {
                 info!("sending fake event {:?}",cmd);
                 {
                     let mut v = app_list.lock().unwrap();
-                    for mut app in v.iter_mut() {
+                    for app in v.iter_mut() {
                         app.connection.write_all(data.as_ref()).expect("failed to send rect");
                     }
                 }
@@ -103,26 +106,8 @@ fn send_fake_keyboard(app_list: Arc<Mutex<Vec<App>>>, stop: Arc<AtomicBool>) {
     });
 
 }
-// fn send_fake_keyboard(mut apps_arc: &Arc<Mutex<Vec<App>>>, stop: Arc<AtomicBool>) {
-//     let apps_mutex = apps_arc.clone();
-//     loop {
-//         if stop.load(Ordering::Relaxed) { break;}
-//         let cmd:APICommand = APICommand::KeyDown(KeyDownEvent{
-//             original_timestamp: 0,
-//             key: 1
-//         });
-//         let data = serde_json::to_string(&cmd).unwrap();
-//         info!("sending fake event {:?}",cmd);
-//         {
-//             for mut app in apps_mutex.lock().unwrap() {
-//                 app.connection.write_all(data.as_ref()).expect("failed to send rect");
-//             }
-//         }
-//         thread::sleep(Duration::from_millis(1000));
-//     }
-// }
 
-fn handle_client(mut stream: TcpStream, tx: Sender<APICommand>, stop: Arc<AtomicBool>) -> JoinHandle<()> {
+fn handle_client(stream: TcpStream, tx: Sender<APICommand>, stop: Arc<AtomicBool>) -> JoinHandle<()> {
     thread::spawn(move || {
         let mut de = serde_json::Deserializer::from_reader(stream);
         loop {

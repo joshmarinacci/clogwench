@@ -1,26 +1,28 @@
 extern crate framebuffer;
 
-use interprocess::local_socket::{LocalSocketListener, LocalSocketStream};
+use std::{fs, thread};
+use std::io::{self, BufReader};
+use std::io::Write;
+use std::net::{TcpListener, TcpStream};
 use std::process::{Child, Command, Output, Stdio};
 use std::sync::{Arc, mpsc, Mutex};
-use std::sync::mpsc::{Receiver, Sender};
-use std::io::{self, BufReader};
-use std::{fs, thread};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc::{Receiver, Sender};
 use std::thread::JoinHandle;
 use std::time::Duration;
-use framebuffer::{Framebuffer, KdMode};
-use serde::Deserialize;
-use common::{APICommand, ARGBColor, KeyDownEvent, MouseMoveEvent};
-use evdev::{AbsoluteAxisType, Device, EventType, InputEventKind, Key, RelativeAxisType};
+
 use ctrlc;
-use surf::Surf;
-use structopt::StructOpt;
-use log::{error, info, log, warn};
 use env_logger;
 use env_logger::Env;
-use std::net::{TcpListener, TcpStream};
-use std::io::{Write};
+use evdev::{AbsoluteAxisType, Device, EventType, InputEventKind, Key, RelativeAxisType};
+use framebuffer::{Framebuffer, KdMode};
+use interprocess::local_socket::{LocalSocketListener, LocalSocketStream};
+use log::{error, info, log, warn};
+use serde::Deserialize;
+use structopt::StructOpt;
+
+use common::{APICommand, ARGBColor, KeyDownEvent, MouseMoveEvent};
+use surf::Surf;
 
 mod network;
 mod surf;
@@ -113,8 +115,8 @@ fn start_timeout(stop: Arc<AtomicBool>, max_seconds:u32) -> JoinHandle<()> {
 }
 
 
-fn make_drawing_thread(mut surf: Surf, 
-    stop: Arc<AtomicBool>, 
+fn make_drawing_thread(mut surf: Surf,
+    stop: Arc<AtomicBool>,
     rx: Receiver<APICommand>,
     app_list: Arc<Mutex<Vec<App>>>
 ) -> JoinHandle<()> {
