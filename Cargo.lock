@@ -768,11 +768,13 @@ version = "0.1.0"
 dependencies = [
  "common",
  "ctrlc",
+ "env_logger",
  "errno",
  "evdev",
  "framebuffer",
  "interprocess",
  "libc",
+ "log",
  "memmap",
  "serde",
  "serde_json",
