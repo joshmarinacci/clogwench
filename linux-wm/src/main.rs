@@ -19,10 +19,13 @@ use framebuffer::{Framebuffer, KdMode};
 use log::{error, info, log, warn};
 use serde::Deserialize;
 use structopt::StructOpt;
+use uuid::Uuid;
 
 use common::{APICommand, ARGBColor, HelloWindowManager, IncomingMessage, Point, Rect};
+use common::APICommand::KeyDown;
 use common::events::{KeyDownEvent, KeyUpEvent, KeyCode};
 use surf::Surf;
+use crate::network::OutgoingMessage;
 
 mod network;
 mod surf;
@@ -97,15 +100,15 @@ fn main() {
     input::setup_evdev_watcher(keyboard, stop.clone(), conn.tx_in.clone());
     input::setup_evdev_watcher(mouse, stop.clone(), conn.tx_in.clone());
 
-    
+
     let mut framebuffer = Framebuffer::new("/dev/fb0").unwrap();
     print_debug_info(&framebuffer);
     let _ = Framebuffer::set_kd_mode(KdMode::Graphics).unwrap();
     let mut surf:Surf = Surf::make(framebuffer);
     //let ch = start_process();
     surf.sync();
-    let drawing_thread = make_drawing_thread(surf,stop.clone(),conn.rx_in);
-    
+    let drawing_thread = make_drawing_thread(surf,stop.clone(),conn.rx_in, conn.tx_out.clone());
+
     let timeout_handle = start_timeout(stop.clone(),args.timeout);
     timeout_handle.join().unwrap();
     let _ = Framebuffer::set_kd_mode(KdMode::Text).unwrap();
@@ -128,18 +131,41 @@ fn start_timeout(stop: Arc<AtomicBool>, max_seconds:u32) -> JoinHandle<()> {
     });
 }
 
+struct InternalState {
+    apps:Vec<App>,
+}
+
+impl InternalState {
+    pub(crate) fn find_app(&mut self, app_id: Uuid) -> Option<&mut App> {
+        self.apps.iter_mut().find(|a|a.id == app_id)
+    }
+}
+
+impl InternalState {
+    fn init() -> InternalState {
+        InternalState {
+            apps: vec![]
+        }
+    }
+}
+
 
 fn make_drawing_thread(mut surf: Surf,
                        stop: Arc<AtomicBool>,
-                       rx: Receiver<IncomingMessage>
+                       rx: Receiver<IncomingMessage>,
+                       tx_out: Sender<OutgoingMessage>
 ) -> JoinHandle<()> {
     return thread::spawn(move ||{
         info!("render thread starting");
+        let mut state = InternalState::init();
         for cmd in rx {
             if stop.load(Ordering::Relaxed) == true { break; }
             match cmd.command {
-                APICommand::OpenWindowCommand(cm) => {
-                    // println!("open window")
+                APICommand::AppConnectResponse(res) => {
+                    info!("adding an app");
+                }
+                APICommand::OpenWindowResponse(cm) => {
+                    info!("adding a window");
                 },
                 APICommand::DrawRectCommand(cm) => {
                     surf.rect(cm.rect,cm.color);
@@ -155,17 +181,24 @@ fn make_drawing_thread(mut surf: Surf,
                             stop.store(true, Ordering::Relaxed);
                         },
                         _ => {
-                            // let cmd2: APICommand = APICommand::KeyDown(KeyDownEvent {
-                            //     app_id: Default::default(),
-                            //     window_id: Default::default(),
-                            //     original_timestamp: kd.original_timestamp,
-                            //     key: kd.key,
-                            // });
-                            // let data = serde_json::to_string(&cmd2).unwrap();
-                            // let mut v = app_list.lock().unwrap();
-                            // for app in v.iter_mut() {
-                            //     app.connection.write_all(data.as_ref()).expect("failed to send rect");
-                            // }
+                            info!("key down");
+                            //now send to a random app's random window, if any
+                            if !state.apps.is_empty() {
+                                let app = &state.apps[0];
+                                if !app.windows.is_empty() {
+                                    let win = &app.windows[0];
+                                    let msg = OutgoingMessage {
+                                        recipient: app.id,
+                                        command: KeyDown(KeyDownEvent{
+                                            app_id: app.id,
+                                            window_id: win.id,
+                                            original_timestamp: 0,
+                                            key: kd.key
+                                        })
+                                    };
+                                    tx_out.send(msg).unwrap();
+                                }
+                            }
                         }
                     }
                 },
