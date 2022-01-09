@@ -21,7 +21,8 @@ use log::{error, info, log, warn};
 use serde::Deserialize;
 use structopt::StructOpt;
 
-use common::{APICommand, ARGBColor, KeyDownEvent, MouseMoveEvent};
+use common::{APICommand, ARGBColor};
+use common::events::{KeyDownEvent, KeyUpEvent, KeyCode};
 use surf::Surf;
 
 mod network;
@@ -140,20 +141,22 @@ fn make_drawing_thread(mut surf: Surf,
                 APICommand::KeyDown(kd) => {
                     // println!("key down {}",kd.key);
 
-                    if kd.key == 1 { //wait for the ESC key
-                        stop.store(true, Ordering::Relaxed);
-                    } else {
-                        let cmd2: APICommand = APICommand::KeyDown(KeyDownEvent {
-                            original_timestamp: kd.original_timestamp,
-                            key: kd.key,
-                        });
-                        let data = serde_json::to_string(&cmd2).unwrap();
-                        let mut v = app_list.lock().unwrap();
-                        for app in v.iter_mut() {
-                            app.connection.write_all(data.as_ref()).expect("failed to send rect");
+                    match kd.key {
+                        KeyCode::ESC => {
+                            stop.store(true, Ordering::Relaxed);
+                        },
+                        _ => {
+                            let cmd2: APICommand = APICommand::KeyDown(KeyDownEvent {
+                                original_timestamp: kd.original_timestamp,
+                                key: kd.key,
+                            });
+                            let data = serde_json::to_string(&cmd2).unwrap();
+                            let mut v = app_list.lock().unwrap();
+                            for app in v.iter_mut() {
+                                app.connection.write_all(data.as_ref()).expect("failed to send rect");
+                            }
                         }
                     }
-
                 },
                 APICommand::MouseDown(mme) => {
                     // println!("mouse move {:?}",mme)

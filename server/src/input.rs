@@ -2,9 +2,11 @@ use evdev::{AbsoluteAxisType, Device, EventType, InputEventKind, Key, RelativeAx
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::Sender;
-use common::{APICommand, KeyDownEvent, MouseMoveEvent};
+use common::{APICommand};
+use common::events::*;
+
 use std::thread;
-use common::events::{KeyCode, linuxkernel_to_KeyCode, MouseButton, MouseMoveEvent};
+use common::events::{KeyCode, MouseButton, MouseMoveEvent};
 
 pub fn find_keyboard() -> Option<evdev::Device> {
     let mut devices = evdev::enumerate().collect::<Vec<_>>();
@@ -46,7 +48,7 @@ fn linuxkernel_to_KeyCode(code:u16) -> KeyCode {
     match key {
         Key::KEY_RESERVED => KeyCode::RESERVED,
         Key::KEY_ESC => KeyCode::ESC,
-        Key::KEY_LEFT => KeyCode::ARROW_LEFT,
+        Key::KEY_LEFT => KeyCode::ARROW_DOWN,
         Key::KEY_RIGHT => KeyCode::ARROW_RIGHT,
         Key::KEY_UP => KeyCode::ARROW_UP,
         Key::KEY_DOWN => KeyCode::ARROW_DOWN,

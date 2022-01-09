@@ -1,6 +1,6 @@
 use std::net::{TcpListener, TcpStream};
 use std::thread::JoinHandle;
-use common::{APICommand, KeyDownEvent};
+use common::{APICommand};
 use serde::Deserialize;
 use std::sync::mpsc::{Receiver, Sender};
 use std::sync::atomic::{AtomicBool, Ordering};
