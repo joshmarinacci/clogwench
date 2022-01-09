@@ -14,29 +14,26 @@ use log::{error, info};
 use serde::Deserialize;
 use serde_json;
 use structopt::StructOpt;
+use uuid::Uuid;
 
-use common::{APICommand, KeyDownEvent};
+use common::{APICommand, App, CentralState, IncomingMessage, KeyDownEvent, Window};
 
-pub struct App {
-    connection:TcpStream,
-    pub receiver_handle: JoinHandle<()>,
-}
 fn main() {
     let args:Cli = init_setup();
 
     let stop:Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
     setup_c_handler(stop.clone());
 
-    let (tx, rx) = mpsc::channel::<APICommand>();
+    let (tx, rx) = mpsc::channel::<IncomingMessage>();
 
-    let app_list: Arc<Mutex<Vec<App>>> = Arc::new(Mutex::new(Vec::new()));
+    let state:Arc<Mutex<CentralState>> = Arc::new(Mutex::new(CentralState::init()));
 
-    start_network_server(stop.clone(), tx, app_list.clone());
-    start_event_processor(stop.clone(), rx);
+    start_network_server(stop.clone(), tx, state.clone());
+    start_event_processor(stop.clone(), rx, state.clone());
     // let ch = start_process();
 
     if args.keyboard {
-        send_fake_keyboard(app_list.clone(), stop.clone());
+        send_fake_keyboard(state.clone(), stop.clone());
     }
 
     let timeout_handle = start_timeout(stop.clone(), args.timeout);
@@ -45,18 +42,29 @@ fn main() {
 }
 
 
-fn start_event_processor(stop: Arc<AtomicBool>, rx: Receiver<APICommand>) -> JoinHandle<()> {
+fn start_event_processor(stop: Arc<AtomicBool>,
+                         rx: Receiver<IncomingMessage>,
+                         state: Arc<Mutex<CentralState>>
+) -> JoinHandle<()> {
     return thread::spawn(move || {
         for cmd in rx {
-            info!("processing event {:?}",cmd);
             if stop.load(Ordering::Relaxed) { break; }
+            info!("processing event {:?}",cmd);
+            match cmd.command {
+                APICommand::OpenWindowCommand(ow) => {
+                    info!("adding a window to the app");
+                    let win = Window::from_rect(ow.bounds);
+                    state.lock().unwrap().add_window(cmd.appid,win);
+                }
+                _ => {}
+            };
         }
     });
 }
 
 fn start_network_server(stop: Arc<AtomicBool>,
-                        tx: Sender<APICommand>,
-                        app_list: Arc<Mutex<Vec<App>>>) -> JoinHandle<()> {
+                        tx: Sender<IncomingMessage>,
+                        state: Arc<Mutex<CentralState>>) -> JoinHandle<()> {
 
     return thread::spawn(move || {
         info!("starting network connection");
@@ -68,11 +76,9 @@ fn start_network_server(stop: Arc<AtomicBool>,
             match stream {
                 Ok(stream) => {
                     info!("got a new connection");
-                    let app = App {
-                        connection: stream.try_clone().unwrap(),
-                        receiver_handle:handle_client(stream.try_clone().unwrap(),tx.clone(),stop.clone()),
-                    };
-                    app_list.lock().unwrap().push(app);
+                    let app = App::from_stream(stream.try_clone().unwrap());
+                    handle_client(stream.try_clone().unwrap(),tx.clone(),stop.clone(),state.clone(),app.id);
+                    state.lock().unwrap().add_app(app);
                 }
                 Err(e) => {
                     error!("error: {}",e);
@@ -83,7 +89,8 @@ fn start_network_server(stop: Arc<AtomicBool>,
     })
 }
 
-fn send_fake_keyboard(app_list: Arc<Mutex<Vec<App>>>, stop: Arc<AtomicBool>) {
+
+fn send_fake_keyboard(state: Arc<Mutex<CentralState>>, stop: Arc<AtomicBool>) {
     thread::spawn({
         move || {
             loop {
@@ -95,8 +102,7 @@ fn send_fake_keyboard(app_list: Arc<Mutex<Vec<App>>>, stop: Arc<AtomicBool>) {
                 let data = serde_json::to_string(&cmd).unwrap();
                 info!("sending fake event {:?}",cmd);
                 {
-                    let mut v = app_list.lock().unwrap();
-                    for app in v.iter_mut() {
+                    for app in state.lock().unwrap().app_list() {
                         app.connection.write_all(data.as_ref()).expect("failed to send rect");
                     }
                 }
@@ -107,7 +113,7 @@ fn send_fake_keyboard(app_list: Arc<Mutex<Vec<App>>>, stop: Arc<AtomicBool>) {
 
 }
 
-fn handle_client(stream: TcpStream, tx: Sender<APICommand>, stop: Arc<AtomicBool>) -> JoinHandle<()> {
+fn handle_client(stream: TcpStream, tx: Sender<IncomingMessage>, stop: Arc<AtomicBool>, _state: Arc<Mutex<CentralState>>, appid: Uuid) -> JoinHandle<()> {
     thread::spawn(move || {
         let mut de = serde_json::Deserializer::from_reader(stream);
         loop {
@@ -117,8 +123,9 @@ fn handle_client(stream: TcpStream, tx: Sender<APICommand>, stop: Arc<AtomicBool
             }
             match APICommand::deserialize(&mut de) {
                 Ok(cmd) => {
-                    info!("server received command {:?}",cmd);
-                    tx.send(cmd).unwrap();
+                    //info!("server received command {:?}",cmd);
+                    let im = IncomingMessage { appid, command:cmd, };
+                    tx.send(im).unwrap();
                 }
                 Err(e) => {
                     error!("error deserializing from client {:?}",e);
