@@ -158,6 +158,7 @@ fn make_drawing_thread(mut surf: Surf, stop: Arc<AtomicBool>, rx: Receiver<APICo
                 },
                 APICommand::KeyDown(kd) => {
                     // println!("key down {}",kd.key);
+                    
                     if kd.key == 1 { //wait for the ESC key
                         stop.store(true, Ordering::Relaxed);
                     }
