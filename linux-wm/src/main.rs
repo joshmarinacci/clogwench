@@ -21,7 +21,7 @@ use log::{error, info, log, warn};
 use serde::Deserialize;
 use structopt::StructOpt;
 
-use common::{APICommand, ARGBColor};
+use common::{APICommand, ARGBColor, HelloWindowManager, IncomingMessage, Point, Rect};
 use common::events::{KeyDownEvent, KeyUpEvent, KeyCode};
 use surf::Surf;
 
@@ -33,7 +33,6 @@ pub struct App {
     connection:TcpStream,
     pub receiver_handle: JoinHandle<()>,
 }
-
 
 fn print_debug_info(framebuffer: &Framebuffer) {
     let s = String::from_utf8_lossy(&framebuffer.fix_screen_info.id);
@@ -66,24 +65,39 @@ fn start_process() -> Child {
     list_dir
 }
 
-fn sleep(ms:u64) {
-    thread::sleep(Duration::from_millis(ms));
-}
-
 fn main() {
     let args:Cli = init_setup();
     let stop:Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
     setup_c_handler(stop.clone());
 
-    let (tx, rx) = mpsc::channel::<APICommand>();
+    //connect to input
     let mut keyboard = input::find_keyboard().expect("Couldn't find the keyboard");
     let mut mouse = input::find_mouse().expect("Couldn't find the mouse");
-    input::setup_evdev_watcher(keyboard, stop.clone(), tx.clone());
-    input::setup_evdev_watcher(mouse, stop.clone(), tx.clone());
 
-    let app_list: Arc<Mutex<Vec<App>>> = Arc::new(Mutex::new(Vec::new()));
+    //connect to network
+    let conn = network::start_wm_network_connection(stop.clone())
+        .expect("error connecting to the central server");
+    //send hello window manager
+    let msg = OutgoingMessage {
+        recipient: Default::default(),
+        command: APICommand::WMConnect(HelloWindowManager {
+        })
+    };
+    conn.tx_out.send(msg).unwrap();
 
-    network::start_network_server(stop.clone(), tx, app_list.clone());
+    let resp = conn.rx_in.recv().unwrap();
+    let selfid = if let APICommand::WMConnectResponse(res) = resp.command {
+        info!("got response back from the server {:?}",res);
+        res.wm_id
+    } else {
+        panic!("did not get the window manager connect response. gah!");
+    };
+
+
+    //start input watchers
+    input::setup_evdev_watcher(keyboard, stop.clone(), conn.tx_in.clone());
+    input::setup_evdev_watcher(mouse, stop.clone(), conn.tx_in.clone());
+
 
     let mut framebuffer = Framebuffer::new("/dev/fb0").unwrap();
     print_debug_info(&framebuffer);
@@ -91,7 +105,7 @@ fn main() {
     let mut surf:Surf = Surf::make(framebuffer);
     //let ch = start_process();
     surf.sync();
-    let drawing_thread = make_drawing_thread(surf,stop.clone(),rx,app_list.clone());
+    let drawing_thread = make_drawing_thread(surf,stop.clone(),conn.rx_in);
 
     let timeout_handle = start_timeout(stop.clone(),args.timeout);
     timeout_handle.join().unwrap();
@@ -117,22 +131,19 @@ fn start_timeout(stop: Arc<AtomicBool>, max_seconds:u32) -> JoinHandle<()> {
 
 
 fn make_drawing_thread(mut surf: Surf,
-    stop: Arc<AtomicBool>,
-    rx: Receiver<APICommand>,
-    app_list: Arc<Mutex<Vec<App>>>
+                       stop: Arc<AtomicBool>,
+                       rx: Receiver<IncomingMessage>
 ) -> JoinHandle<()> {
     return thread::spawn(move ||{
+        info!("render thread starting");
         for cmd in rx {
-            if stop.load(Ordering::Relaxed) == true {
-                println!("render thread stopping");
-                break;
-            }
-            match cmd {
+            if stop.load(Ordering::Relaxed) == true { break; }
+            match cmd.command {
                 APICommand::OpenWindowCommand(cm) => {
                     // println!("open window")
                 },
                 APICommand::DrawRectCommand(cm) => {
-                    surf.rect(cm.x,cm.y,cm.w,cm.h, cm.color);
+                    surf.rect(cm.rect,cm.color);
                     surf.sync();
                 },
                 APICommand::KeyUp(ku) => {
@@ -140,21 +151,22 @@ fn make_drawing_thread(mut surf: Surf,
                 },
                 APICommand::KeyDown(kd) => {
                     // println!("key down {}",kd.key);
-
                     match kd.key {
                         KeyCode::ESC => {
                             stop.store(true, Ordering::Relaxed);
                         },
                         _ => {
-                            let cmd2: APICommand = APICommand::KeyDown(KeyDownEvent {
-                                original_timestamp: kd.original_timestamp,
-                                key: kd.key,
-                            });
-                            let data = serde_json::to_string(&cmd2).unwrap();
-                            let mut v = app_list.lock().unwrap();
-                            for app in v.iter_mut() {
-                                app.connection.write_all(data.as_ref()).expect("failed to send rect");
-                            }
+                            // let cmd2: APICommand = APICommand::KeyDown(KeyDownEvent {
+                            //     app_id: Default::default(),
+                            //     window_id: Default::default(),
+                            //     original_timestamp: kd.original_timestamp,
+                            //     key: kd.key,
+                            // });
+                            // let data = serde_json::to_string(&cmd2).unwrap();
+                            // let mut v = app_list.lock().unwrap();
+                            // for app in v.iter_mut() {
+                            //     app.connection.write_all(data.as_ref()).expect("failed to send rect");
+                            // }
                         }
                     }
                 },
@@ -168,22 +180,21 @@ fn make_drawing_thread(mut surf: Surf,
                         b: 255,
                         a: 255
                     };
-                    //surf.clear();
-                    let mut x = mme.x;
-                    if x < 0  {x = 0;}
-                    if x > 500 {x = 500;}
-                    let mut y = mme.y;
-                    if y < 0 {y = 0;}
-                    if y > 500 {y = 500;}
-                    surf.rect(x,y,10,10, color);
+                    let bounds = Rect::from_ints(0,0,500,500);
+                    let pt = bounds.clamp(Point::init(mme.x,mme.y));
+                    // //surf.clear();
+                    let cursor = Rect::from_ints(pt.x,pt.y,10,10);
+                    surf.rect(cursor, color);
                     surf.sync();
                     //println!("mouse move {:?},{:?}",(mme.x/10),(mme.y/10))
                 },
                 APICommand::MouseUp(mme) => {
                     // println!("mouse move {:?}",mme)
                 },
+                _ => {}
             }
         }
+        info!("render thread stopping");
     });
 }
 
@@ -207,8 +218,8 @@ fn init_setup() -> Cli {
 
 
 fn setup_c_handler(stop: Arc<AtomicBool>) {
-    ctrlc::set_handler(move || {
-        error!("control C pressed. stopping everything");
-        stop.store(true, Ordering::Relaxed)
-    }).expect("error setting control C handler");
+    // ctrlc::set_handler(move || {
+    //     error!("control C pressed. stopping everything");
+    //     stop.store(true, Ordering::Relaxed)
+    // }).expect("error setting control C handler");
 }

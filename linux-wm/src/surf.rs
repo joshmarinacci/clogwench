@@ -1,5 +1,5 @@
 use framebuffer::Framebuffer;
-use common::ARGBColor;
+use common::{ARGBColor, BLACK, Rect};
 
 pub struct Surf {
     fb:Framebuffer,
@@ -20,7 +20,7 @@ impl Surf {
 }
 
 impl Surf {
-    pub fn rect(&mut self, x:i32, y:i32, w:i32, h:i32, color: ARGBColor) {
+    pub fn rect(&mut self, x: Rect, y: ARGBColor) {
         let ll = (self.fb.fix_screen_info.line_length/4) as i32;
         for j in 0..h {
             for i in 0..w {
@@ -36,12 +36,6 @@ impl Surf {
         self.fb.write_frame(&self.frame);
     }
     pub fn clear(&mut self) {
-        let black = ARGBColor {
-            r: 0,
-            g: 0,
-            b: 0,
-            a: 255
-        };
-        self.rect(0, 0, self.fb.var_screen_info.xres as i32, self.fb.var_screen_info.yres as i32, black);
+        self.rect(Rect::from_ints(0, 0, self.fb.var_screen_info.xres, self.fb.var_screen_info.yres as i32),BLACK);
     }
 }

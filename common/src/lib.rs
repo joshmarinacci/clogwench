@@ -135,7 +135,7 @@ impl Rect {
 }
 
 impl Rect {
-    pub fn from_ints(x:i32,y:i32,w:i32,h:i32) -> Rect {
+    pub fn from_ints(x:i32, y:i32, w: i32, h:i32) -> Rect {
         Rect {
             x,y,w,h
         }

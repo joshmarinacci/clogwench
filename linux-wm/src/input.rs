@@ -2,7 +2,7 @@ use evdev::{AbsoluteAxisType, Device, EventType, InputEventKind, Key, RelativeAx
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::Sender;
-use common::{APICommand};
+use common::{APICommand, IncomingMessage};
 use common::events::*;
 
 use std::thread;
@@ -58,7 +58,7 @@ fn linuxkernel_to_KeyCode(code:u16) -> KeyCode {
     }
 }
 
-pub fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender<APICommand>) {
+pub fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender<IncomingMessage>) {
     thread::spawn(move || {
         let mut cx = 0;
         let mut cy = 0;
@@ -73,10 +73,15 @@ pub fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender
                 match ev.kind() {
                     InputEventKind::Key(key) => {
                         println!("   evdev:key {}",key.code());
-                        let cmd = APICommand::KeyDown(KeyDownEvent{
-                            original_timestamp:0,
-                            key:linuxkernel_to_KeyCode(key.code()),
-                        });
+                        let cmd = IncomingMessage {
+                            source: Default::default(),
+                            command: APICommand::KeyDown(KeyDownEvent{
+                                app_id: Default::default(),
+                                window_id: Default::default(),
+                                original_timestamp: 0,
+                                key:linuxkernel_to_KeyCode(key.code()),
+                            })
+                        };
                         tx.send(cmd).unwrap()
                     },
                     InputEventKind::RelAxis(rel) => {
@@ -89,30 +94,41 @@ pub fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender
                             }
                         }
                         println!("cursor {} , {}",cx, cy);
-                        let cmd = APICommand::MouseMove(MouseMoveEvent{
-                            original_timestamp:0,
-                            button:MouseButton::Primary,
-                            x:cx,
-                            y:cy
-                        });
+                        let cmd = IncomingMessage {
+                            source: Default::default(),
+                            command: APICommand::MouseMove(MouseMoveEvent{
+                                // app_id: Default::default(),
+                                // window_id: Default::default(),
+                                original_timestamp: 0,
+                                button: MouseButton::Primary,
+                                x:cx,
+                                y:cy
+                            })
+                        };
+                        // let cmd = APICommand::MouseMove(MouseMoveEvent{
+                        //     original_timestamp:0,
+                        //     button:MouseButton::Primary,
+                        //     x:cx,
+                        //     y:cy
+                        // });
                         tx.send(cmd).unwrap()
                     },
                     InputEventKind::AbsAxis(abs) => {
-                        // println!("abs event {:?} {:?}",ev.value(), abs);
-                        match abs {
-                            AbsoluteAxisType::ABS_X => cx = ev.value()/10,
-                            AbsoluteAxisType::ABS_Y => cy = ev.value()/10,
-                            _ => {
-                                println!("unknown aboslute axis type")
-                            }
-                        }
-                        let cmd = APICommand::MouseMove(MouseMoveEvent{
-                            original_timestamp:0,
-                            button:MouseButton::Primary,
-                            x:cx,
-                            y:cy
-                        });
-                        tx.send(cmd).unwrap()
+                        println!("abs event {:?} {:?}",ev.value(), abs);
+                        // match abs {
+                        //     AbsoluteAxisType::ABS_X => cx = ev.value()/10,
+                        //     AbsoluteAxisType::ABS_Y => cy = ev.value()/10,
+                        //     _ => {
+                        //         println!("unknown aboslute axis type")
+                        //     }
+                        // }
+                        // let cmd = APICommand::MouseMove(MouseMoveEvent{
+                        //     original_timestamp:0,
+                        //     button:MouseButton::Primary,
+                        //     x:cx,
+                        //     y:cy
+                        // });
+                        // tx.send(cmd).unwrap()
                         //stop.store(true,Ordering::Relaxed);
                     },
                     _ => {}
