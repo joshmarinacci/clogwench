@@ -48,7 +48,7 @@ fn linuxkernel_to_KeyCode(code:u16) -> KeyCode {
     match key {
         Key::KEY_RESERVED => KeyCode::RESERVED,
         Key::KEY_ESC => KeyCode::ESC,
-        Key::KEY_LEFT => KeyCode::ARROW_DOWN,
+        Key::KEY_LEFT => KeyCode::ARROW_LEFT,
         Key::KEY_RIGHT => KeyCode::ARROW_RIGHT,
         Key::KEY_UP => KeyCode::ARROW_UP,
         Key::KEY_DOWN => KeyCode::ARROW_DOWN,

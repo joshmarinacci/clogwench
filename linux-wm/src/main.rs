@@ -165,10 +165,22 @@ fn make_drawing_thread(mut surf: Surf,
             if stop.load(Ordering::Relaxed) == true { break; }
             match cmd.command {
                 APICommand::AppConnectResponse(res) => {
-                    info!("adding an app");
-                }
-                APICommand::OpenWindowResponse(cm) => {
-                    info!("adding a window");
+                    info!("adding an app {}",res.app_id);
+                    let app = App {
+                        id:res.app_id,
+                        windows: vec![]
+                    };
+                    state.apps.push(app);
+                },
+                APICommand::OpenWindowResponse(ow) => {
+                    info!("adding a window to the app");
+                    let win = Window {
+                        id:ow.window_id,
+                        bounds:ow.bounds,
+                    };
+                    if let Some(app) = state.find_app(ow.app_id) {
+                        app.windows.push(win);
+                    }
                 },
                 APICommand::DrawRectCommand(cm) => {
                     surf.rect(cm.rect,cm.color);
