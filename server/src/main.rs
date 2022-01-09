@@ -19,6 +19,8 @@ use structopt::StructOpt;
 use log::{error, info, log, warn};
 use env_logger;
 use env_logger::Env;
+use std::net::{TcpListener, TcpStream};
+use std::io::{Write};
 
 mod network;
 mod surf;
@@ -86,7 +88,7 @@ fn main() {
     let mut surf:Surf = Surf::make(framebuffer);
     //let ch = start_process();
     surf.sync();
-    let drawing_thread = make_drawing_thread(surf,stop.clone(),rx);
+    let drawing_thread = make_drawing_thread(surf,stop.clone(),rx,app_list.clone());
 
     let timeout_handle = start_timeout(stop.clone(),args.timeout);
     timeout_handle.join().unwrap();
@@ -111,7 +113,11 @@ fn start_timeout(stop: Arc<AtomicBool>, max_seconds:u32) -> JoinHandle<()> {
 }
 
 
-fn make_drawing_thread(mut surf: Surf, stop: Arc<AtomicBool>, rx: Receiver<APICommand>) -> JoinHandle<()> {
+fn make_drawing_thread(mut surf: Surf, 
+    stop: Arc<AtomicBool>, 
+    rx: Receiver<APICommand>,
+    app_list: Arc<Mutex<Vec<App>>>
+) -> JoinHandle<()> {
     return thread::spawn(move ||{
         for cmd in rx {
             if stop.load(Ordering::Relaxed) == true {
@@ -134,7 +140,18 @@ fn make_drawing_thread(mut surf: Surf, stop: Arc<AtomicBool>, rx: Receiver<APICo
 
                     if kd.key == 1 { //wait for the ESC key
                         stop.store(true, Ordering::Relaxed);
+                    } else {
+                        let cmd2: APICommand = APICommand::KeyDown(KeyDownEvent {
+                            original_timestamp: kd.original_timestamp,
+                            key: kd.key,
+                        });
+                        let data = serde_json::to_string(&cmd2).unwrap();
+                        let mut v = app_list.lock().unwrap();
+                        for app in v.iter_mut() {
+                            app.connection.write_all(data.as_ref()).expect("failed to send rect");
+                        }
                     }
+
                 },
                 APICommand::MouseDown(mme) => {
                     // println!("mouse move {:?}",mme)
