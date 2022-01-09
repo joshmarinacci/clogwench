@@ -15,7 +15,12 @@ use common::{APICommand, ARGBColor, KeyDownEvent, MouseMoveEvent};
 use evdev::{Device, EventType, InputEventKind, Key, AbsoluteAxisType, RelativeAxisType};
 use ctrlc;
 use surf::Surf;
+use structopt::StructOpt;
+use log::{info, warn, error,log};
+use env_logger;
+use env_logger::Env;
 
+mod network;
 mod surf;
 
 
@@ -33,43 +38,6 @@ fn print_debug_info(framebuffer: &Framebuffer) {
 
 }
 
-fn setup_listener(arc: Arc<AtomicBool>, tx:Sender<APICommand>) -> JoinHandle<()> {
-    fn handle_error(connection: io::Result<LocalSocketStream>) -> LocalSocketStream {
-        match connection {
-            Ok(val) => val,
-            Err(error) => {
-                eprintln!("\n");
-                panic!("Incoming connection failed: {}", error);
-            }
-        }
-    }
-
-    fs::remove_file("/tmp/teletype.sock");
-    let listener =
-        LocalSocketListener::bind("/tmp/teletype.sock").expect("failed to set up server");
-    eprintln!("Teletype server listening for connections.");
-    let handle = thread::spawn(move ||{
-        let mut conn = listener
-            .incoming()
-            .next()
-            .map(handle_error)
-            .map(BufReader::new)
-            .unwrap();
-        let mut de = serde_json::Deserializer::from_reader(conn);
-        loop {
-            if arc.load(Ordering::Relaxed) == true {
-                println!("socket thread stopping");
-                break;
-            }
-            println!("server reading from socket");
-            let cmd:APICommand =APICommand::deserialize(&mut de).unwrap();
-            println!("server is getting results {:?}",cmd);
-            tx.send(cmd).unwrap();
-        }
-    });
-    handle
-}
-
 // create simple app to print text which is launched by the server
 fn start_process() -> Child {
     println!("running some output");
@@ -85,28 +53,6 @@ fn start_process() -> Child {
         ;
     println!("spawned it");
     list_dir
-}
-
-fn test_draw_rects(mut surf: &mut Surf) {
-    surf.rect(10, 10, 10, 10, ARGBColor{
-        r: 255,
-        g: 0,
-        b: 0,
-        a: 255
-    });
-    surf.rect(10, 30, 10, 10, ARGBColor{
-        r: 0,
-        g: 255,
-        b: 0,
-        a: 255
-    });
-    surf.rect(10, 50, 10, 10, ARGBColor{
-        r: 0,
-        g: 0,
-        b: 255,
-        a: 255
-    });
-    surf.sync();
 }
 
 fn sleep(ms:u64) {
@@ -149,50 +95,48 @@ fn find_mouse() -> Option<evdev::Device> {
 }
 
 fn main() {
-    let should_stop:Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
-    let ss2 = should_stop.clone();
+    let args:Cli = init_setup();
+    let stop:Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
+    setup_c_handler(stop.clone());
 
     let (tx, rx) = mpsc::channel::<APICommand>();
     let mut keyboard = find_keyboard().expect("Couldn't find the keyboard");
     let mut mouse = find_mouse().expect("Couldn't find the mouse");
-    setup_evdev_watcher(keyboard, should_stop.clone(),tx.clone());
-    setup_evdev_watcher(mouse, should_stop.clone(),tx.clone());
+    setup_evdev_watcher(keyboard, stop.clone(),tx.clone());
+    setup_evdev_watcher(mouse, stop.clone(),tx.clone());
+
+    network::start_network_server(stop.clone(), tx);
 
     let mut framebuffer = Framebuffer::new("/dev/fb0").unwrap();
     print_debug_info(&framebuffer);
     let _ = Framebuffer::set_kd_mode(KdMode::Graphics).unwrap();
     let mut surf:Surf = Surf::make(framebuffer);
-    //    test_draw_rects(&mut surf);
+    //let ch = start_process();
+    surf.sync();
+    let drawing_thread = make_drawing_thread(surf,stop.clone(),rx);
 
-    let hand = setup_listener(should_stop.clone(), tx);
-    let ch = start_process();
-    let drawing_thread = make_drawing_thread(surf,should_stop.clone(),rx);
+    let timeout_handle = start_timeout(stop.clone(),args.timeout);
+    timeout_handle.join().unwrap();
+    let _ = Framebuffer::set_kd_mode(KdMode::Text).unwrap();
+    info!("all done now");
+}
 
-    // control c handler
-    ctrlc::set_handler(move || {
-        ss2.store(true, Ordering::Relaxed)
-    }).expect("error setting control C handler");
-
-    //timeout thread
-    let timeout_handle = thread::spawn(move || {
+fn start_timeout(stop: Arc<AtomicBool>, max_seconds:u32) -> JoinHandle<()> {
+    return thread::spawn(move || {
+        info!("timeout will end in {} seconds",max_seconds);
         let mut count = 0;
         loop {
             count = count + 1;
-            if count > 15 {
-                should_stop.store(true,Ordering::Relaxed);
+            if count > max_seconds {
+                info!("timeout triggered");
+                stop.store(true,Ordering::Relaxed);
             }
-            println!("watchdog sleeping for 1000");
-            sleep(1000);
-            if should_stop.load(Ordering::Relaxed) == true {
-                println!("render thread stopping");
-                break;
-            }
+            thread::sleep(Duration::from_millis(1000));
+            if stop.load(Ordering::Relaxed) == true { break; }
         }
     });
-    timeout_handle.join().unwrap();
-    let _ = Framebuffer::set_kd_mode(KdMode::Text).unwrap();
-    println!("all done now");
 }
+
 
 fn make_drawing_thread(mut surf: Surf, stop: Arc<AtomicBool>, rx: Receiver<APICommand>) -> JoinHandle<()> {
     return thread::spawn(move ||{
@@ -230,11 +174,11 @@ fn make_drawing_thread(mut surf: Surf, stop: Arc<AtomicBool>, rx: Receiver<APICo
                     };
                     //surf.clear();
                     let mut x = mme.x;
-                    if(x < 0) {x = 0;}
-                    if(x > 500) {x = 500;}
+                    if x < 0  {x = 0;}
+                    if x > 500 {x = 500;}
                     let mut y = mme.y;
-                    if(y < 0) {y = 0;}
-                    if(y > 500) {y = 500;}
+                    if y < 0 {y = 0;}
+                    if y > 500 {y = 500;}
                     surf.rect(x,y,10,10, color);
                     surf.sync();
                     //println!("mouse move {:?},{:?}",(mme.x/10),(mme.y/10))
@@ -311,3 +255,28 @@ fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender<API
     });
 }
 
+
+#[derive(StructOpt, Debug)]
+#[structopt(name = "test-server", about = "simulates receiving and sending server events")]
+struct Cli {
+    #[structopt(short, long)]
+    debug:bool,
+    #[structopt(short, long, default_value="60")]
+    timeout:u32,
+}
+
+fn init_setup() -> Cli {
+    let args:Cli = Cli::from_args();
+    let loglevel = if args.debug { "debug"} else { "error"};
+    env_logger::Builder::from_env(Env::default().default_filter_or(loglevel)).init();
+    info!("running with args {:?}",args);
+    return args;
+}
+
+
+fn setup_c_handler(stop: Arc<AtomicBool>) {
+    ctrlc::set_handler(move || {
+        error!("control C pressed. stopping everything");
+        stop.store(true, Ordering::Relaxed)
+    }).expect("error setting control C handler");
+}
