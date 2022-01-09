@@ -4,6 +4,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::Sender;
 use common::{APICommand, KeyDownEvent, MouseMoveEvent};
 use std::thread;
+use common::events::{KeyCode, linuxkernel_to_KeyCode, MouseButton, MouseMoveEvent};
 
 pub fn find_keyboard() -> Option<evdev::Device> {
     let mut devices = evdev::enumerate().collect::<Vec<_>>();
@@ -40,6 +41,21 @@ pub fn find_mouse() -> Option<evdev::Device> {
     None
 }
 
+fn linuxkernel_to_KeyCode(code:u16) -> KeyCode {
+    let key = Key::new(code);
+    match key {
+        Key::KEY_RESERVED => KeyCode::RESERVED,
+        Key::KEY_ESC => KeyCode::ESC,
+        Key::KEY_LEFT => KeyCode::ARROW_LEFT,
+        Key::KEY_RIGHT => KeyCode::ARROW_RIGHT,
+        Key::KEY_UP => KeyCode::ARROW_UP,
+        Key::KEY_DOWN => KeyCode::ARROW_DOWN,
+        Key::KEY_SPACE => KeyCode::SPACE,
+        Key::KEY_ENTER => KeyCode::ENTER,
+        _ => KeyCode::UNKNOWN
+    }
+}
+
 pub fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender<APICommand>) {
     thread::spawn(move || {
         let mut cx = 0;
@@ -57,7 +73,7 @@ pub fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender
                         println!("   evdev:key {}",key.code());
                         let cmd = APICommand::KeyDown(KeyDownEvent{
                             original_timestamp:0,
-                            key:key.code() as i32,
+                            key:linuxkernel_to_KeyCode(key.code()),
                         });
                         tx.send(cmd).unwrap()
                     },
@@ -73,7 +89,7 @@ pub fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender
                         println!("cursor {} , {}",cx, cy);
                         let cmd = APICommand::MouseMove(MouseMoveEvent{
                             original_timestamp:0,
-                            button:0,
+                            button:MouseButton::Primary,
                             x:cx,
                             y:cy
                         });
@@ -90,7 +106,7 @@ pub fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender
                         }
                         let cmd = APICommand::MouseMove(MouseMoveEvent{
                             original_timestamp:0,
-                            button:0,
+                            button:MouseButton::Primary,
                             x:cx,
                             y:cy
                         });

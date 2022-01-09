@@ -16,7 +16,8 @@ use serde_json;
 use structopt::StructOpt;
 use uuid::Uuid;
 
-use common::{APICommand, App, CentralState, IncomingMessage, KeyDownEvent, Window};
+use common::{APICommand, App, CentralState, IncomingMessage, Window};
+use common::events::{KeyCode, KeyDownEvent};
 
 fn main() {
     let args:Cli = init_setup();
@@ -97,7 +98,7 @@ fn send_fake_keyboard(state: Arc<Mutex<CentralState>>, stop: Arc<AtomicBool>) {
                 if stop.load(Ordering::Relaxed) { break; }
                 let cmd: APICommand = APICommand::KeyDown(KeyDownEvent {
                     original_timestamp: 0,
-                    key: 1
+                    key: KeyCode::ARROW_RIGHT
                 });
                 let data = serde_json::to_string(&cmd).unwrap();
                 info!("sending fake event {:?}",cmd);

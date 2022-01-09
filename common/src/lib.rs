@@ -7,9 +7,11 @@ use std::sync::mpsc;
 use std::thread;
 use std::sync::mpsc::{Receiver, Sender};
 use std::io::Write;
+use crate::events::{KeyDownEvent, KeyUpEvent};
 
 pub mod client;
-// pub use crate::client::client;
+pub mod events;
+
 
 #[cfg(test)]
 mod tests {
@@ -40,42 +42,6 @@ pub struct DrawRectCommand {
     pub color:ARGBColor,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct KeyDownEvent {
-    pub original_timestamp:i64,
-    pub key:i32,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct KeyUpEvent {
-    pub original_timestamp:i64,
-    pub key:i32,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct MouseDownEvent {
-    pub original_timestamp:i64,
-    pub button:i32,
-    pub x:i32,
-    pub y:i32,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct MouseMoveEvent {
-    pub original_timestamp:i64,
-    pub button:i32,
-    pub x:i32,
-    pub y:i32,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct MouseUpEvent {
-    pub original_timestamp:i64,
-    pub button:i32,
-    pub x:i32,
-    pub y:i32,
-}
-
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct OpenWindowCommand {
@@ -90,9 +56,9 @@ pub enum APICommand {
     OpenWindowCommand(OpenWindowCommand),
     KeyDown(KeyDownEvent),
     KeyUp(KeyUpEvent),
-    MouseDown(MouseDownEvent),
-    MouseMove(MouseMoveEvent),
-    MouseUp(MouseUpEvent),
+    MouseDown(crate::events::MouseDownEvent),
+    MouseMove(crate::events::MouseMoveEvent),
+    MouseUp(crate::events::MouseUpEvent),
 }
 
 #[derive(Serialize, Deserialize, Debug)]

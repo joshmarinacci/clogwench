@@ -5,7 +5,8 @@ use std::sync::mpsc::{IntoIter, Iter, Receiver, Sender, TryIter};
 use std::thread;
 use serde::Deserialize;
 use common::{APICommand, ARGBColor, BLACK, DrawRectCommand, OpenWindowCommand, Rect, WHITE};
-use common::client::client::ClientConnection;
+use common::client::ClientConnection;
+use common::events::KeyCode;
 
 fn redraw(client: &ClientConnection, x: i32, y: i32, w:i32, h:i32) {
     //draw background and wait
@@ -37,7 +38,11 @@ fn main() {
         match cmd {
             APICommand::KeyDown(kd) => {
                 println!("got a keydown event");
-                x += 1;
+                match kd.key {
+                    KeyCode::ARROW_RIGHT => x += 1,
+                    KeyCode::ARROW_LEFT => x -= 1,
+                    _ => {}
+                }
                 redraw(&client,x,y,w,h)
             }
             _ => {}
