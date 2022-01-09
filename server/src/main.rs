@@ -2,7 +2,7 @@ extern crate framebuffer;
 
 use interprocess::local_socket::{LocalSocketListener, LocalSocketStream};
 use std::process::{Child, Command, Output, Stdio};
-use std::sync::{Arc, mpsc};
+use std::sync::{Arc, mpsc, Mutex};
 use std::sync::mpsc::{Receiver, Sender};
 use std::io::{self, BufReader};
 use std::{fs, thread};
@@ -12,16 +12,22 @@ use std::time::Duration;
 use framebuffer::{Framebuffer, KdMode};
 use serde::Deserialize;
 use common::{APICommand, ARGBColor, KeyDownEvent, MouseMoveEvent};
-use evdev::{Device, EventType, InputEventKind, Key, AbsoluteAxisType, RelativeAxisType};
+use evdev::{AbsoluteAxisType, Device, EventType, InputEventKind, Key, RelativeAxisType};
 use ctrlc;
 use surf::Surf;
 use structopt::StructOpt;
-use log::{info, warn, error,log};
+use log::{error, info, log, warn};
 use env_logger;
 use env_logger::Env;
 
 mod network;
 mod surf;
+mod input;
+
+pub struct App {
+    connection:TcpStream,
+    pub receiver_handle: JoinHandle<()>,
+}
 
 
 fn print_debug_info(framebuffer: &Framebuffer) {
@@ -59,53 +65,20 @@ fn sleep(ms:u64) {
     thread::sleep(Duration::from_millis(ms));
 }
 
-fn find_keyboard() -> Option<evdev::Device> {
-    let mut devices = evdev::enumerate().collect::<Vec<_>>();
-    devices.reverse();
-    for (i, d) in devices.iter().enumerate() {
-        if d.supported_keys().map_or(false, |keys| keys.contains(Key::KEY_ENTER)) {
-            println!("found keyboard device {}",d.name().unwrap_or("Unnamed device"));
-            return devices.into_iter().nth(i);
-        }
-    }
-    None
-}
-
-fn find_mouse() -> Option<evdev::Device> {
-    let mut devices = evdev::enumerate().collect::<Vec<_>>();
-    devices.reverse();
-    for (i, d) in devices.iter().enumerate() {
-        for typ in d.supported_events().iter() {
-            println!("   type {:?}",typ);
-        }
-        if d.supported_events().contains(EventType::RELATIVE) {
-            println!("found a device with relative input {}", d.name().unwrap_or("unnamed device"));
-            return devices.into_iter().nth(i);
-        }
-        if d.supported_events().contains(EventType::ABSOLUTE) {
-            println!("found a device with absolute input: {}", d.name().unwrap_or("Unnamed device"));
-            return devices.into_iter().nth(i);
-        }
-        // if d.supported_relative_axes().map_or(false, |axes| axes.contains(RelativeAxisType::REL_X)) {
-        //     println!("found a device with relative input: {}", d.name().unwrap_or("Unnamed device"));
-        //     return devices.into_iter().nth(i);
-        // }
-    }
-    None
-}
-
 fn main() {
     let args:Cli = init_setup();
     let stop:Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
     setup_c_handler(stop.clone());
 
     let (tx, rx) = mpsc::channel::<APICommand>();
-    let mut keyboard = find_keyboard().expect("Couldn't find the keyboard");
-    let mut mouse = find_mouse().expect("Couldn't find the mouse");
-    setup_evdev_watcher(keyboard, stop.clone(),tx.clone());
-    setup_evdev_watcher(mouse, stop.clone(),tx.clone());
+    let mut keyboard = input::find_keyboard().expect("Couldn't find the keyboard");
+    let mut mouse = input::find_mouse().expect("Couldn't find the mouse");
+    input::setup_evdev_watcher(keyboard, stop.clone(), tx.clone());
+    input::setup_evdev_watcher(mouse, stop.clone(), tx.clone());
 
-    network::start_network_server(stop.clone(), tx);
+    let app_list: Arc<Mutex<Vec<App>>> = Arc::new(Mutex::new(Vec::new()));
+
+    network::start_network_server(stop.clone(), tx, app_list.clone());
 
     let mut framebuffer = Framebuffer::new("/dev/fb0").unwrap();
     print_debug_info(&framebuffer);
@@ -158,7 +131,7 @@ fn make_drawing_thread(mut surf: Surf, stop: Arc<AtomicBool>, rx: Receiver<APICo
                 },
                 APICommand::KeyDown(kd) => {
                     // println!("key down {}",kd.key);
-                    
+
                     if kd.key == 1 { //wait for the ESC key
                         stop.store(true, Ordering::Relaxed);
                     }
@@ -187,70 +160,6 @@ fn make_drawing_thread(mut surf: Surf, stop: Arc<AtomicBool>, rx: Receiver<APICo
                 APICommand::MouseUp(mme) => {
                     // println!("mouse move {:?}",mme)
                 },
-            }
-        }
-    });
-}
-
-fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender<APICommand>) {
-    thread::spawn(move || {
-        let mut cx = 0;
-        let mut cy = 0;
-        loop {
-            if stop.load(Ordering::Relaxed) == true {
-                println!("keyboard thread stopping");
-                break;
-            }
-            for ev in device.fetch_events().unwrap() {
-                // println!("{:?}", ev);
-                println!("type {:?}", ev.event_type());
-                match ev.kind() {
-                    InputEventKind::Key(key) => {
-                        println!("   evdev:key {}",key.code());
-                        let cmd = APICommand::KeyDown(KeyDownEvent{
-                            original_timestamp:0,
-                            key:key.code() as i32,
-                        });
-                        tx.send(cmd).unwrap()
-                    },
-                    InputEventKind::RelAxis(rel) => {
-                        println!("mouse event {:?} {}",rel, ev.value());
-                        match rel {
-                            RelativeAxisType::REL_X => cx += ev.value(),
-                            RelativeAxisType::REL_Y => cy += ev.value(),
-                            _ => {
-                                println!("unknown relative axis type");
-                            }
-                        }
-                        println!("cursor {} , {}",cx, cy);
-                        let cmd = APICommand::MouseMove(MouseMoveEvent{
-                            original_timestamp:0,
-                            button:0,
-                            x:cx,
-                            y:cy
-                        });
-                        tx.send(cmd).unwrap()
-                    },
-                    InputEventKind::AbsAxis(abs) => {
-                        // println!("abs event {:?} {:?}",ev.value(), abs);
-                        match abs {
-                            AbsoluteAxisType::ABS_X => cx = ev.value()/10,
-                            AbsoluteAxisType::ABS_Y => cy = ev.value()/10,
-                            _ => {
-                                println!("unknown aboslute axis type")
-                            }
-                        }
-                        let cmd = APICommand::MouseMove(MouseMoveEvent{
-                            original_timestamp:0,
-                            button:0,
-                            x:cx,
-                            y:cy
-                        });
-                        tx.send(cmd).unwrap()
-                        //stop.store(true,Ordering::Relaxed);
-                    },
-                    _ => {}
-                }
             }
         }
     });

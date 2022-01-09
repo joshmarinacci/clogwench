@@ -1,0 +1,105 @@
+use evdev::{AbsoluteAxisType, Device, EventType, InputEventKind, Key, RelativeAxisType};
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc::Sender;
+use common::{APICommand, KeyDownEvent, MouseMoveEvent};
+use std::thread;
+
+pub fn find_keyboard() -> Option<evdev::Device> {
+    let mut devices = evdev::enumerate().collect::<Vec<_>>();
+    devices.reverse();
+    for (i, d) in devices.iter().enumerate() {
+        if d.supported_keys().map_or(false, |keys| keys.contains(Key::KEY_ENTER)) {
+            println!("found keyboard device {}",d.name().unwrap_or("Unnamed device"));
+            return devices.into_iter().nth(i);
+        }
+    }
+    None
+}
+
+pub fn find_mouse() -> Option<evdev::Device> {
+    let mut devices = evdev::enumerate().collect::<Vec<_>>();
+    devices.reverse();
+    for (i, d) in devices.iter().enumerate() {
+        for typ in d.supported_events().iter() {
+            println!("   type {:?}",typ);
+        }
+        if d.supported_events().contains(EventType::RELATIVE) {
+            println!("found a device with relative input {}", d.name().unwrap_or("unnamed device"));
+            return devices.into_iter().nth(i);
+        }
+        if d.supported_events().contains(EventType::ABSOLUTE) {
+            println!("found a device with absolute input: {}", d.name().unwrap_or("Unnamed device"));
+            return devices.into_iter().nth(i);
+        }
+        // if d.supported_relative_axes().map_or(false, |axes| axes.contains(RelativeAxisType::REL_X)) {
+        //     println!("found a device with relative input: {}", d.name().unwrap_or("Unnamed device"));
+        //     return devices.into_iter().nth(i);
+        // }
+    }
+    None
+}
+
+pub fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender<APICommand>) {
+    thread::spawn(move || {
+        let mut cx = 0;
+        let mut cy = 0;
+        loop {
+            if stop.load(Ordering::Relaxed) == true {
+                println!("keyboard thread stopping");
+                break;
+            }
+            for ev in device.fetch_events().unwrap() {
+                // println!("{:?}", ev);
+                println!("type {:?}", ev.event_type());
+                match ev.kind() {
+                    InputEventKind::Key(key) => {
+                        println!("   evdev:key {}",key.code());
+                        let cmd = APICommand::KeyDown(KeyDownEvent{
+                            original_timestamp:0,
+                            key:key.code() as i32,
+                        });
+                        tx.send(cmd).unwrap()
+                    },
+                    InputEventKind::RelAxis(rel) => {
+                        println!("mouse event {:?} {}",rel, ev.value());
+                        match rel {
+                            RelativeAxisType::REL_X => cx += ev.value(),
+                            RelativeAxisType::REL_Y => cy += ev.value(),
+                            _ => {
+                                println!("unknown relative axis type");
+                            }
+                        }
+                        println!("cursor {} , {}",cx, cy);
+                        let cmd = APICommand::MouseMove(MouseMoveEvent{
+                            original_timestamp:0,
+                            button:0,
+                            x:cx,
+                            y:cy
+                        });
+                        tx.send(cmd).unwrap()
+                    },
+                    InputEventKind::AbsAxis(abs) => {
+                        // println!("abs event {:?} {:?}",ev.value(), abs);
+                        match abs {
+                            AbsoluteAxisType::ABS_X => cx = ev.value()/10,
+                            AbsoluteAxisType::ABS_Y => cy = ev.value()/10,
+                            _ => {
+                                println!("unknown aboslute axis type")
+                            }
+                        }
+                        let cmd = APICommand::MouseMove(MouseMoveEvent{
+                            original_timestamp:0,
+                            button:0,
+                            x:cx,
+                            y:cy
+                        });
+                        tx.send(cmd).unwrap()
+                        //stop.store(true,Ordering::Relaxed);
+                    },
+                    _ => {}
+                }
+            }
+        }
+    });
+}
