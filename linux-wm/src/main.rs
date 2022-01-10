@@ -13,7 +13,7 @@ use ctrlc;
 use env_logger;
 use env_logger::Env;
 use framebuffer::{Framebuffer, KdMode};
-use log::{error, info, log, warn};
+use log::{debug, error, info, log, warn};
 use serde::Deserialize;
 use structopt::StructOpt;
 use uuid::Uuid;
@@ -21,10 +21,10 @@ use uuid::Uuid;
 use common::{APICommand, ARGBColor, HelloWindowManager, IncomingMessage, Point, Rect};
 use common::APICommand::KeyDown;
 use common::events::{KeyDownEvent, KeyCode};
+use common_wm::{OutgoingMessage, start_wm_network_connection, WindowManagerState};
 use surf::Surf;
 use crate::network::OutgoingMessage;
 
-mod network;
 mod surf;
 mod input;
 
@@ -69,7 +69,7 @@ fn main() {
     let mut mouse = input::find_mouse().expect("Couldn't find the mouse");
 
     //connect to network
-    let conn = network::start_wm_network_connection(stop.clone())
+    let conn = start_wm_network_connection(stop.clone())
         .expect("error connecting to the central server");
     //send hello window manager
     let msg = network::OutgoingMessage {
@@ -123,33 +123,6 @@ fn start_timeout(stop: Arc<AtomicBool>, max_seconds:u32) -> JoinHandle<()> {
     });
 }
 
-struct InternalState {
-    apps:Vec<App>,
-}
-
-impl InternalState {
-    pub(crate) fn find_app(&mut self, app_id: Uuid) -> Option<&mut App> {
-        self.apps.iter_mut().find(|a|a.id == app_id)
-    }
-}
-
-impl InternalState {
-    fn init() -> InternalState {
-        InternalState {
-            apps: vec![]
-        }
-    }
-}
-struct App {
-    id:Uuid,
-    windows:Vec<Window>,
-}
-struct Window {
-    id:Uuid,
-    bounds:Rect,
-}
-
-
 fn make_drawing_thread(mut surf: Surf,
                        stop: Arc<AtomicBool>,
                        rx: Receiver<IncomingMessage>,
@@ -157,27 +130,17 @@ fn make_drawing_thread(mut surf: Surf,
 ) -> JoinHandle<()> {
     return thread::spawn(move ||{
         info!("render thread starting");
-        let mut state = InternalState::init();
+        let mut state = WindowManagerState::init();
         for cmd in rx {
             if stop.load(Ordering::Relaxed) == true { break; }
             match cmd.command {
                 APICommand::AppConnectResponse(res) => {
                     info!("adding an app {}",res.app_id);
-                    let app = App {
-                        id:res.app_id,
-                        windows: vec![]
-                    };
-                    state.apps.push(app);
+                    state.add_app(res.app_id);
                 },
                 APICommand::OpenWindowResponse(ow) => {
                     info!("adding a window to the app");
-                    let win = Window {
-                        id:ow.window_id,
-                        bounds:ow.bounds,
-                    };
-                    if let Some(app) = state.find_app(ow.app_id) {
-                        app.windows.push(win);
-                    }
+                    state.add_window(ow.app_id, ow.window_id, &ow.bounds);
                 },
                 APICommand::DrawRectCommand(cm) => {
                     surf.rect(cm.rect,cm.color);
@@ -194,15 +157,13 @@ fn make_drawing_thread(mut surf: Surf,
                         },
                         _ => {
                             info!("key down");
-                            //now send to a random app's random window, if any
-                            if !state.apps.is_empty() {
-                                let app = &state.apps[0];
-                                if !app.windows.is_empty() {
-                                    let win = &app.windows[0];
+                            //send key to the currently focused window
+                            if let Some(winid) = state.get_focused_window() {
+                                if let Some(win) = state.lookup_window(winid.clone()) {
                                     let msg = OutgoingMessage {
-                                        recipient: app.id,
-                                        command: KeyDown(KeyDownEvent{
-                                            app_id: app.id,
+                                        recipient: win.owner,
+                                        command: KeyDown(KeyDownEvent {
+                                            app_id: win.owner,
                                             window_id: win.id,
                                             original_timestamp: 0,
                                             key: kd.key
@@ -215,7 +176,12 @@ fn make_drawing_thread(mut surf: Surf,
                     }
                 },
                 APICommand::MouseDown(mme) => {
-                    // println!("mouse move {:?}",mme)
+                    let pt = Point::init(ku.x, ku.y);
+                    info!("mouse down at {:?}",pt);
+                    if let Some(win) = state.pick_window_at(pt) {
+                        debug!("found a window at {:?}", pt);
+                        state.set_focused_window(win.id);
+                    }
                 },
                 APICommand::MouseMove(mme) => {
                     let color = ARGBColor{
