@@ -142,8 +142,16 @@ fn make_drawing_thread(mut surf: Surf,
                     state.add_window(ow.app_id, ow.window_id, &ow.bounds);
                 },
                 APICommand::DrawRectCommand(cm) => {
-                    surf.rect(cm.rect,cm.color);
-                    surf.sync();
+                    info!("drawing a rect");
+                    if let Some(mut win) = state.lookup_window(dr.window_id) {
+                        win.backbuffer.fill_rect(dr.rect, dr.color);
+                    }
+                    surf.clear();
+                    for win in state.window_list() {
+                        surf.copy_from(win.bounds.x, win.bounds.y, &win.backbuffer)
+                    }
+                    // surf.rect(cm.rect,cm.color);
+                    // surf.sync();
                 },
                 APICommand::KeyUp(ku) => {
                     // println!("key up");

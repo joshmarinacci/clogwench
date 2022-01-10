@@ -15,7 +15,7 @@ use structopt::StructOpt;
 use common::{APICommand, HelloWindowManager, IncomingMessage, Point};
 use common::APICommand::KeyDown;
 use common::events::{KeyCode, KeyDownEvent, MouseButton, MouseDownEvent};
-use common_wm::{OutgoingMessage, start_wm_network_connection, Window, WindowManagerState};
+use common_wm::{BackBuffer, OutgoingMessage, start_wm_network_connection, Window, WindowManagerState};
 
 fn main() {
     let args:Cli = init_setup();
@@ -108,10 +108,12 @@ fn make_watchdog(stop: Arc<AtomicBool>, stream: TcpStream) -> JoinHandle<()> {
     })
 }
 
+
 fn start_event_processor(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, tx_out: Sender<OutgoingMessage>) -> JoinHandle<()> {
     return thread::spawn(move || {
         info!("event thread starting");
         let mut state = WindowManagerState::init();
+        let mut screen = BackBuffer::init(640,480);
         for cmd in rx {
             if stop.load(Ordering::Relaxed) { break; }
             info!("processing event {:?}",cmd);
@@ -126,6 +128,13 @@ fn start_event_processor(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, t
                 },
                 APICommand::DrawRectCommand(dr) => {
                     info!("drawing a rect");
+                    if let Some(win) = state.lookup_window(dr.window_id) {
+                        win.backbuffer.fill_rect(dr.rect, dr.color);
+                    }
+                    screen.clear();
+                    for win in state.window_list() {
+                        screen.copy_from(win.bounds.x, win.bounds.y, &win.backbuffer)
+                    }
                 },
                 APICommand::KeyDown(kd) => {
                     info!("key down");
