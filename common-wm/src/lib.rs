@@ -37,9 +37,9 @@ pub struct WindowManagerState {
 }
 
 pub struct BackBuffer {
-    data:Vec<u8>,
-    w:u32,
-    h:u32,
+    pub data:Vec<u8>,
+    pub w:u32,
+    pub h:u32,
     bpp:u8,
 }
 
@@ -61,7 +61,7 @@ impl BackBuffer {
             }
         }
     }
-    fn xy_to_n(&self, x: u32, y: u32) -> usize {
+    pub fn xy_to_n(&self, x: u32, y: u32) -> usize {
         return ((x + self.w * y) * (self.bpp as u32)) as usize;
     }
 }

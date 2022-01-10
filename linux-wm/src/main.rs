@@ -14,7 +14,6 @@ use env_logger;
 use env_logger::Env;
 use framebuffer::{Framebuffer, KdMode};
 use log::{debug, error, info, log, warn};
-use serde::Deserialize;
 use structopt::StructOpt;
 use uuid::Uuid;
 
@@ -141,7 +140,7 @@ fn make_drawing_thread(mut surf: Surf,
                     info!("adding a window to the app");
                     state.add_window(ow.app_id, ow.window_id, &ow.bounds);
                 },
-                APICommand::DrawRectCommand(cm) => {
+                APICommand::DrawRectCommand(dr) => {
                     info!("drawing a rect");
                     if let Some(mut win) = state.lookup_window(dr.window_id) {
                         win.backbuffer.fill_rect(dr.rect, dr.color);
@@ -151,7 +150,7 @@ fn make_drawing_thread(mut surf: Surf,
                         surf.copy_from(win.bounds.x, win.bounds.y, &win.backbuffer)
                     }
                     // surf.rect(cm.rect,cm.color);
-                    // surf.sync();
+                    surf.sync();
                 },
                 APICommand::KeyUp(ku) => {
                     // println!("key up");
