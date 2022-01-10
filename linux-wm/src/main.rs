@@ -17,10 +17,10 @@ use log::{debug, error, info, log, warn};
 use structopt::StructOpt;
 use uuid::Uuid;
 
-use common::{APICommand, ARGBColor, HelloWindowManager, IncomingMessage, Point, Rect};
+use common::{APICommand, ARGBColor, HelloWindowManager, IncomingMessage, Point, Rect, WHITE, BLACK};
 use common::APICommand::KeyDown;
 use common::events::{KeyDownEvent, KeyCode};
-use common_wm::{OutgoingMessage, start_wm_network_connection, WindowManagerState};
+use common_wm::{OutgoingMessage, start_wm_network_connection, WindowManagerState, BackBuffer};
 use surf::Surf;
 
 mod surf;
@@ -129,6 +129,16 @@ fn make_drawing_thread(mut surf: Surf,
     return thread::spawn(move ||{
         info!("render thread starting");
         let mut state = WindowManagerState::init();
+        let mut cursor = Rect::from_ints(50,50,10,10);
+        let mut test_buff = BackBuffer::init(64,64);
+        let yellow = ARGBColor{
+            r: 0,
+            g: 255,
+            b: 255,
+            a: 255
+        };
+        test_buff.clear();
+        test_buff.fill_rect(Rect::from_ints(20,20,20,20),WHITE);
         for cmd in rx {
             if stop.load(Ordering::Relaxed) == true { break; }
             match cmd.command {
@@ -139,17 +149,19 @@ fn make_drawing_thread(mut surf: Surf,
                 APICommand::OpenWindowResponse(ow) => {
                     info!("adding a window to the app");
                     state.add_window(ow.app_id, ow.window_id, &ow.bounds);
+                    state.set_focused_window(ow.window_id);
                 },
                 APICommand::DrawRectCommand(dr) => {
                     info!("drawing a rect");
                     if let Some(mut win) = state.lookup_window(dr.window_id) {
                         win.backbuffer.fill_rect(dr.rect, dr.color);
                     }
-                    surf.clear();
+                    //surf.clear();
+                    surf.copy_from(0,0,&test_buff);
                     for win in state.window_list() {
                         surf.copy_from(win.bounds.x, win.bounds.y, &win.backbuffer)
                     }
-                    // surf.rect(cm.rect,cm.color);
+                    surf.rect(cursor, yellow.clone());
                     surf.sync();
                 },
                 APICommand::KeyUp(ku) => {
@@ -190,17 +202,13 @@ fn make_drawing_thread(mut surf: Surf,
                     }
                 },
                 APICommand::MouseMove(mme) => {
-                    let color = ARGBColor{
-                        r: 0,
-                        g: 255,
-                        b: 255,
-                        a: 255
-                    };
                     let bounds = Rect::from_ints(0,0,500,500);
                     let pt = bounds.clamp(&Point::init(mme.x,mme.y));
-                    // //surf.clear();
-                    let cursor = Rect::from_ints(pt.x,pt.y,10,10);
-                    surf.rect(cursor, color);
+                    cursor.x = pt.x;
+                    cursor.y = pt.y;
+                    //surf.clear();
+                    surf.copy_from(0,0,&test_buff);
+                    surf.rect(cursor, yellow.clone());
                     surf.sync();
                     //println!("mouse move {:?},{:?}",(mme.x/10),(mme.y/10))
                 },
