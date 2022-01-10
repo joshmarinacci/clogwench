@@ -23,7 +23,6 @@ use common::APICommand::KeyDown;
 use common::events::{KeyDownEvent, KeyCode};
 use common_wm::{OutgoingMessage, start_wm_network_connection, WindowManagerState};
 use surf::Surf;
-use crate::network::OutgoingMessage;
 
 mod surf;
 mod input;
@@ -72,7 +71,7 @@ fn main() {
     let conn = start_wm_network_connection(stop.clone())
         .expect("error connecting to the central server");
     //send hello window manager
-    let msg = network::OutgoingMessage {
+    let msg = OutgoingMessage {
         recipient: Default::default(),
         command: APICommand::WMConnect(HelloWindowManager {
         })
@@ -176,7 +175,7 @@ fn make_drawing_thread(mut surf: Surf,
                     }
                 },
                 APICommand::MouseDown(mme) => {
-                    let pt = Point::init(ku.x, ku.y);
+                    let pt = Point::init(mme.x, mme.y);
                     info!("mouse down at {:?}",pt);
                     if let Some(win) = state.pick_window_at(pt) {
                         debug!("found a window at {:?}", pt);
