@@ -1,8 +1,5 @@
-use std::collections::HashMap;
-use std::io::Write;
-use std::net::{Shutdown, TcpListener, TcpStream};
-use std::process::Command;
-use std::sync::{Arc, mpsc, Mutex};
+use std::net::{Shutdown, TcpStream};
+use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread;
@@ -12,23 +9,13 @@ use std::time::Duration;
 use ctrlc;
 use env_logger;
 use env_logger::Env;
-use log::{error, info};
-use serde::{Deserialize, Serialize};
-use serde_json;
+use log::{debug, info};
+use rand::Rng;
 use structopt::StructOpt;
-use uuid::Uuid;
-
-use common::{APICommand, HelloWindowManager, IncomingMessage, Rect};
+use common::{APICommand, HelloWindowManager, IncomingMessage, Point};
 use common::APICommand::KeyDown;
-use common::events::{KeyCode, KeyDownEvent, MouseDownEvent};
-
-
-#[derive(Serialize, Deserialize, Debug)]
-struct OutgoingMessage {
-    recipient:Uuid,
-    command:APICommand,
-}
-
+use common::events::{KeyCode, KeyDownEvent, MouseButton, MouseDownEvent};
+use common_wm::{OutgoingMessage, start_wm_network_connection, Window, WindowManagerState};
 
 fn main() {
     let args:Cli = init_setup();
@@ -60,11 +47,14 @@ fn main() {
 
     //make thread for fake incoming events. sends to the main event thread
     if args.keyboard {
-        let input_thread_handler = send_fake_keyboard(stop.clone(), conn.tx_in.clone());
+        send_fake_keyboard(stop.clone(), conn.tx_in.clone());
+    }
+    if args.mouse {
+        send_fake_mouse(stop.clone(), conn.tx_in.clone());
     }
 
     //event processing thread
-    let event_thread_handler = start_event_processor(stop.clone(), conn.rx_in, conn.tx_out.clone());
+    start_event_processor(stop.clone(), conn.rx_in, conn.tx_out.clone());
         //draw commands. can immediately draw to the fake screen
         //app added, add to own app list
         //window added, add to own app window list
@@ -74,8 +64,31 @@ fn main() {
         //on mouse press, send to window under the cursor
         //can all state live on this thread?
     info!("waiting for the watch dog");
-    watchdog.join();
+    watchdog.join().unwrap();
     info!("all done now");
+}
+
+fn send_fake_mouse(stop: Arc<AtomicBool>, sender: Sender<IncomingMessage>) {
+    thread::spawn({
+        move || {
+            let mut rng = rand::thread_rng();
+            loop {
+                if stop.load(Ordering::Relaxed) { break; }
+                let command: APICommand = APICommand::MouseDown(MouseDownEvent {
+                    original_timestamp: 0,
+                    button: MouseButton::Primary,
+                    x: rng.gen_range(0..500),
+                    y: rng.gen_range(0..500),
+                });
+                sender.send(IncomingMessage{
+                    source: Default::default(),
+                    command
+                }).unwrap();
+                thread::sleep(Duration::from_millis(1000));
+            }
+        }
+    });
+
 }
 
 fn make_watchdog(stop: Arc<AtomicBool>, stream: TcpStream) -> JoinHandle<()> {
@@ -95,58 +108,21 @@ fn make_watchdog(stop: Arc<AtomicBool>, stream: TcpStream) -> JoinHandle<()> {
     })
 }
 
-struct InternalState {
-    apps:Vec<App>,
-}
-
-impl InternalState {
-    pub(crate) fn find_app(&mut self, app_id: Uuid) -> Option<&mut App> {
-        self.apps.iter_mut().find(|a|a.id == app_id)
-    }
-}
-
-impl InternalState {
-    fn init() -> InternalState {
-        InternalState {
-            apps: vec![]
-        }
-    }
-}
-
-struct App {
-    id:Uuid,
-    windows:Vec<Window>,
-}
-struct Window {
-    id:Uuid,
-    bounds:Rect,
-}
-
 fn start_event_processor(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, tx_out: Sender<OutgoingMessage>) -> JoinHandle<()> {
     return thread::spawn(move || {
         info!("event thread starting");
-        let mut state = InternalState::init();
+        let mut state = WindowManagerState::init();
         for cmd in rx {
             if stop.load(Ordering::Relaxed) { break; }
             info!("processing event {:?}",cmd);
             match cmd.command {
                 APICommand::AppConnectResponse(res) => {
                     info!("adding an app {}",res.app_id);
-                    let app = App {
-                        id:res.app_id,
-                        windows: vec![]
-                    };
-                    state.apps.push(app);
+                    state.add_app(res.app_id);
                 },
                 APICommand::OpenWindowResponse(ow) => {
                     info!("adding a window to the app");
-                    let win = Window {
-                        id:ow.window_id,
-                        bounds:ow.bounds,
-                    };
-                    if let Some(app) = state.find_app(ow.app_id) {
-                        app.windows.push(win);
-                    }
+                    state.add_window(ow.app_id, ow.window_id, &ow.bounds);
                 },
                 APICommand::DrawRectCommand(dr) => {
                     info!("drawing a rect");
@@ -154,14 +130,12 @@ fn start_event_processor(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, t
                 APICommand::KeyDown(kd) => {
                     info!("key down");
                     //now send to a random app's random window, if any
-                    if !state.apps.is_empty() {
-                        let app = &state.apps[0];
-                        if !app.windows.is_empty() {
-                            let win = &app.windows[0];
+                    if let Some(winid) = state.get_focused_window() {
+                        if let Some(win) = state.lookup_window(winid.clone()) {
                             let msg = OutgoingMessage {
-                                recipient: app.id,
-                                command: KeyDown(KeyDownEvent{
-                                    app_id: app.id,
+                                recipient: win.owner,
+                                command: KeyDown(KeyDownEvent {
+                                    app_id: win.owner,
                                     window_id: win.id,
                                     original_timestamp: 0,
                                     key: kd.key
@@ -175,7 +149,13 @@ fn start_event_processor(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, t
                     info!("key down")
                 },
                 APICommand::MouseDown(ku) => {
-                    info!("mouse down");
+                    let pt = Point::init(ku.x, ku.y);
+                    info!("mouse down at {:?}",pt);
+                    state.dump();
+                    if let Some(win) = state.pick_window_at(pt) {
+                        debug!("found a window at {:?}", pt);
+                        state.set_focused_window(win.id);
+                    }
                 },
                 APICommand::MouseMove(ku) => {
                     info!("mouse move")
@@ -189,81 +169,6 @@ fn start_event_processor(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, t
         info!("event thread ending");
     });
 }
-
-struct CentralConnection {
-    stream: TcpStream,
-    recv_thread: JoinHandle<()>,
-    send_thread: JoinHandle<()>,
-    tx_out: Sender<OutgoingMessage>,
-    rx_in: Receiver<IncomingMessage>,
-    tx_in: Sender<IncomingMessage>,
-}
-
-fn start_wm_network_connection(stop: Arc<AtomicBool>) -> Option<CentralConnection> {
-    match TcpStream::connect("localhost:3334") {
-        Ok(mut master_stream) => {
-            let (tx_in, rx_in) = mpsc::channel::<IncomingMessage>();
-            let (tx_out, rx_out) =mpsc::channel::<OutgoingMessage>();
-            println!("connected to the linux-wm");
-            //receiving thread
-            let receiving_handle = thread::spawn({
-                let mut stream = master_stream.try_clone().unwrap();
-                let stop = stop.clone();
-                let tx_in = tx_in.clone();
-                move || {
-                    info!("receiving thread starting");
-                    let mut de = serde_json::Deserializer::from_reader(stream);
-                    loop {
-                        if stop.load(Ordering::Relaxed) { break; }
-                        match IncomingMessage::deserialize(&mut de) {
-                            Ok(cmd) => {
-                                // info!("received command {:?}", cmd);
-                                tx_in.send(cmd);
-                            }
-                            Err(e) => {
-                                error!("error deserializing {:?}", e);
-                                stop.store(true,Ordering::Relaxed);
-                                break;
-                            }
-                        }
-                    }
-                    info!("receiving thread ending")
-                }
-            });
-            //sending thread
-            let sending_handle = thread::spawn({
-                let mut stream = master_stream.try_clone().unwrap();
-                let stop = stop.clone();
-                move || {
-                    info!("sending thread starting");
-                    for out in rx_out {
-                        if stop.load(Ordering::Relaxed) { break; }
-                        let im = IncomingMessage {
-                            source: Default::default(),
-                            command: out.command
-                        };
-                        println!("sending out message {:?}",im);
-                        let data = serde_json::to_string(&im).unwrap();
-                        println!("sending data {:?}", data);
-                        stream.write_all(data.as_ref()).expect("failed to send rect");
-                    }
-                    info!("sending thread ending");
-                }
-            });
-            Some(CentralConnection {
-                stream: master_stream,
-                send_thread:sending_handle,
-                recv_thread:receiving_handle,
-                tx_in:tx_in,
-                rx_in:rx_in,
-                tx_out:tx_out,
-            })
-
-        }
-        _ => None
-    }
-}
-
 
 fn send_fake_keyboard(stop: Arc<AtomicBool>, sender: Sender<IncomingMessage>) {
     thread::spawn({
@@ -279,7 +184,7 @@ fn send_fake_keyboard(stop: Arc<AtomicBool>, sender: Sender<IncomingMessage>) {
                 sender.send(IncomingMessage{
                     source: Default::default(),
                     command
-                });
+                }).unwrap();
                 thread::sleep(Duration::from_millis(1000));
             }
         }
@@ -290,12 +195,14 @@ fn send_fake_keyboard(stop: Arc<AtomicBool>, sender: Sender<IncomingMessage>) {
 #[derive(StructOpt, Debug)]
 #[structopt(name = "test-wm", about = "simulates receiving and sending linux-wm events")]
 struct Cli {
-    #[structopt(short, long)]
+    #[structopt(long)]
     debug:bool,
-    #[structopt(short, long, default_value="60")]
+    #[structopt(long, default_value="60")]
     timeout:u32,
-    #[structopt(short, long)]
+    #[structopt(long)]
     keyboard:bool,
+    #[structopt(long)]
+    mouse:bool,
 }
 
 fn init_setup() -> Cli {

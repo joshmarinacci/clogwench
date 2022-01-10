@@ -1,13 +1,9 @@
-use interprocess::local_socket::LocalSocketStream;
-use std::io::{self, prelude::*, BufReader};
+use std::io::{prelude::*};
 use std::net::TcpStream;
-use std::{env, thread};
+use std::thread;
 use std::time::Duration;
-use common::{APICommand, ARGBColor, DrawRectCommand, OpenWindowCommand, Rect};
-use serde::{Deserialize, Serialize};
-use rand::prelude::*;
-
-
+use common::{APICommand, OpenWindowCommand, Rect};
+use serde::Deserialize;
 
 fn main()  {
     match TcpStream::connect("localhost:3333") {
@@ -19,7 +15,6 @@ fn main()  {
                 let mut rng = rand::thread_rng();
                 for i in 0..5 {
                     let cmd = APICommand::OpenWindowCommand(OpenWindowCommand{
-                        name: rng.gen_range(0..5),
                         window_type: "plain".to_string(),
                         bounds: Rect::from_ints(0,0,20,30),
                     });

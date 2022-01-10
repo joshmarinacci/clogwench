@@ -11,7 +11,6 @@ use serde::Deserialize;
 use uuid::Uuid;
 use common::{APICommand, HelloAppResponse, HelloWindowManagerResponse, IncomingMessage, OpenWindowCommand, OpenWindowResponse, Rect};
 use structopt::StructOpt;
-use common::APICommand::WMConnectResponse;
 
 struct Window {
     id:Uuid,

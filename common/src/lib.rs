@@ -1,10 +1,5 @@
-use std::slice::IterMut;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use std::sync::mpsc;
-use std::thread;
-use std::sync::mpsc::{Receiver, Sender};
-use std::io::Write;
 use crate::events::{KeyDownEvent, KeyUpEvent};
 
 pub mod client;
@@ -104,6 +99,7 @@ pub struct Point {
     pub y:i32,
 }
 
+
 impl Point {
     pub fn add(&self, pt:Point) -> Point {
         Point::init(self.x + pt.x, self.y + pt.y)
@@ -128,6 +124,16 @@ pub struct Rect {
 }
 
 impl Rect {
+    pub fn contains(&self, pt: Point) -> bool {
+        if pt.x < self.x { return false }
+        if pt.y < self.y { return false }
+        if pt.x > self.x + self.w { return false }
+        if pt.y > self.y + self.h { return false}
+        return true
+    }
+}
+
+impl Rect {
     pub fn set_position(&mut self, pos: &Point) {
         self.x = pos.x;
         self.y = pos.y;
@@ -143,10 +149,10 @@ impl Rect {
     pub fn clamp(&self, pt:&Point) -> Point {
         let mut x = pt.x;
         let mut y = pt.y;
-        if(x < self.x) { x = self.x }
-        if(y < self.y) { y = self.y }
-        if(x > self.x+self.w) { x = self.x+self.w };
-        if(y > self.y + self.h) { y = self.y + self.h; }
+        if x < self.x { x = self.x }
+        if y < self.y { y = self.y }
+        if x > self.x+self.w { x = self.x+self.w };
+        if y > self.y + self.h { y = self.y + self.h; }
         return Point::init(x,y);
     }
 }

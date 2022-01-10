@@ -31,8 +31,8 @@ impl ClientConnection {
                 println!("connected to the linux-wm");
 
                 //receiving thread
-                let receiving_handle = thread::spawn({
-                    let mut stream = master_stream.try_clone().unwrap();
+                thread::spawn({
+                    let stream = master_stream.try_clone().unwrap();
                     move || {
                         println!("receiving thread starting");
                         let mut de = serde_json::Deserializer::from_reader(stream);
@@ -40,7 +40,7 @@ impl ClientConnection {
                             match APICommand::deserialize(&mut de) {
                                 Ok(cmd) => {
                                     println!("demo-clickgrid received command {:?}", cmd);
-                                    in_tx.send(cmd);
+                                    in_tx.send(cmd).unwrap();
                                 }
                                 Err(e) => {
                                     println!("error deserializing from demo-clickgrid {:?}", e);
@@ -51,7 +51,7 @@ impl ClientConnection {
                     }
                 });
                 //sending thread
-                let sending_handle = thread::spawn({
+                thread::spawn({
                     let mut stream = master_stream.try_clone().unwrap();
                     move || {
                         println!("sending thread starting");

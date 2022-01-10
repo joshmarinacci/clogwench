@@ -1,16 +1,14 @@
 use std::io::Write;
-use std::net::{TcpListener, TcpStream};
+use std::net::TcpStream;
 use std::thread::JoinHandle;
 use common::{APICommand, IncomingMessage};
 use serde::{Deserialize, Serialize};
 use std::sync::mpsc::{Receiver, Sender};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, mpsc, Mutex};
+use std::sync::{Arc, mpsc};
 use std::thread;
-use log::{info, warn, error,log};
+use log::{info, error, log};
 use uuid::Uuid;
-use crate::App;
-
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct OutgoingMessage {

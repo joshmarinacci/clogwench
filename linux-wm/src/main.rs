@@ -1,10 +1,8 @@
 extern crate framebuffer;
 
-use std::{fs, thread};
-use std::io::{self, BufReader};
+use std::thread;
 use std::io::Write;
-use std::net::{TcpStream};
-use std::process::{Child, Command, Output, Stdio};
+use std::process::{Child, Command};
 use std::sync::{Arc};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, Sender};
@@ -14,7 +12,6 @@ use std::time::Duration;
 use ctrlc;
 use env_logger;
 use env_logger::Env;
-use evdev::{AbsoluteAxisType, Device, EventType, InputEventKind, Key, RelativeAxisType};
 use framebuffer::{Framebuffer, KdMode};
 use log::{error, info, log, warn};
 use serde::Deserialize;
@@ -23,7 +20,7 @@ use uuid::Uuid;
 
 use common::{APICommand, ARGBColor, HelloWindowManager, IncomingMessage, Point, Rect};
 use common::APICommand::KeyDown;
-use common::events::{KeyDownEvent, KeyUpEvent, KeyCode};
+use common::events::{KeyDownEvent, KeyCode};
 use surf::Surf;
 use crate::network::OutgoingMessage;
 
