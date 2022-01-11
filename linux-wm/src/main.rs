@@ -1,5 +1,6 @@
 extern crate framebuffer;
 
+use std::fs::File;
 use std::thread;
 use std::io::Write;
 use std::process::{Child, Command};
@@ -94,9 +95,9 @@ fn main() {
 
     let pth = "/dev/fb0";
     let file = File::Open(pth).unwrap();
-    let vsi = framebuffer::get_var_screeninfo(file);
+    let mut vsi = Framebuffer::get_var_screeninfo(file).unwrap();
     vsi.bits_per_pixel = 32;
-    framebuffer::put_var_screeninfo(vsi).unwrap();
+    Framebuffer::put_var_screeninfo(file,&vsi).unwrap();
 
     let mut fb = Framebuffer::new(pth).unwrap();
 
