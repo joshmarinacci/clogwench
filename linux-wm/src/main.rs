@@ -12,7 +12,7 @@ use std::time::Duration;
 use ctrlc;
 use env_logger;
 use env_logger::Env;
-use framebuffer::{Framebuffer, KdMode};
+use framebuffer::{Framebuffer, KdMode, VarScreenInfo};
 use log::{debug, error, info, log, warn};
 use structopt::StructOpt;
 use uuid::Uuid;
@@ -22,6 +22,7 @@ use common::APICommand::KeyDown;
 use common::events::{KeyDownEvent, KeyCode};
 use common_wm::{OutgoingMessage, start_wm_network_connection, WindowManagerState, BackBuffer};
 use surf::Surf;
+use std::io::File;
 
 mod surf;
 mod input;
@@ -91,10 +92,17 @@ fn main() {
     input::setup_evdev_watcher(mouse, stop.clone(), conn.tx_in.clone());
 
 
-    let mut framebuffer = Framebuffer::new("/dev/fb0").unwrap();
-    print_debug_info(&framebuffer);
+    let pth = "/dev/fb0";
+    let file = File::Open(pth).unwrap();
+    let vsi = framebuffer::get_var_screeninfo(file);
+    vsi.bits_per_pixel = 32;
+    framebuffer::put_var_screeninfo(vsi).unwrap();
+
+    let mut fb = Framebuffer::new(pth).unwrap();
+
+    print_debug_info(&fb);
     let _ = Framebuffer::set_kd_mode(KdMode::Graphics).unwrap();
-    let mut surf:Surf = Surf::make(framebuffer);
+    let mut surf:Surf = Surf::make(fb);
     //let ch = start_process();
     surf.sync();
     let drawing_thread = make_drawing_thread(surf,stop.clone(),conn.rx_in, conn.tx_out.clone());
