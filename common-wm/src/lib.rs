@@ -9,6 +9,8 @@ use log::{error, info};
 use uuid::Uuid;
 use common::{APICommand, ARGBColor, BLACK, IncomingMessage, Point, Rect};
 use serde::{Deserialize, Serialize};
+use common::graphics::ColorDepth::CD24;
+use common::graphics::GFXBuffer;
 
 #[cfg(test)]
 mod tests {
@@ -28,70 +30,12 @@ pub struct Window {
     pub id:Uuid,
     pub bounds:Rect,
     pub owner:Uuid,
-    pub backbuffer:BackBuffer,
+    pub backbuffer:GFXBuffer,
 }
 
 pub struct WindowManagerState {
     apps:Vec<App>,
     focused:Option<Uuid>,
-}
-
-pub struct BackBuffer {
-    pub data:Vec<u8>,
-    pub w:u32,
-    pub h:u32,
-    bpp:u8,
-}
-
-impl BackBuffer {
-    pub fn clear(&mut self) {
-        self.fill_rect(Rect::from_ints(0, 0, self.w as i32, self.h as i32), BLACK);
-    }
-    pub fn copy_from(&mut self, sx: i32, sy: i32, src: &BackBuffer) {
-        let x = sx as u32;
-        let y = sy as u32;
-        println!("copying buffer {}x{} to self at {},{}", src.w, src.h, x,y);
-        for j in 0..src.h {
-            for i in 0..src.w {
-                let src_n =  src.xy_to_n(i,j);
-                let dst_n = self.xy_to_n((x + i) as u32, (y + j) as u32);
-                for o in 0..4 {
-                    self.data[dst_n+ o] = src.data[src_n+ o]
-                }
-            }
-        }
-    }
-    pub fn xy_to_n(&self, x: u32, y: u32) -> usize {
-        return ((x + self.w * y) * (self.bpp as u32)) as usize;
-    }
-}
-
-impl BackBuffer {
-    pub fn fill_rect(&mut self, rect: Rect, color: ARGBColor) {
-        for j in 0..rect.h {
-            for i in 0..rect.w {
-                let x:u32 = (rect.x + i) as u32;
-                let y:u32 = (rect.y + j) as u32;
-                let n = ((x + y*self.w)*4) as usize;
-                self.data[n+0] = color.b;
-                self.data[n+1] = color.g;
-                self.data[n+2] = color.r;
-                self.data[n+3] = color.a;
-            }
-        }
-        println!("drew a rect {:?} onto buffer {}x{}",rect,self.w,self.h)
-    }
-}
-
-impl BackBuffer {
-    pub fn init(w:u32, h:u32) -> BackBuffer {
-        let bpp:u8 = 4;
-        let buffer_size = w * h * (bpp as u32);
-        BackBuffer {
-            w, h, bpp,
-            data: vec![0u8; (buffer_size) as usize],
-        }
-    }
 }
 
 impl WindowManagerState {
@@ -116,7 +60,7 @@ impl WindowManagerState {
             id: win_id,
             bounds:bounds.clone(),
             owner: app_id,
-            backbuffer: BackBuffer::init(bounds.w as u32, bounds.h as u32),
+            backbuffer: GFXBuffer::new(CD24(), bounds.w as u32, bounds.h as u32)
         };
         if let Some(app) = self.find_app(app_id) {
             app.windows.push(win);

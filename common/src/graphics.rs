@@ -40,12 +40,11 @@ fn pixel_24_rgb_to_16_packed(src:u32) -> u16 {
 }
 
 impl GFXBuffer {
-    pub fn copy_from(&mut self, src: &GFXBuffer) {
+    pub fn copy_from(&mut self, x:i32, y:i32, src: &GFXBuffer) {
         for i in 0..src.width {
             for j in 0..src.height {
-                // let n = (i+j*src.width) as usize;
                 let v:u32 = src.get_pixel_32argb(i, j);
-                self.set_pixel_32argb(i, j, v);
+                self.set_pixel_32argb(i+(x as u32), j+(y as u32), v);
             }
         }
     }
@@ -116,7 +115,7 @@ impl GFXBuffer {
 }
 
 impl GFXBuffer {
-    pub(crate) fn clear(&mut self, color: &ARGBColor) {
+    pub fn clear(&mut self, color: &ARGBColor) {
         for i in 0..self.width {
             for j in 0..self.height {
                 //let n = self.xy_to_n(i,j);

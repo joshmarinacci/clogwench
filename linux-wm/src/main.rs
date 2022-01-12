@@ -24,6 +24,7 @@ use common::events::{KeyDownEvent, KeyCode};
 use common_wm::{OutgoingMessage, start_wm_network_connection, WindowManagerState, BackBuffer};
 use surf::Surf;
 use std::io::File;
+use common::graphics::{ColorDepth, GFXBuffer};
 
 mod surf;
 mod input;
@@ -139,15 +140,15 @@ fn make_drawing_thread(mut surf: Surf,
         info!("render thread starting");
         let mut state = WindowManagerState::init();
         let mut cursor = Rect::from_ints(50,50,10,10);
-        let mut test_buff = BackBuffer::init(64,64);
+        let mut test_buff = GFXBuffer::new(ColorDepth::CD24(),64,64);//BackBuffer::init(64,64);
         let yellow = ARGBColor{
             r: 0,
             g: 255,
             b: 255,
             a: 255
         };
-        test_buff.clear();
-        test_buff.fill_rect(Rect::from_ints(20,20,20,20),WHITE);
+        test_buff.clear(&BLACK);
+        // test_buff.fill_rect(Rect::from_ints(20,20,20,20),WHITE);
         for cmd in rx {
             if stop.load(Ordering::Relaxed) == true { break; }
             match cmd.command {
