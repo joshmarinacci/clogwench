@@ -133,9 +133,9 @@ fn make_drawing_thread(mut surf: Surf,
         let mut cursor = Rect::from_ints(50,50,10,10);
         let mut test_buff = GFXBuffer::new(ColorDepth::CD24(),64,64);//BackBuffer::init(64,64);
         let yellow = ARGBColor{
-            r: 0,
-            g: 255,
-            b: 0,
+            r: 255,
+            g: 128,
+            b: 128,
             a: 255
         };
         test_buff.clear(&BLACK);
