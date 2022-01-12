@@ -5,7 +5,6 @@ use common::graphics::ColorDepth::{CD16, CD24, CD32};
 
 pub struct Surf {
     fb:Framebuffer,
-    // data: Vec<u8>,
     buf:GFXBuffer,
     w:u32,
     h:u32,
@@ -20,7 +19,7 @@ impl Surf {
             24 => GFXBuffer::new(CD24(),w,h),
             32 => GFXBuffer::new(CD32(),w,h),
             _ => {
-                panic!("unsupported resolution")
+                panic!("unsupported resolution {}",fb.var_screen_info.bits_per_pixel);
             }
         };
         Surf { fb, w, h, buf }
