@@ -30,11 +30,25 @@ impl GFXBuffer {
     pub fn from_png_file(path: &str) -> GFXBuffer {
         let decoder = png::Decoder::new(File::open(path).unwrap());
         let mut reader = decoder.read_info().unwrap();
+        println!("loading bytes {}", reader.output_buffer_size());
         let mut buf = vec![0; reader.output_buffer_size()];
         let info = reader.next_frame(&mut buf).unwrap();
+        println!("size {}x{} bitdepth={:?} colortype={:?}",info.width, info.height, info.bit_depth, info.color_type);
         let bytes = &buf[..info.buffer_size()];
-        println!("loaded bytes {}", bytes.len());
-        return GFXBuffer::new(CD32(),16,16);
+        let mut gfx = GFXBuffer::new(CD32(), info.width, info.height);
+        for j in 0..info.height {
+            for i in 0..info.width {
+                let n = (i + j*info.width) as usize;
+                gfx.set_pixel_32argb(i,j,ARGBColor::new_argb(
+                    bytes[n*4+3],
+                    bytes[n*4+0],
+                    bytes[n*4+1],
+                    bytes[n*4+2],
+                ).as_32bit())
+            }
+        }
+        println!("done loading the image {:x}", gfx.get_pixel_32argb(0,3));
+        return gfx
     }
 }
 
