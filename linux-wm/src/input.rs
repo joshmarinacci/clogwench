@@ -6,6 +6,7 @@ use common::{APICommand, IncomingMessage};
 use common::events::*;
 
 use std::thread;
+use interprocess::os::unix::signal::SignalHandler::Default;
 use common::events::{KeyCode, MouseButton, MouseMoveEvent};
 
 pub fn find_keyboard() -> Option<evdev::Device> {
@@ -105,31 +106,29 @@ pub fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender
                                 y:cy
                             })
                         };
-                        // let cmd = APICommand::MouseMove(MouseMoveEvent{
-                        //     original_timestamp:0,
-                        //     button:MouseButton::Primary,
-                        //     x:cx,
-                        //     y:cy
-                        // });
                         tx.send(cmd).unwrap()
                     },
                     InputEventKind::AbsAxis(abs) => {
                         println!("abs event {:?} {:?}",ev.value(), abs);
-                        // match abs {
-                        //     AbsoluteAxisType::ABS_X => cx = ev.value()/10,
-                        //     AbsoluteAxisType::ABS_Y => cy = ev.value()/10,
-                        //     _ => {
-                        //         println!("unknown aboslute axis type")
-                        //     }
-                        // }
-                        // let cmd = APICommand::MouseMove(MouseMoveEvent{
-                        //     original_timestamp:0,
-                        //     button:MouseButton::Primary,
-                        //     x:cx,
-                        //     y:cy
-                        // });
-                        // tx.send(cmd).unwrap()
-                        //stop.store(true,Ordering::Relaxed);
+                        match abs {
+                            AbsoluteAxisType::ABS_X => cx = ev.value()/10,
+                            AbsoluteAxisType::ABS_Y => cy = ev.value()/10,
+                            _ => {
+                                println!("unknown aboslute axis type")
+                            }
+                        }
+                        println!("cursor {} , {}",cx, cy);
+                        let cmd = IncomingMessage {
+                            source: Default::default(),
+                            command: APICommand::MouseMove(MouseMoveEvent {
+                                original_timestamp: 0,
+                                button: MouseButton::Primary,
+                                x: cx,
+                                y: cy
+                            }),
+                        };
+                        tx.send(cmd).unwrap();
+                        stop.store(true,Ordering::Relaxed);
                     },
                     _ => {}
                 }
