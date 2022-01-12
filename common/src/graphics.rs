@@ -70,7 +70,7 @@ impl GFXBuffer {
             }
             ColorDepth::CD32() => {
                 let n = (x + y * (self.width as u32)) as usize;
-                ARGBColor::new_argb(self.data[n*3+0], self.data[n*3+1], self.data[n*3+2], self.data[n*3+3]).as_32bit()
+                ARGBColor::new_argb(self.data[n*4+0], self.data[n*4+1], self.data[n*4+2], self.data[n*4+3]).as_32bit()
             }
         }
     }
@@ -82,8 +82,18 @@ impl GFXBuffer {
                 self.data[n*2+0] = ((vv & 0xFF00) >> 8) as u8;
                 self.data[n*2+1] = ((vv & 0x00FF) >> 0) as u8;
             }
-            ColorDepth::CD24() => {}
-            ColorDepth::CD32() => {}
+            ColorDepth::CD24() => {
+                // self.data[n*4+0] = (v & 0xFF000000 >> 24) as u8;
+                self.data[n*3+0] = (v & 0x00FF0000 >> 16) as u8;
+                self.data[n*3+1] = (v & 0x0000FF00 >> 8) as u8;
+                self.data[n*3+2] = (v & 0x000000FF >> 0) as u8;
+            }
+            ColorDepth::CD32() => {
+                self.data[n*4+0] = (v & 0xFF000000 >> 24) as u8;
+                self.data[n*4+1] = (v & 0x00FF0000 >> 16) as u8;
+                self.data[n*4+2] = (v & 0x0000FF00 >> 8) as u8;
+                self.data[n*4+3] = (v & 0x000000FF >> 0) as u8;
+            }
         }
     }
 }
