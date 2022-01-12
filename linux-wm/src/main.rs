@@ -218,7 +218,7 @@ fn make_drawing_thread(mut surf: Surf,
                 _ => {}
             }
             if redraw {
-                //surf.clear();
+                surf.clear();
                 // surf.copy_from(0,0,&cursor_image);
                 for win in state.window_list() {
                     surf.copy_from(win.bounds.x, win.bounds.y, &win.backbuffer)
