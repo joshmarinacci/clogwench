@@ -139,6 +139,10 @@ fn make_drawing_thread(mut surf: Surf,
             a: 255
         };
         test_buff.clear(&BLACK);
+        test_buff.set_pixel_32argb(0,0,0xFF00FFFF);
+        test_buff.set_pixel_32argb(1,0,0xFF0000FF);
+        test_buff.set_pixel_32argb(2,0,0xFF000000);
+        test_buff.set_pixel_32argb(3,0,0x000000FF);
         // test_buff.fill_rect(Rect::from_ints(20,20,20,20),WHITE);
         for cmd in rx {
             if stop.load(Ordering::Relaxed) == true { break; }
