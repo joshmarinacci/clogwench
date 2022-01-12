@@ -24,21 +24,19 @@ pub struct ARGBColor {
     pub a:u8,
 }
 
-impl ARGBColor {
-}
 
 impl ARGBColor {
     pub(crate) fn from_16bit(packed_color: u16) -> ARGBColor {
         let r:u8 = (((packed_color & 0b11111_000000_00000) >> 11) << 3) as u8;
         let g:u8 = (((packed_color & 0b00000_111111_00000) >> 5)  << 2) as u8;
         let b:u8 = (((packed_color & 0b00000_000000_11111) >> 0)  << 3) as u8;
-        return ARGBColor::new_RGB(r,g,b);
+        return ARGBColor::new_rgb(r, g, b);
     }
     pub(crate) fn from_24bit(packed_color: u32) -> ARGBColor {
         let r:u8 = ((packed_color & 0xFF0000) >> 16) as u8;
         let g:u8 = ((packed_color & 0x00FF00) >> 8) as u8;
         let b:u8 = ((packed_color & 0x0000FF) >> 0) as u8;
-        return ARGBColor::new_RGB(r,g,b);
+        return ARGBColor::new_rgb(r, g, b);
     }
 }
 
@@ -67,8 +65,11 @@ impl ARGBColor {
 }
 
 impl ARGBColor {
-    pub(crate) fn new_RGB(r: u8, g: u8, b: u8) -> ARGBColor {
+    pub(crate) fn new_rgb(r: u8, g: u8, b: u8) -> ARGBColor {
         ARGBColor { r, g, b, a: 255 }
+    }
+    pub(crate) fn new_argb(a: u8, r: u8, g: u8, b:u8) -> ARGBColor {
+        ARGBColor { a,r,g,b}
     }
 }
 

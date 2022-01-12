@@ -66,10 +66,11 @@ impl GFXBuffer {
             }
             ColorDepth::CD24() => {
                 let n = (x + y * (self.width as u32)) as usize;
-                ARGBColor::new_RGB(self.data[n*3+0],self.data[n*3+1],self.data[n*3+2]).as_32bit()
+                ARGBColor::new_rgb(self.data[n*3+0], self.data[n*3+1], self.data[n*3+2]).as_32bit()
             }
             ColorDepth::CD32() => {
-                return 0
+                let n = (x + y * (self.width as u32)) as usize;
+                ARGBColor::new_argb(self.data[n*3+0], self.data[n*3+1], self.data[n*3+2], self.data[n*3+3]).as_32bit()
             }
         }
     }
@@ -216,16 +217,16 @@ mod tests {
 
     #[test]
     fn color_checks() {
-        let color = ARGBColor::new_RGB(255,255,255);
+        let color = ARGBColor::new_rgb(255, 255, 255);
         let val:u16 = color.as_16bit();
         let n:u32 = 2;
         // println!("16bit color is {:#024b} {}",val, n.pow(16)-1);
         assert_eq!(val as u32,n.pow(16)-1);
 
         //convert red from 24 to 16 bit
-        assert_eq!(ARGBColor::new_RGB(255,0,0).as_16bit(), 0b1111100000000000);
+        assert_eq!(ARGBColor::new_rgb(255, 0, 0).as_16bit(), 0b1111100000000000);
         //convert red from 16 to 24 bit
-        assert_eq!(ARGBColor::from_16bit(0b11111_000000_00000 as u16).r, ARGBColor::new_RGB(0xF8,0,0).r);
+        assert_eq!(ARGBColor::from_16bit(0b11111_000000_00000 as u16).r, ARGBColor::new_rgb(0xF8, 0, 0).r);
         assert_eq!(ARGBColor::from_16bit(0b11111_000000_00000 as u16).as_24bit(),0b00000000_11111000_00000000_00000000);
         // let vv = ARGBColor::from_24bit(0b11111111_00000000_00000000 as u32).as_32bit();
         // println!(" vv is {:x}",vv);
@@ -240,9 +241,9 @@ mod tests {
         let colors = [
             BLACK,
             WHITE,
-            ARGBColor::new_RGB(0,255,255), //yellow
-            ARGBColor::new_RGB(255,0,255), //magenta
-            ARGBColor::new_RGB(255,0,0), //red
+            ARGBColor::new_rgb(0, 255, 255), //yellow
+            ARGBColor::new_rgb(255, 0, 255), //magenta
+            ARGBColor::new_rgb(255, 0, 0), //red
             ];
 
         for set_color in &colors {
@@ -265,10 +266,10 @@ mod tests {
     #[test]
     fn check_24_to_16() {
         let mut buf24 = GFXBuffer::new(CD24(), 2, 2);
-        let green = ARGBColor::new_RGB(0, 255, 0);
+        let green = ARGBColor::new_rgb(0, 255, 0);
         buf24.clear(&green);
         let mut buf16 = GFXBuffer::new(CD16(), 2, 2);
-        buf16.copy_from(&buf24);
+        buf16.copy_from(0,0,&buf24);
         {
             let c1 = buf16.get_pixel_32argb(1, 1);
             let c2 = buf24.get_pixel_32argb(1, 1);
