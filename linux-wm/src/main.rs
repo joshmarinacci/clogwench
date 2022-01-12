@@ -98,18 +98,16 @@ fn main() {
     // vsi.bits_per_pixel = 32;
     // Framebuffer::put_var_screeninfo(file,&vsi).unwrap();
 
-    let mut fb = Framebuffer::new(pth).unwrap();
-
-    print_debug_info(&fb);
-    let _ = Framebuffer::set_kd_mode(KdMode::Graphics).unwrap();
-    let mut surf:Surf = Surf::make(fb);
-    //let ch = start_process();
-    surf.sync();
-    let drawing_thread = make_drawing_thread(surf,stop.clone(),conn.rx_in, conn.tx_out.clone());
+    // let mut fb = Framebuffer::new(pth).unwrap();
+    // print_debug_info(&fb);
+    // let _ = Framebuffer::set_kd_mode(KdMode::Graphics).unwrap();
+    // let mut surf:Surf = Surf::make(fb);
+    // surf.sync();
+    // let drawing_thread = make_drawing_thread(surf,stop.clone(),conn.rx_in, conn.tx_out.clone());
 
     let timeout_handle = start_timeout(stop.clone(),args.timeout);
     timeout_handle.join().unwrap();
-    let _ = Framebuffer::set_kd_mode(KdMode::Text).unwrap();
+    // let _ = Framebuffer::set_kd_mode(KdMode::Text).unwrap();
     info!("all done now");
 }
 
