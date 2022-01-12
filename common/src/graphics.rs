@@ -84,11 +84,13 @@ impl GFXBuffer {
             }
             ColorDepth::CD24() => {
                 // self.data[n*4+0] = (v & 0xFF000000 >> 24) as u8;
+                let n = (x + y * (self.width as u32)) as usize;
                 self.data[n*3+0] = (v & 0x00FF0000 >> 16) as u8;
                 self.data[n*3+1] = (v & 0x0000FF00 >> 8) as u8;
                 self.data[n*3+2] = (v & 0x000000FF >> 0) as u8;
             }
             ColorDepth::CD32() => {
+                let n = (x + y * (self.width as u32)) as usize;
                 self.data[n*4+0] = (v & 0xFF000000 >> 24) as u8;
                 self.data[n*4+1] = (v & 0x00FF0000 >> 16) as u8;
                 self.data[n*4+2] = (v & 0x0000FF00 >> 8) as u8;
