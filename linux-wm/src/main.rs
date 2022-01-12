@@ -206,11 +206,6 @@ fn make_drawing_thread(mut surf: Surf,
                     cursor.x = pt.x;
                     cursor.y = pt.y;
                     redraw = true;
-                    // //surf.clear();
-                    // surf.copy_from(0,0,&test_buff);
-                    // surf.copy_from(cursor.x, cursor.y, &test_buff);
-                    // surf.sync();
-                    //println!("mouse move {:?},{:?}",(mme.x/10),(mme.y/10))
                 },
                 APICommand::MouseUp(mme) => {
                     // println!("mouse move {:?}",mme)
