@@ -1,3 +1,4 @@
+
 add stuff
 
 
@@ -17,6 +18,7 @@ __adapted from https://graspingtech.com/ubuntu-desktop-18.04-virtual-machine-mac
 * then run again without the -cdrom line
 * now log into the virtual server
 * you can ssh to the virtual server with  `-net user,hostfwd=tcp::2222-:22 -net nic \` added to the `./run_qemu_x86_64.sh` file.
+   *    
 * install some deps: `sudo apt-get install curl git build-essential make gcc -y`
 * now install rust and cargo. `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
 * now log out and back into the virtual server

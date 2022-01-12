@@ -2,7 +2,7 @@ extern crate framebuffer;
 
 use std::fs::File;
 use std::thread;
-use std::io::Write;
+// use std::io::Write;
 use std::process::{Child, Command};
 use std::sync::{Arc};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -14,11 +14,10 @@ use ctrlc;
 use env_logger;
 use env_logger::Env;
 use framebuffer::{Framebuffer, KdMode, VarScreenInfo};
-use log::{debug, error, info, log, warn};
+use log::{debug, info, log, warn};
 use structopt::StructOpt;
-use uuid::Uuid;
 
-use common::{APICommand, ARGBColor, HelloWindowManager, IncomingMessage, Point, Rect, WHITE, BLACK};
+use common::{APICommand, ARGBColor, HelloWindowManager, IncomingMessage, Point, Rect, BLACK};
 use common::APICommand::KeyDown;
 use common::events::{KeyDownEvent, KeyCode};
 use common_wm::{OutgoingMessage, start_wm_network_connection, WindowManagerState, BackBuffer};
