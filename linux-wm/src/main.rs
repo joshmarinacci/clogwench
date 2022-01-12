@@ -92,7 +92,7 @@ fn main() {
     input::setup_evdev_watcher(mouse, stop.clone(), conn.tx_in.clone());
 
 
-    if args.graphics {
+    if !args.disable_graphics {
         let pth = "/dev/fb0";
         let mut fb = Framebuffer::new(pth).unwrap();
         print_debug_info(&fb);
@@ -104,7 +104,7 @@ fn main() {
 
     let timeout_handle = start_timeout(stop.clone(),args.timeout);
     timeout_handle.join().unwrap();
-    if args.graphics {
+    if !args.disable_graphics {
         let _ = Framebuffer::set_kd_mode(KdMode::Text).unwrap();
     }
     info!("all done now");
@@ -237,8 +237,8 @@ struct Cli {
     debug:bool,
     #[structopt(short, long, default_value="60")]
     timeout:u32,
-    #[structopt(long, default_value="true")]
-    graphics:bool,
+    #[structopt(long)]
+    disable_graphics:bool,
 }
 
 fn init_setup() -> Cli {
