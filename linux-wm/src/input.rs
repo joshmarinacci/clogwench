@@ -6,7 +6,6 @@ use common::{APICommand, IncomingMessage};
 use common::events::*;
 
 use std::thread;
-use interprocess::os::unix::signal::SignalHandler::Default;
 use common::events::{KeyCode, MouseButton, MouseMoveEvent};
 
 pub fn find_keyboard() -> Option<evdev::Device> {
