@@ -24,6 +24,54 @@ pub struct ARGBColor {
     pub a:u8,
 }
 
+impl ARGBColor {
+}
+
+impl ARGBColor {
+    pub(crate) fn from_16bit(packed_color: u16) -> ARGBColor {
+        let r:u8 = (((packed_color & 0b11111_000000_00000) >> 11) << 3) as u8;
+        let g:u8 = (((packed_color & 0b00000_111111_00000) >> 5)  << 2) as u8;
+        let b:u8 = (((packed_color & 0b00000_000000_11111) >> 0)  << 3) as u8;
+        return ARGBColor::new_RGB(r,g,b);
+    }
+    pub(crate) fn from_24bit(packed_color: u32) -> ARGBColor {
+        let r:u8 = ((packed_color & 0xFF0000) >> 16) as u8;
+        let g:u8 = ((packed_color & 0x00FF00) >> 8) as u8;
+        let b:u8 = ((packed_color & 0x0000FF) >> 0) as u8;
+        return ARGBColor::new_RGB(r,g,b);
+    }
+}
+
+impl ARGBColor {
+    pub fn as_16bit(&self) -> u16 {
+        // println!("color {:?}",self);
+        let r = self.r >> 3; // 5 bits
+        let g = self.g >> 2; // 6 bits
+        let b = self.b >> 3; // 5 bits
+        // println!("parts are {} {} {}",r,g,b);
+        return (((r as u16) << (5+6)) | ((g as u16) << 5) | ((b as u16) << 0)) as u16;
+    }
+    pub fn as_24bit(&self) -> u32 {
+        return ((self.r as u32) << 16) | ((self.g as u32) << 8) | ((self.b as u32) << 0) as u32;
+    }
+    pub fn as_32bit(&self) -> u32 {
+        // println!("parts are")
+        return ((self.a as u32)<<24) | ((self.r as u32) << 16) | ((self.g as u32) << 8) | ((self.b as u32) << 0) as u32;
+    }
+}
+
+impl ARGBColor {
+    pub(crate) fn as_vec(&self) -> Vec<u8> {
+        Vec::from([self.a, self.r, self.g, self.b])
+    }
+}
+
+impl ARGBColor {
+    pub(crate) fn new_RGB(r: u8, g: u8, b: u8) -> ARGBColor {
+        ARGBColor { r, g, b, a: 255 }
+    }
+}
+
 pub const BLACK:ARGBColor = ARGBColor { r: 0, g: 0, b: 0, a: 255 };
 pub const WHITE:ARGBColor = ARGBColor { r: 255, g: 255, b: 255, a: 255 };
 
