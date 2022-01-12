@@ -94,6 +94,7 @@ fn main() {
     input::setup_evdev_watcher(keyboard, stop.clone(), conn.tx_in.clone());
     input::setup_evdev_watcher(mouse, stop.clone(), conn.tx_in.clone());
 
+    let cursor_image:GFXBuffer = GFXBuffer::from_png_file("../resources/cursor.png");
 
     if !args.disable_graphics {
         let pth = "/dev/fb0";
@@ -102,7 +103,7 @@ fn main() {
         let _ = Framebuffer::set_kd_mode(KdMode::Graphics).unwrap();
         let mut surf:Surf = Surf::make(fb);
         // surf.sync();
-        let drawing_thread = make_drawing_thread(surf,stop.clone(),conn.rx_in, conn.tx_out.clone());
+        let drawing_thread = make_drawing_thread(surf,stop.clone(),conn.rx_in, conn.tx_out.clone(), cursor_image);
     }
 
     let timeout_handle = start_timeout(stop.clone(),args.timeout);
@@ -132,19 +133,20 @@ fn start_timeout(stop: Arc<AtomicBool>, max_seconds:u32) -> JoinHandle<()> {
 fn make_drawing_thread(mut surf: Surf,
                        stop: Arc<AtomicBool>,
                        rx: Receiver<IncomingMessage>,
-                       tx_out: Sender<OutgoingMessage>
+                       tx_out: Sender<OutgoingMessage>,
+                       cursor_image: GFXBuffer
 ) -> JoinHandle<()> {
     return thread::spawn(move ||{
         info!("render thread starting");
         let mut state = WindowManagerState::init();
-        let mut cursor = Rect::from_ints(50,50,10,10);
-        let mut test_buff = GFXBuffer::new(ColorDepth::CD24(),10,10);
-        test_buff.clear(&ARGBColor::new_rgb(0,0,0));
+        let mut cursor:Point = Point::init(0,0);
+        // let mut test_buff = GFXBuffer::new(ColorDepth::CD24(),10,10);
+        // test_buff.clear(&ARGBColor::new_rgb(0,0,0));
 
-        test_buff.fill_rect(Rect::from_ints(0,0,5,5),(ARGBColor::new_rgb(255,0,0)));
-        test_buff.fill_rect(Rect::from_ints(5,0,5,5),(ARGBColor::new_rgb(0,255,0)));
-        test_buff.fill_rect(Rect::from_ints(0,5,5,5),(ARGBColor::new_rgb(0,0,255)));
-        test_buff.fill_rect(Rect::from_ints(5,5,5,5),(ARGBColor::new_rgb(255,255,255)));
+        // test_buff.fill_rect(Rect::from_ints(0,0,5,5),(ARGBColor::new_rgb(255,0,0)));
+        // test_buff.fill_rect(Rect::from_ints(5,0,5,5),(ARGBColor::new_rgb(0,255,0)));
+        // test_buff.fill_rect(Rect::from_ints(0,5,5,5),(ARGBColor::new_rgb(0,0,255)));
+        // test_buff.fill_rect(Rect::from_ints(5,5,5,5),(ARGBColor::new_rgb(255,255,255)));
         for cmd in rx {
             if stop.load(Ordering::Relaxed) == true { break; }
             let mut redraw = false;
@@ -206,8 +208,7 @@ fn make_drawing_thread(mut surf: Surf,
                 APICommand::MouseMove(mme) => {
                     let bounds = Rect::from_ints(0,0,500,500);
                     let pt = bounds.clamp(&Point::init(mme.x,mme.y));
-                    cursor.x = pt.x;
-                    cursor.y = pt.y;
+                    cursor.copy_from(pt);
                     redraw = true;
                 },
                 APICommand::MouseUp(mme) => {
@@ -217,11 +218,11 @@ fn make_drawing_thread(mut surf: Surf,
             }
             if redraw {
                 //surf.clear();
-                surf.copy_from(0,0,&test_buff);
+                // surf.copy_from(0,0,&cursor_image);
                 for win in state.window_list() {
                     surf.copy_from(win.bounds.x, win.bounds.y, &win.backbuffer)
                 }
-                surf.copy_from(cursor.x, cursor.y, &test_buff);
+                surf.copy_from(cursor.x, cursor.y, &cursor_image);
                 surf.sync();
             }
         }

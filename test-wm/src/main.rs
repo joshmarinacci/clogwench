@@ -5,6 +5,7 @@ use std::sync::mpsc::{Receiver, Sender};
 use std::thread;
 use std::thread::JoinHandle;
 use std::time::Duration;
+use std::env;
 
 use ctrlc;
 use env_logger;
@@ -23,11 +24,16 @@ use common::graphics::ColorDepth::CD32;
 use common::graphics::GFXBuffer;
 use common_wm::{OutgoingMessage, start_wm_network_connection, Window, WindowManagerState};
 
-fn main() {
+fn main() -> std::io::Result<()>{
     let args:Cli = init_setup();
 
     let stop:Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
     setup_c_handler(stop.clone());
+
+    //try loading a resource
+    let cwd = env::current_dir()?;
+    println!("cwd is {}", cwd.display());
+    let cursor_image:GFXBuffer = GFXBuffer::from_png_file("../resources/cursor.png");
 
     //open network connection
     let conn = start_wm_network_connection(stop.clone())
@@ -72,6 +78,7 @@ fn main() {
     info!("waiting for the watch dog");
     watchdog.join().unwrap();
     info!("all done now");
+    Ok(())
 }
 
 fn send_fake_mouse(stop: Arc<AtomicBool>, sender: Sender<IncomingMessage>) {

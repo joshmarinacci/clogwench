@@ -8,8 +8,10 @@
 	    common screen and surface impls.
  */
 
+use std::fs::File;
 use png;
 use crate::{ARGBColor, Rect};
+use crate::graphics::ColorDepth::{CD24, CD32};
 
 pub enum ColorDepth {
     CD16(),
@@ -22,6 +24,18 @@ pub struct GFXBuffer {
     width:u32,
     height:u32,
     pub data: Vec<u8>,
+}
+
+impl GFXBuffer {
+    pub fn from_png_file(path: &str) -> GFXBuffer {
+        let decoder = png::Decoder::new(File::open(path).unwrap());
+        let mut reader = decoder.read_info().unwrap();
+        let mut buf = vec![0; reader.output_buffer_size()];
+        let info = reader.next_frame(&mut buf).unwrap();
+        let bytes = &buf[..info.buffer_size()];
+        println!("loaded bytes {}", bytes.len());
+        return GFXBuffer::new(CD32(),16,16);
+    }
 }
 
 fn pixel_16_packed_to_24_rgb(src:u16, dst:u32) {
