@@ -65,10 +65,10 @@ impl ARGBColor {
 }
 
 impl ARGBColor {
-    pub(crate) fn new_rgb(r: u8, g: u8, b: u8) -> ARGBColor {
+    pub fn new_rgb(r: u8, g: u8, b: u8) -> ARGBColor {
         ARGBColor { r, g, b, a: 255 }
     }
-    pub(crate) fn new_argb(a: u8, r: u8, g: u8, b:u8) -> ARGBColor {
+    pub fn new_argb(a: u8, r: u8, g: u8, b:u8) -> ARGBColor {
         ARGBColor { a,r,g,b}
     }
 }
