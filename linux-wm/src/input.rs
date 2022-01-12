@@ -108,8 +108,8 @@ pub fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender
                     InputEventKind::AbsAxis(abs) => {
                         println!("abs event {:?} {:?}",ev.value(), abs);
                         match abs {
-                            AbsoluteAxisType::ABS_X => cx = ev.value()/10,
-                            AbsoluteAxisType::ABS_Y => cy = ev.value()/10,
+                            AbsoluteAxisType::ABS_X => cx = ev.value()/100,
+                            AbsoluteAxisType::ABS_Y => cy = ev.value()/100,
                             _ => {
                                 println!("unknown aboslute axis type")
                             }
@@ -125,7 +125,7 @@ pub fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender
                             }),
                         };
                         tx.send(cmd).unwrap();
-                        stop.store(true,Ordering::Relaxed);
+                        // stop.store(true,Ordering::Relaxed);
                     },
                     _ => {}
                 }
