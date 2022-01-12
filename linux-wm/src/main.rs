@@ -209,7 +209,7 @@ fn make_drawing_thread(mut surf: Surf,
                     cursor.y = pt.y;
                     //surf.clear();
                     surf.copy_from(0,0,&test_buff);
-                    surf.rect(cursor, yellow.clone());
+                    surf.rect(cursor, &yellow);
                     surf.sync();
                     //println!("mouse move {:?},{:?}",(mme.x/10),(mme.y/10))
                 },
