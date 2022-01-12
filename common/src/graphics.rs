@@ -8,6 +8,7 @@
 	    common screen and surface impls.
  */
 
+use png;
 use crate::{ARGBColor, Rect};
 
 pub enum ColorDepth {
@@ -75,6 +76,10 @@ impl GFXBuffer {
         }
     }
     pub fn set_pixel_32argb(&mut self, x: u32, y: u32, v: u32) {
+        if x >= self.width || y >= self.height {
+            println!("error. pixel {},{} out of bounds {}x{}",x,y,self.width,self.height);
+            return;
+        }
         match self.bitdepth {
             ColorDepth::CD16() => {
                 let vv = ARGBColor::from_24bit(v).as_16bit();
@@ -85,16 +90,16 @@ impl GFXBuffer {
             ColorDepth::CD24() => {
                 // self.data[n*4+0] = (v & 0xFF000000 >> 24) as u8;
                 let n = (x + y * (self.width as u32)) as usize;
-                self.data[n*3+0] = (v & 0x00FF0000 >> 16) as u8;
-                self.data[n*3+1] = (v & 0x0000FF00 >> 8) as u8;
-                self.data[n*3+2] = (v & 0x000000FF >> 0) as u8;
+                self.data[n*3+0] = ((v & 0x00FF0000) >> 16) as u8;
+                self.data[n*3+1] = ((v & 0x0000FF00) >> 8) as u8;
+                self.data[n*3+2] = ((v & 0x000000FF) >> 0) as u8;
             }
             ColorDepth::CD32() => {
                 let n = (x + y * (self.width as u32)) as usize;
-                self.data[n*4+0] = (v & 0xFF000000 >> 24) as u8;
-                self.data[n*4+1] = (v & 0x00FF0000 >> 16) as u8;
-                self.data[n*4+2] = (v & 0x0000FF00 >> 8) as u8;
-                self.data[n*4+3] = (v & 0x000000FF >> 0) as u8;
+                self.data[n*4+0] = ((v & 0xFF000000) >> 24) as u8;
+                self.data[n*4+1] = ((v & 0x00FF0000) >> 16) as u8;
+                self.data[n*4+2] = ((v & 0x0000FF00) >> 8) as u8;
+                self.data[n*4+3] = ((v & 0x000000FF) >> 0) as u8;
             }
         }
     }
@@ -189,6 +194,30 @@ impl GFXBuffer {
     }
 }
 
+pub fn draw_test_pattern(buf:&mut GFXBuffer) {
+    for j in 0..buf.height {
+        for i in 0..buf.width {
+            let v = (i*4) as u8;
+            if j < (buf.height/4)*1 {
+                buf.set_pixel_32argb(i,j,ARGBColor::new_rgb(v, 0, 0).as_32bit());
+                continue;
+            }
+            if j < (buf.height/4)*2 {
+                buf.set_pixel_32argb(i,j,ARGBColor::new_rgb(0,v,  0).as_32bit());
+                continue;
+            }
+            if j < (buf.height/4)*3 {
+                buf.set_pixel_32argb(i,j,ARGBColor::new_rgb(0,0,v).as_32bit());
+                continue;
+            }
+            if j < (buf.height/4)*4 {
+                buf.set_pixel_32argb(i, j, ARGBColor{r:0, g:0, b:0, a:v}.as_32bit());
+                continue;
+            }
+        }
+    }
+}
+
 // rs.fillRect(rect,color)
 // rs:fillRect(surf,rect,color)
 // rs.copy(src:Surface,
@@ -223,9 +252,12 @@ impl GFXBuffer {
 
 #[cfg(test)]
 mod tests {
+    use std::fs::File;
+    use std::io::BufWriter;
+    use std::path::Path;
     use crate::{ARGBColor, BLACK, WHITE};
     use crate::graphics::ColorDepth::{CD16, CD24, CD32};
-    use crate::graphics::GFXBuffer;
+    use crate::graphics::{draw_test_pattern, GFXBuffer};
 
     #[test]
     fn color_checks() {
@@ -287,5 +319,47 @@ mod tests {
             let c2 = buf24.get_pixel_32argb(1, 1);
             assert_eq!(c1, 0b11111111_00000000_11111100_00000000);
         }
+    }
+
+    #[test]
+    fn check_32_to_32() {
+        let mut buf = GFXBuffer::new(CD32(),2,2);
+        buf.set_pixel_32argb(0,0, ARGBColor::new_rgb(255,254,253).as_32bit());
+        print!("{:x} vs {:x}", ARGBColor::new_rgb(255,254,253).as_32bit(), buf.get_pixel_32argb(0,0));
+        assert_eq!(buf.get_pixel_32argb(0,0),0xFFFFFEFD);
+    }
+
+    #[test]
+    fn try_test_pattern() {
+        let mut buf = GFXBuffer::new(CD32(),64,64);
+        draw_test_pattern(&mut buf);
+
+        // buf = GFXBuffer::new(CD32(),32,32);
+        // draw_test_pattern(&mut buf);
+        export_to_png(&buf);
+    }
+
+    fn export_to_png(buf: &GFXBuffer) {
+        let path = Path::new(r"test.png");
+        let file = File::create(path).unwrap();
+        let ref mut w = BufWriter::new(file);
+        let mut encoder = png::Encoder::new(w, buf.width, buf.height); // Width is 2 pixels and height is 1.
+        encoder.set_color(png::ColorType::Rgba);
+        encoder.set_depth(png::BitDepth::Eight);
+        let mut writer = encoder.write_header().unwrap();
+
+        let mut data:Vec<u8> = vec![];
+        for j in 0..buf.height {
+            for i in 0..buf.width {
+                let px = buf.get_vec_pixel_32argb(i as i32, j as i32);
+                // println!("{},{}  {:x}",i,j, buf.get_pixel_32argb(i,j));
+                data.push(px[1]); //R
+                data.push(px[2]); //G
+                data.push(px[3]); //B
+                data.push(255); //A
+            }
+        }
+        writer.write_image_data(&data).unwrap(); // Save
+
     }
 }
