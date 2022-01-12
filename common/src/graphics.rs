@@ -48,6 +48,15 @@ impl GFXBuffer {
             }
         }
     }
+
+    pub fn fill_rect(&mut self, bounds: Rect, color: ARGBColor) {
+        for i in bounds.x .. (bounds.x+bounds.w) {
+            for j in bounds.y .. (bounds.y+bounds.h) {
+                self.set_pixel_32argb(i as u32, j as u32, color.as_32bit());
+            }
+        }
+    }
+
     pub fn get_pixel_32argb(&self, x: u32, y: u32) -> u32 {
         match self.bitdepth {
             ColorDepth::CD16() => {
