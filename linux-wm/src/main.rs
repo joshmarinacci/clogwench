@@ -20,9 +20,8 @@ use structopt::StructOpt;
 use common::{APICommand, ARGBColor, HelloWindowManager, IncomingMessage, Point, Rect, BLACK};
 use common::APICommand::KeyDown;
 use common::events::{KeyDownEvent, KeyCode};
-use common_wm::{OutgoingMessage, start_wm_network_connection, WindowManagerState, BackBuffer};
+use common_wm::{OutgoingMessage, start_wm_network_connection, WindowManagerState};
 use surf::Surf;
-use std::io::File;
 use common::graphics::{ColorDepth, GFXBuffer};
 
 mod surf;

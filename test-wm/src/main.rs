@@ -15,7 +15,7 @@ use structopt::StructOpt;
 use common::{APICommand, HelloWindowManager, IncomingMessage, Point};
 use common::APICommand::KeyDown;
 use common::events::{KeyCode, KeyDownEvent, MouseButton, MouseDownEvent};
-use common_wm::{BackBuffer, OutgoingMessage, start_wm_network_connection, Window, WindowManagerState};
+use common_wm::{OutgoingMessage, start_wm_network_connection, Window, WindowManagerState};
 
 fn main() {
     let args:Cli = init_setup();

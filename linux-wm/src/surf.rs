@@ -2,7 +2,6 @@ use framebuffer::Framebuffer;
 use common::{ARGBColor, BLACK, Rect};
 use common::graphics::{ColorDepth, GFXBuffer};
 use common::graphics::ColorDepth::{CD16, CD24, CD32};
-use common_wm::{BackBuffer};
 
 pub struct Surf {
     fb:Framebuffer,
