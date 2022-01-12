@@ -13,7 +13,7 @@ use std::time::Duration;
 use ctrlc;
 use env_logger;
 use env_logger::Env;
-use framebuffer::{Framebuffer, KdMode, VarScreenInfo};
+use framebuffer::{Framebuffer, KdMode, VarScreeninfo};
 use log::{debug, info, log, warn};
 use structopt::StructOpt;
 
