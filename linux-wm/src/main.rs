@@ -14,7 +14,10 @@ use ctrlc;
 use env_logger;
 use env_logger::Env;
 use framebuffer::{Framebuffer, KdMode, VarScreeninfo};
-use log::{debug, info, log, warn};
+use log::{debug, info, LevelFilter, log, warn};
+use log4rs::append::file::FileAppender;
+use log4rs::Config;
+use log4rs::config::{Appender, Root};
 use structopt::StructOpt;
 
 use common::{APICommand, ARGBColor, HelloWindowManager, IncomingMessage, Point, Rect, BLACK};
@@ -240,8 +243,24 @@ struct Cli {
 
 fn init_setup() -> Cli {
     let args:Cli = Cli::from_args();
-    let loglevel = if args.debug { "debug"} else { "error"};
-    env_logger::Builder::from_env(Env::default().default_filter_or(loglevel)).init();
+    let loglevel = if args.debug { LevelFilter::Debug } else { LevelFilter::Error };
+
+    // create file appender with target file path
+    let logfile = FileAppender::builder()
+        .build("log/output.log").expect("error setting up file appender");
+    println!("logging to log/output.log");
+
+    // make a config
+    let config = Config::builder()
+        //add the file appender
+        .appender(Appender::builder().build("logfile", Box::new(logfile)))
+        //now make it
+        .build(Root::builder()
+            .appender("logfile") // why do we need to mention logfile again?
+            .build(loglevel)).expect("error setting up log file");
+
+    log4rs::init_config(config).expect("error initing config");
+
     info!("running with args {:?}",args);
     return args;
 }

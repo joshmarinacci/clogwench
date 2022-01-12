@@ -9,12 +9,18 @@ use std::time::Duration;
 use ctrlc;
 use env_logger;
 use env_logger::Env;
-use log::{debug, info};
+use log::{debug, info, LevelFilter};
+use log4rs::append::file::FileAppender;
+use log4rs::Config;
+use log4rs::config::{Appender, Root};
+use log4rs::encode::pattern::PatternEncoder;
 use rand::Rng;
 use structopt::StructOpt;
-use common::{APICommand, HelloWindowManager, IncomingMessage, Point};
+use common::{APICommand, BLACK, HelloWindowManager, IncomingMessage, Point};
 use common::APICommand::KeyDown;
 use common::events::{KeyCode, KeyDownEvent, MouseButton, MouseDownEvent};
+use common::graphics::ColorDepth::CD32;
+use common::graphics::GFXBuffer;
 use common_wm::{OutgoingMessage, start_wm_network_connection, Window, WindowManagerState};
 
 fn main() {
@@ -113,7 +119,7 @@ fn start_event_processor(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, t
     return thread::spawn(move || {
         info!("event thread starting");
         let mut state = WindowManagerState::init();
-        let mut screen = BackBuffer::init(640,480);
+        let mut screen = GFXBuffer::new(CD32(),640,480);
         for cmd in rx {
             if stop.load(Ordering::Relaxed) { break; }
             info!("processing event {:?}",cmd);
@@ -131,7 +137,7 @@ fn start_event_processor(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, t
                     if let Some(win) = state.lookup_window(dr.window_id) {
                         win.backbuffer.fill_rect(dr.rect, dr.color);
                     }
-                    screen.clear();
+                    screen.clear(&BLACK);
                     for win in state.window_list() {
                         screen.copy_from(win.bounds.x, win.bounds.y, &win.backbuffer)
                     }
@@ -216,8 +222,24 @@ struct Cli {
 
 fn init_setup() -> Cli {
     let args:Cli = Cli::from_args();
-    let loglevel = if args.debug { "debug"} else { "error"};
-    env_logger::Builder::from_env(Env::default().default_filter_or(loglevel)).init();
+    let loglevel = if args.debug { LevelFilter::Debug } else { LevelFilter::Error };
+
+    // create file appender with target file path
+    let logfile = FileAppender::builder()
+        .build("log/output.log").expect("error setting up file appender");
+    println!("logging to log/output.log");
+
+    // make a config
+    let config = Config::builder()
+        //add the file appender
+        .appender(Appender::builder().build("logfile", Box::new(logfile)))
+        //now make it
+        .build(Root::builder()
+            .appender("logfile") // why do we need to mention logfile again?
+            .build(loglevel)).expect("error setting up log file");
+
+    log4rs::init_config(config).expect("error initing config");
+
     info!("running with args {:?}",args);
     return args;
 }

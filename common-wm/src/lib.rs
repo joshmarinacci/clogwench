@@ -151,7 +151,8 @@ pub struct CentralConnection {
 }
 
 pub fn start_wm_network_connection(stop: Arc<AtomicBool>) -> Option<CentralConnection> {
-    match TcpStream::connect("localhost:3334") {
+    let conn_string ="localhost:3334";
+    match TcpStream::connect(conn_string) {
         Ok(master_stream) => {
             let (tx_in, rx_in) = mpsc::channel::<IncomingMessage>();
             let (tx_out, rx_out) =mpsc::channel::<OutgoingMessage>();
@@ -211,7 +212,10 @@ pub fn start_wm_network_connection(stop: Arc<AtomicBool>) -> Option<CentralConne
             })
 
         }
-        _ => None
+        _ => {
+            error!("could not connect to server at {}",conn_string);
+            None
+        }
     }
 }
 
