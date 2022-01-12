@@ -135,7 +135,7 @@ fn make_drawing_thread(mut surf: Surf,
         let yellow = ARGBColor{
             r: 0,
             g: 255,
-            b: 255,
+            b: 0,
             a: 255
         };
         test_buff.clear(&BLACK);
@@ -162,7 +162,7 @@ fn make_drawing_thread(mut surf: Surf,
                     for win in state.window_list() {
                         surf.copy_from(win.bounds.x, win.bounds.y, &win.backbuffer)
                     }
-                    surf.rect(cursor, yellow.clone());
+                    surf.rect(cursor, &yellow);
                     surf.sync();
                 },
                 APICommand::KeyUp(ku) => {

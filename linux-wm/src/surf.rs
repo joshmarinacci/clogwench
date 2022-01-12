@@ -31,7 +31,7 @@ impl Surf {
     pub fn copy_from(&mut self, x: i32, y: i32, buf: &GFXBuffer) {
         self.buf.copy_from(x, y, buf);
     }
-    pub fn rect(&mut self, rect: Rect, color: ARGBColor) {
+    pub fn rect(&mut self, rect: Rect, color: &ARGBColor) {
         for j in 0..rect.h {
             for i in 0..rect.w {
                 self.buf.set_pixel_32argb((rect.x + i) as u32, (rect.y + j) as u32, color.as_32bit());
@@ -45,6 +45,6 @@ impl Surf {
         self.rect(Rect::from_ints(0, 0,
                                   self.fb.var_screen_info.xres as i32,
                                   self.fb.var_screen_info.yres as i32),
-                  BLACK);
+                  &BLACK);
     }
 }
