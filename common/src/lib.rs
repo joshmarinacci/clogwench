@@ -153,6 +153,10 @@ impl Point {
     pub fn add(&self, pt:Point) -> Point {
         Point::init(self.x + pt.x, self.y + pt.y)
     }
+    pub fn copy_from(&mut self, pt:Point) {
+        self.x = pt.x;
+        self.y = pt.y;
+    }
 }
 
 impl Point {

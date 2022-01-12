@@ -95,6 +95,7 @@ fn main() {
     input::setup_evdev_watcher(mouse, stop.clone(), conn.tx_in.clone());
 
     let cursor_image:GFXBuffer = GFXBuffer::from_png_file("../resources/cursor.png");
+    info!("loaded the cursor image");
 
     if !args.disable_graphics {
         let pth = "/dev/fb0";
