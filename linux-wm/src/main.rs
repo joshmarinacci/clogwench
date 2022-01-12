@@ -94,10 +94,10 @@ fn main() {
 
 
     let pth = "/dev/fb0";
-    let file = File::Open(pth).unwrap();
-    let mut vsi = Framebuffer::get_var_screeninfo(file).unwrap();
-    vsi.bits_per_pixel = 32;
-    Framebuffer::put_var_screeninfo(file,&vsi).unwrap();
+    // let file = File::Open(pth).unwrap();
+    // let mut vsi = Framebuffer::get_var_screeninfo(file).unwrap();
+    // vsi.bits_per_pixel = 32;
+    // Framebuffer::put_var_screeninfo(file,&vsi).unwrap();
 
     let mut fb = Framebuffer::new(pth).unwrap();
 
