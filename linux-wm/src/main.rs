@@ -135,19 +135,13 @@ fn make_drawing_thread(mut surf: Surf,
         info!("render thread starting");
         let mut state = WindowManagerState::init();
         let mut cursor = Rect::from_ints(50,50,10,10);
-        let mut test_buff = GFXBuffer::new(ColorDepth::CD24(),64,64);//BackBuffer::init(64,64);
-        let yellow = ARGBColor{
-            r: 255,
-            g: 128,
-            b: 128,
-            a: 255
-        };
-        test_buff.clear(&BLACK);
-        test_buff.fill_rect(Rect::from_ints(0,0,10,10),ARGBColor::new_rgb(255,0,0));
-        test_buff.fill_rect(Rect::from_ints(0,20,10,10),ARGBColor::new_rgb(255,255,0));
-        test_buff.fill_rect(Rect::from_ints(0,40,10,10),ARGBColor::new_rgb(255,0,255));
+        let mut test_buff = GFXBuffer::new(ColorDepth::CD24(),10,10);
+        test_buff.clear(&ARGBColor::new_rgb(0,0,0));
+        test_buff.fill_rect(Rect::from_ints(0,0,5,5),(ARGBColor::new_rgb(255,0,0)));
+        test_buff.fill_rect(Rect::from_ints(5,5,5,5),(ARGBColor::new_rgb(0,0,255)));
         for cmd in rx {
             if stop.load(Ordering::Relaxed) == true { break; }
+            let mut redraw = false;
             match cmd.command {
                 APICommand::AppConnectResponse(res) => {
                     info!("adding an app {}",res.app_id);
@@ -157,19 +151,14 @@ fn make_drawing_thread(mut surf: Surf,
                     info!("adding a window to the app");
                     state.add_window(ow.app_id, ow.window_id, &ow.bounds);
                     state.set_focused_window(ow.window_id);
+                    redraw = true;
                 },
                 APICommand::DrawRectCommand(dr) => {
                     info!("drawing a rect");
                     if let Some(mut win) = state.lookup_window(dr.window_id) {
                         win.backbuffer.fill_rect(dr.rect, dr.color);
                     }
-                    //surf.clear();
-                    surf.copy_from(0,0,&test_buff);
-                    for win in state.window_list() {
-                        surf.copy_from(win.bounds.x, win.bounds.y, &win.backbuffer)
-                    }
-                    surf.rect(cursor, &yellow);
-                    surf.sync();
+                    redraw = true;
                 },
                 APICommand::KeyUp(ku) => {
                     // println!("key up");
@@ -213,16 +202,26 @@ fn make_drawing_thread(mut surf: Surf,
                     let pt = bounds.clamp(&Point::init(mme.x,mme.y));
                     cursor.x = pt.x;
                     cursor.y = pt.y;
-                    //surf.clear();
-                    surf.copy_from(0,0,&test_buff);
-                    surf.rect(cursor, &yellow);
-                    surf.sync();
+                    redraw = true;
+                    // //surf.clear();
+                    // surf.copy_from(0,0,&test_buff);
+                    // surf.copy_from(cursor.x, cursor.y, &test_buff);
+                    // surf.sync();
                     //println!("mouse move {:?},{:?}",(mme.x/10),(mme.y/10))
                 },
                 APICommand::MouseUp(mme) => {
                     // println!("mouse move {:?}",mme)
                 },
                 _ => {}
+            }
+            if redraw {
+                //surf.clear();
+                surf.copy_from(0,0,&test_buff);
+                for win in state.window_list() {
+                    surf.copy_from(win.bounds.x, win.bounds.y, &win.backbuffer)
+                }
+                surf.copy_from(cursor.x, cursor.y, &test_buff);
+                surf.sync();
             }
         }
         info!("render thread stopping");
