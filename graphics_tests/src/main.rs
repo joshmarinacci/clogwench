@@ -51,7 +51,11 @@ fn make_drawing_thread(mut surf: Surf,
             surf.buf.fill_rect(bounds, ARGBColor::new_rgb(255, 0, 0));
             surf.copy_from(cursor.x, cursor.y, &cursor_image);
             surf.sync();
-            info!("drawing {}ms",(now.elapsed().as_millis()));
+            let dur = now.elapsed().as_millis();
+            info!("drawing {}ms",dur);
+            if dur < 500 {
+                thread::sleep(Duration::from_millis((500 - dur) as u64))
+            }
         }
         info!("render thread stopping");
     });
