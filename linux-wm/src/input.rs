@@ -88,9 +88,10 @@ pub fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender
                     },
                     InputEventKind::RelAxis(rel) => {
                         info!("mouse event {:?} {}",rel, ev.value());
+                        let v = ev.value() as f32;
                         match rel {
-                            RelativeAxisType::REL_X => cx += ev.value(),
-                            RelativeAxisType::REL_Y => cy += ev.value(),
+                            RelativeAxisType::REL_X => cx += v,
+                            RelativeAxisType::REL_Y => cy += v,
                             _ => {
                                 warn!("unknown relative axis type");
                             }
