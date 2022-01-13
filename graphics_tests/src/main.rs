@@ -3,6 +3,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
+use common::graphics::{ColorDepth, GFXBuffer};
+use common::{APICommand, ARGBColor, HelloWindowManager, IncomingMessage, Point, Rect, BLACK};
 
 fn main() {
     let args:Cli = init_setup();
