@@ -17,6 +17,7 @@ use crate::surf::Surf;
 
 fn main() {
     let args:Cli = init_setup();
+    let stop:Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
 
     let pth = "/dev/fb0";
     let mut fb = Framebuffer::new(pth).unwrap();
