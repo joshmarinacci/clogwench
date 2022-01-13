@@ -1,4 +1,5 @@
 use framebuffer::Framebuffer;
+use log::info;
 use common::{ARGBColor, BLACK, Rect};
 use common::graphics::{ColorDepth, GFXBuffer};
 use common::graphics::ColorDepth::{CD16, CD24, CD32};
@@ -22,6 +23,7 @@ impl Surf {
                 panic!("unsupported resolution {}",fb.var_screen_info.bits_per_pixel);
             }
         };
+        info!("made surface {}x{} at {}",w,h,fb.var_screen_info.bits_per_pixel);
         Surf { fb, w, h, buf }
     }
 }
