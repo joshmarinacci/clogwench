@@ -195,12 +195,12 @@ impl GFXBuffer {
             }
             CD32() => {
 
-        //impl1
-        let v = color.as_vec();
-        let a = v[0];
-        let r = v[1];
-        let g = v[2];
-        let b = v[3];
+            //impl1
+            let v = color.as_vec();
+            let a = v[0];
+            let r = v[1];
+            let g = v[2];
+            let b = v[3];
 
         //impl 1a  ~169
         // for chunk in self.data.chunks_mut(4) {
@@ -218,13 +218,26 @@ impl GFXBuffer {
         //     chunk[3] = b;
         // }
 
-        // impl 1c 45ms
-        for chunk in self.data.chunks_exact_mut(4) {
-            chunk[0] = a;
-            chunk[1] = r;
-            chunk[2] = g;
-            chunk[3] = b;
-        }
+            // impl 1c 45ms
+            let vv = &v;
+            let mut row:Vec<u8> = vec![];
+            for i in 0..self.width {
+                row.push(a);
+                row.push(r);
+                row.push(g);
+                row.push(b);
+            }
+                // println!("putting in {:?}",v);
+                // println!("chunk len is {:?}",self.width*4);
+            //get one row per chunk
+            for chunk in self.data.chunks_exact_mut((self.width*4) as usize) {
+                chunk.copy_from_slice(&*row);
+            // chunk.copy_from_slice(vv);
+            // chunk[0] = a;
+            // chunk[1] = r;
+            // chunk[2] = g;
+            // chunk[3] = b;
+            }
 
         //impl 2 ~244ms
         // let len = (self.width*self.height) as usize;
