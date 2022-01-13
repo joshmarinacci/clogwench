@@ -18,6 +18,7 @@ use crate::surf::Surf;
 fn main() {
     let args:Cli = init_setup();
     let stop:Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
+    setup_c_handler(stop.clone());
 
     let pth = "/dev/fb0";
     let mut fb = Framebuffer::new(pth).unwrap();
@@ -106,4 +107,10 @@ fn init_setup() -> Cli {
 
     info!("running with args {:?}",args);
     return args;
+}
+fn setup_c_handler(stop: Arc<AtomicBool>) {
+    ctrlc::set_handler(move || {
+        error!("control C pressed. stopping everything");
+        stop.store(true, Ordering::Relaxed)
+    }).expect("error setting control C handler");
 }
