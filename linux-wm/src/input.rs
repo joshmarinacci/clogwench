@@ -1,8 +1,9 @@
+use std::cmp::max;
 use evdev::{AbsoluteAxisType, Device, EventType, InputEventKind, Key, RelativeAxisType};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::Sender;
-use common::{APICommand, IncomingMessage};
+use common::{APICommand, IncomingMessage, Rect};
 use common::events::*;
 
 use std::thread;
@@ -58,7 +59,7 @@ fn linuxkernel_to_KeyCode(code:u16) -> KeyCode {
     }
 }
 
-pub fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender<IncomingMessage>) {
+pub fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender<IncomingMessage>, screen_size: Rect) {
     thread::spawn(move || {
         let mut cx = 0;
         let mut cy = 0;
@@ -107,9 +108,10 @@ pub fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender
                     },
                     InputEventKind::AbsAxis(abs) => {
                         println!("abs event {:?} {:?}",ev.value(), abs);
+                        let max_u16 = 32767;
                         match abs {
-                            AbsoluteAxisType::ABS_X => cx = ev.value()/100,
-                            AbsoluteAxisType::ABS_Y => cy = ev.value()/100,
+                            AbsoluteAxisType::ABS_X => cx = ev.value()/max_u16*screen_size.w,
+                            AbsoluteAxisType::ABS_Y => cy = ev.value()/max_u16*screen_size.h,
                             _ => {
                                 println!("unknown aboslute axis type")
                             }

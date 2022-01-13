@@ -90,10 +90,7 @@ fn main() {
         panic!("did not get the window manager connect response. gah!");
     };
 
-
-    //start input watchers
-    input::setup_evdev_watcher(keyboard, stop.clone(), conn.tx_in.clone());
-    input::setup_evdev_watcher(mouse, stop.clone(), conn.tx_in.clone());
+    let mut screen_size = Rect::from_ints(0,0,100,100);
 
     let cursor_image:GFXBuffer = GFXBuffer::from_png_file("../resources/cursor.png");
     info!("loaded the cursor image");
@@ -102,11 +99,17 @@ fn main() {
         let pth = "/dev/fb0";
         let mut fb = Framebuffer::new(pth).unwrap();
         print_debug_info(&fb);
+        screen_size.w = fb.var_screen_info.xres as i32;
+        screen_size.h = fb.var_screen_info.yres as i32;
         let _ = Framebuffer::set_kd_mode(KdMode::Graphics).unwrap();
         let mut surf:Surf = Surf::make(fb);
         // surf.sync();
         let drawing_thread = make_drawing_thread(surf,stop.clone(),conn.rx_in, conn.tx_out.clone(), cursor_image);
     }
+
+    //start input watchers
+    input::setup_evdev_watcher(keyboard, stop.clone(), conn.tx_in.clone(), screen_size);
+    input::setup_evdev_watcher(mouse, stop.clone(), conn.tx_in.clone(), screen_size);
 
     let timeout_handle = start_timeout(stop.clone(),args.timeout);
     timeout_handle.join().unwrap();
