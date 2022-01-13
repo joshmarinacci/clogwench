@@ -7,7 +7,7 @@ use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 use common::graphics::{ColorDepth, GFXBuffer};
 use common::{APICommand, ARGBColor, HelloWindowManager, IncomingMessage, Point, Rect, BLACK};
-use log::{debug, info, LevelFilter, log, warn};
+use log::{debug, error, info, LevelFilter, log, warn};
 use log4rs::append::file::FileAppender;
 use log4rs::Config;
 use log4rs::config::{Appender, Root};
