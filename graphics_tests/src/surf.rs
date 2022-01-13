@@ -5,7 +5,7 @@ use common::graphics::{ColorDepth, GFXBuffer};
 use common::graphics::ColorDepth::{CD16, CD24, CD32};
 
 pub struct Surf {
-    fb:Framebuffer,
+    pub(crate) fb:Framebuffer,
     pub(crate) buf:GFXBuffer,
     w:u32,
     h:u32,
