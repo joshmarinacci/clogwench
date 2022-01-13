@@ -6,7 +6,7 @@ use common::graphics::ColorDepth::{CD16, CD24, CD32};
 
 pub struct Surf {
     fb:Framebuffer,
-    buf:GFXBuffer,
+    pub(crate) buf:GFXBuffer,
     w:u32,
     h:u32,
 }
@@ -42,11 +42,5 @@ impl Surf {
     pub fn sync(&mut self) {
         self.fb.write_frame(&self.buf.data);
     }
-    pub fn clear(&mut self) {
-//         self.buf.fill_rect(Rect::from_ints(0, 0,
-//             self.fb.var_screen_info.xres as i32,
-//             self.fb.var_screen_info.yres as i32),
-// BLACK);
-    self.buf.fill_rect(Rect::from_ints(0, 0, 500, 500), BLACK);
-    }
+
 }
