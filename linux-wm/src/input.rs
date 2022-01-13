@@ -7,6 +7,7 @@ use common::{APICommand, IncomingMessage, Rect};
 use common::events::*;
 
 use std::thread;
+use log::info;
 use common::events::{KeyCode, MouseButton, MouseMoveEvent};
 
 pub fn find_keyboard() -> Option<evdev::Device> {
@@ -116,7 +117,7 @@ pub fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender
                                 println!("unknown aboslute axis type")
                             }
                         }
-                        println!("cursor {} , {}",cx, cy);
+                        info!("cursor {} , {}",cx, cy);
                         let cmd = IncomingMessage {
                             source: Default::default(),
                             command: APICommand::MouseMove(MouseMoveEvent {
