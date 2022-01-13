@@ -142,13 +142,6 @@ fn make_drawing_thread(mut surf: Surf,
         info!("render thread starting");
         let mut state = WindowManagerState::init();
         let mut cursor:Point = Point::init(0,0);
-        // let mut test_buff = GFXBuffer::new(ColorDepth::CD24(),10,10);
-        // test_buff.clear(&ARGBColor::new_rgb(0,0,0));
-
-        // test_buff.fill_rect(Rect::from_ints(0,0,5,5),(ARGBColor::new_rgb(255,0,0)));
-        // test_buff.fill_rect(Rect::from_ints(5,0,5,5),(ARGBColor::new_rgb(0,255,0)));
-        // test_buff.fill_rect(Rect::from_ints(0,5,5,5),(ARGBColor::new_rgb(0,0,255)));
-        // test_buff.fill_rect(Rect::from_ints(5,5,5,5),(ARGBColor::new_rgb(255,255,255)));
         for cmd in rx {
             let now = Instant::now();
             if stop.load(Ordering::Relaxed) == true { break; }
@@ -220,9 +213,9 @@ fn make_drawing_thread(mut surf: Surf,
                 _ => {}
             }
             if redraw {
-                //surf.buf.clear(&BLACK);
-                let bounds = Rect::from_ints(0,0,200,200);
-                surf.buf.fill_rect(bounds, ARGBColor::new_rgb(255,0,0));
+                surf.buf.clear(&BLACK);
+                // let bounds = Rect::from_ints(0,0,200,200);
+                // surf.buf.fill_rect(bounds, ARGBColor::new_rgb(255,0,0));
                 for win in state.window_list() {
                     surf.copy_from(win.bounds.x, win.bounds.y, &win.backbuffer)
                 }
