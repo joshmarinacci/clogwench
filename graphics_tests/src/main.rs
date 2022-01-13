@@ -10,6 +10,7 @@ use log4rs::append::file::FileAppender;
 use log4rs::Config;
 use log4rs::config::{Appender, Root};
 use structopt::StructOpt;
+use framebuffer::{Framebuffer, KdMode, VarScreeninfo};
 
 fn main() {
     let args:Cli = init_setup();
