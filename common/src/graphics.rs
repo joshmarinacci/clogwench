@@ -176,21 +176,30 @@ impl GFXBuffer {
                 let c1 = color.as_16bit();
                 let p1 = ((0xFF00 | c1) >> 8) as u8;
                 let p2 = ((0x00FF | c1) >> 0) as u8;
-                for chunk in self.data.chunks_exact_mut(2) {
-                    chunk[0] = p1;
-                    chunk[1] = p2;
+                //make a complete row
+                let mut row:Vec<u8> = vec![];
+                for i in 0..self.width {
+                    row.push(p1);
+                    row.push(p2);
                 }
+                for chunk in self.data.chunks_exact_mut((self.width*2) as usize) {
+                    chunk.copy_from_slice(&*row);
+                }
+    
             }
             CD24() => {
                 let v = color.as_vec();
-                // let a = v[0];
                 let r = v[1];
                 let g = v[2];
                 let b = v[3];
-                for chunk in self.data.chunks_exact_mut(3) {
-                    chunk[0] = r;
-                    chunk[1] = g;
-                    chunk[2] = b;
+                let mut row:Vec<u8> = vec![];
+                for i in 0..self.width {
+                    row.push(r);
+                    row.push(g);
+                    row.push(b);
+                }
+                for chunk in self.data.chunks_exact_mut((self.width*3) as usize) {
+                    chunk.copy_from_slice(&*row);
                 }
             }
             CD32() => {
@@ -202,23 +211,6 @@ impl GFXBuffer {
             let g = v[2];
             let b = v[3];
 
-        //impl 1a  ~169
-        // for chunk in self.data.chunks_mut(4) {
-        //     chunk[0] = v[0];
-        //     chunk[1] = v[1];
-        //     chunk[2] = v[2];
-        //     chunk[3] = v[3];
-        // }
-
-        //impl 1b  ~58 ms
-        // for chunk in self.data.chunks_mut(4) {
-        //     chunk[0] = a;
-        //     chunk[1] = r;
-        //     chunk[2] = g;
-        //     chunk[3] = b;
-        // }
-
-            // impl 1c 45ms
             let vv = &v;
             let mut row:Vec<u8> = vec![];
             for i in 0..self.width {
@@ -227,26 +219,9 @@ impl GFXBuffer {
                 row.push(g);
                 row.push(b);
             }
-                // println!("putting in {:?}",v);
-                // println!("chunk len is {:?}",self.width*4);
-            //get one row per chunk
             for chunk in self.data.chunks_exact_mut((self.width*4) as usize) {
                 chunk.copy_from_slice(&*row);
-            // chunk.copy_from_slice(vv);
-            // chunk[0] = a;
-            // chunk[1] = r;
-            // chunk[2] = g;
-            // chunk[3] = b;
             }
-
-        //impl 2 ~244ms
-        // let len = (self.width*self.height) as usize;
-        // for n in 0..len {
-        //     self.data[n*4 + 0] = v[0];
-        //     self.data[n*4 + 1] = v[1];
-        //     self.data[n*4 + 2] = v[2];
-        //     self.data[n*4 + 3] = v[3];
-        // }
             }
         }
     }
