@@ -48,10 +48,10 @@ fn make_drawing_thread(mut surf: Surf,
             let now = Instant::now();
             if stop.load(Ordering::Relaxed) == true { break; }
             surf.buf.clear(&BLACK);
-            let bounds = Rect::from_ints(0, 0,
-                                         400, 400);
-            surf.buf.fill_rect(bounds, ARGBColor::new_rgb(255, 0, 0));
-            surf.copy_from(cursor.x, cursor.y, &cursor_image);
+            // let bounds = Rect::from_ints(0, 0,
+            //                              400, 400);
+            // surf.buf.fill_rect(bounds, ARGBColor::new_rgb(255, 0, 0));
+            // surf.copy_from(cursor.x, cursor.y, &cursor_image);
             surf.sync();
             let dur = now.elapsed().as_millis();
             info!("drawing {}ms",dur);
