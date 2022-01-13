@@ -7,7 +7,7 @@ use common::{APICommand, IncomingMessage, Rect};
 use common::events::*;
 
 use std::thread;
-use log::info;
+use log::{info, warn};
 use common::events::{KeyCode, MouseButton, MouseMoveEvent};
 
 pub fn find_keyboard() -> Option<evdev::Device> {
@@ -87,15 +87,15 @@ pub fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender
                         tx.send(cmd).unwrap()
                     },
                     InputEventKind::RelAxis(rel) => {
-                        println!("mouse event {:?} {}",rel, ev.value());
+                        info!("mouse event {:?} {}",rel, ev.value());
                         match rel {
                             RelativeAxisType::REL_X => cx += ev.value(),
                             RelativeAxisType::REL_Y => cy += ev.value(),
                             _ => {
-                                println!("unknown relative axis type");
+                                warn!("unknown relative axis type");
                             }
                         }
-                        println!("cursor {} , {}",cx, cy);
+                        info!("cursor {},{}",cx, cy);
                         let cmd = IncomingMessage {
                             source: Default::default(),
                             command: APICommand::MouseMove(MouseMoveEvent{
@@ -108,13 +108,13 @@ pub fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender
                         tx.send(cmd).unwrap()
                     },
                     InputEventKind::AbsAxis(abs) => {
-                        println!("abs event {:?} {:?}",ev.value(), abs);
+                        info!("abs event {:?} {:?}",ev.value(), abs);
                         let max_u16 = 32767;
                         match abs {
                             AbsoluteAxisType::ABS_X => cx = ev.value()/max_u16*screen_size.w,
                             AbsoluteAxisType::ABS_Y => cy = ev.value()/max_u16*screen_size.h,
                             _ => {
-                                println!("unknown aboslute axis type")
+                                warn!("unknown aboslute axis type")
                             }
                         }
                         info!("cursor {} , {}",cx, cy);
