@@ -150,6 +150,7 @@ fn make_drawing_thread(mut surf: Surf,
         // test_buff.fill_rect(Rect::from_ints(0,5,5,5),(ARGBColor::new_rgb(0,0,255)));
         // test_buff.fill_rect(Rect::from_ints(5,5,5,5),(ARGBColor::new_rgb(255,255,255)));
         for cmd in rx {
+            let now = Instant::now();
             if stop.load(Ordering::Relaxed) == true { break; }
             let mut redraw = false;
             match cmd.command {
@@ -219,16 +220,16 @@ fn make_drawing_thread(mut surf: Surf,
                 _ => {}
             }
             if redraw {
-                let now = Instant::now();
-                surf.buf.clear(&BLACK);
-                // surf.copy_from(0,0,&cursor_image);
-                //for win in state.window_list() {
-                //    surf.copy_from(win.bounds.x, win.bounds.y, &win.backbuffer)
-                //}
+                //surf.buf.clear(&BLACK);
+                let bounds = Rect::from_ints(0,0,200,200);
+                surf.buf.fill_rect(bounds, ARGBColor::new_rgb(255,0,0));
+                for win in state.window_list() {
+                    surf.copy_from(win.bounds.x, win.bounds.y, &win.backbuffer)
+                }
                 surf.copy_from(cursor.x, cursor.y, &cursor_image);
                 surf.sync();
-                info!("drawing {}ms",(now.elapsed().as_millis()));
             }
+            info!("drawing {}ms",(now.elapsed().as_millis()));
         }
         info!("render thread stopping");
     });
