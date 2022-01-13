@@ -1,3 +1,5 @@
+mod surf;
+
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
@@ -11,6 +13,7 @@ use log4rs::Config;
 use log4rs::config::{Appender, Root};
 use structopt::StructOpt;
 use framebuffer::{Framebuffer, KdMode, VarScreeninfo};
+use crate::surf::Surf;
 
 fn main() {
     let args:Cli = init_setup();

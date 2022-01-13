@@ -527,6 +527,7 @@ dependencies = [
  "framebuffer",
  "libc",
  "log4rs",
+ "structopt",
 ]
 
 [[package]]
