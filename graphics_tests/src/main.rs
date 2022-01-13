@@ -21,10 +21,11 @@ fn main() {
 
     let pth = "/dev/fb0";
     let mut fb = Framebuffer::new(pth).unwrap();
-    print_debug_info(&fb);
     let _ = Framebuffer::set_kd_mode(KdMode::Graphics).unwrap();
     let mut surf:Surf = Surf::make(fb);
     // surf.sync();
+    let cursor_image:GFXBuffer = GFXBuffer::from_png_file("../resources/cursor.png");
+    info!("loaded the cursor image");
     let drawing_thread = make_drawing_thread(surf,stop.clone(),cursor_image);
 
     let timeout_handle = start_timeout(stop.clone(),args.timeout);
