@@ -522,6 +522,12 @@ dependencies = [
 [[package]]
 name = "graphics_tests"
 version = "0.1.0"
+dependencies = [
+ "common",
+ "framebuffer",
+ "libc",
+ "log4rs",
+]
 
 [[package]]
 name = "hashbrown"
