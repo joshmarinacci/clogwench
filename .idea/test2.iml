@@ -10,6 +10,7 @@
       <sourceFolder url="file://$MODULE_DIR$/test-wm/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/tools-input/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/common-wm/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/graphics_tests/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/temp" />
       <excludeFolder url="file://$MODULE_DIR$/.tmp" />
       <excludeFolder url="file://$MODULE_DIR$/tmp" />
