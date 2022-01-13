@@ -24,6 +24,7 @@ fn main() {
     let mut fb = Framebuffer::new(pth).unwrap();
     let _ = Framebuffer::set_kd_mode(KdMode::Graphics).unwrap();
     let mut surf:Surf = Surf::make(fb);
+    info!("screen size is {} {}x{}", fb.var_screen_info.bits_per_pixel, fb.var_screen_info.xres, fb.var_screen_info.yres);
     // surf.sync();
     let cursor_image:GFXBuffer = GFXBuffer::from_png_file("../resources/cursor.png");
     info!("loaded the cursor image");
