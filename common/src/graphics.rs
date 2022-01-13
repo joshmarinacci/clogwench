@@ -171,13 +171,45 @@ impl GFXBuffer {
 
 impl GFXBuffer {
     pub fn clear(&mut self, color: &ARGBColor) {
-        for i in 0..self.width {
-            for j in 0..self.height {
-                //let n = self.xy_to_n(i,j);
-                let n = (i + j * self.width) as usize;
-                self.set_pixel_n(n,color)
-            }
+        //impl1
+        let v = color.as_vec();
+        let a = v[0];
+        let r = v[1];
+        let g = v[2];
+        let b = v[3];
+
+        //impl 1a  ~169
+        // for chunk in self.data.chunks_mut(4) {
+        //     chunk[0] = v[0];
+        //     chunk[1] = v[1];
+        //     chunk[2] = v[2];
+        //     chunk[3] = v[3];
+        // }
+
+        //impl 1b  ~58 ms
+        // for chunk in self.data.chunks_mut(4) {
+        //     chunk[0] = a;
+        //     chunk[1] = r;
+        //     chunk[2] = g;
+        //     chunk[3] = b;
+        // }
+
+        // impl 1c 45ms
+        for chunk in self.data.chunks_exact_mut(4) {
+            chunk[0] = a;
+            chunk[1] = r;
+            chunk[2] = g;
+            chunk[3] = b;
         }
+
+        //impl 2 ~244ms
+        // let len = (self.width*self.height) as usize;
+        // for n in 0..len {
+        //     self.data[n*4 + 0] = v[0];
+        //     self.data[n*4 + 1] = v[1];
+        //     self.data[n*4 + 2] = v[2];
+        //     self.data[n*4 + 3] = v[3];
+        // }
     }
     fn set_pixel_n(&mut self, n: usize, color: &ARGBColor) {
         match self.bitdepth {
@@ -283,6 +315,7 @@ mod tests {
     use std::fs::File;
     use std::io::BufWriter;
     use std::path::Path;
+    use std::time::Instant;
     use crate::{ARGBColor, BLACK, WHITE};
     use crate::graphics::ColorDepth::{CD16, CD24, CD32};
     use crate::graphics::{draw_test_pattern, GFXBuffer};
@@ -389,5 +422,15 @@ mod tests {
         }
         writer.write_image_data(&data).unwrap(); // Save
 
+    }
+
+    #[test]
+    fn drawing_speed() {
+        let mut buf = GFXBuffer::new(CD32(),1360,768);
+        let now = Instant::now();
+        for i in 0..50 {
+            buf.clear(&BLACK);
+        }
+        println!("elapsed {} ms", (now.elapsed().as_millis()/50));
     }
 }
