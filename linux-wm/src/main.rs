@@ -9,6 +9,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread::JoinHandle;
 use std::time::Duration;
+use std::time::Instant;
 
 use ctrlc;
 use env_logger;
@@ -218,13 +219,15 @@ fn make_drawing_thread(mut surf: Surf,
                 _ => {}
             }
             if redraw {
-                surf.clear();
+                let now = Instant::now();
+                surf.buf.clear(&BLACK);
                 // surf.copy_from(0,0,&cursor_image);
-                for win in state.window_list() {
-                    surf.copy_from(win.bounds.x, win.bounds.y, &win.backbuffer)
-                }
+                //for win in state.window_list() {
+                //    surf.copy_from(win.bounds.x, win.bounds.y, &win.backbuffer)
+                //}
                 surf.copy_from(cursor.x, cursor.y, &cursor_image);
                 surf.sync();
+                info!("drawing {}ms",(now.elapsed().as_millis()));
             }
         }
         info!("render thread stopping");
