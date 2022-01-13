@@ -171,6 +171,30 @@ impl GFXBuffer {
 
 impl GFXBuffer {
     pub fn clear(&mut self, color: &ARGBColor) {
+        match self.bitdepth {
+            ColorDepth::CD16() => {
+                let c1 = color.as_16bit();
+                let p1 = ((0xFF00 | c1) >> 8) as u8;
+                let p2 = ((0x00FF | c1) >> 0) as u8;
+                for chunk in self.data.chunks_exact_mut(2) {
+                    chunk[0] = p1;
+                    chunk[1] = p2;
+                }
+            }
+            CD24() => {
+                let v = color.as_vec();
+                // let a = v[0];
+                let r = v[1];
+                let g = v[2];
+                let b = v[3];
+                for chunk in self.data.chunks_exact_mut(3) {
+                    chunk[0] = r;
+                    chunk[1] = g;
+                    chunk[2] = b;
+                }
+            }
+            CD32() => {
+
         //impl1
         let v = color.as_vec();
         let a = v[0];
@@ -210,6 +234,8 @@ impl GFXBuffer {
         //     self.data[n*4 + 2] = v[2];
         //     self.data[n*4 + 3] = v[3];
         // }
+            }
+        }
     }
     fn set_pixel_n(&mut self, n: usize, color: &ARGBColor) {
         match self.bitdepth {
@@ -431,6 +457,20 @@ mod tests {
         for i in 0..50 {
             buf.clear(&BLACK);
         }
-        println!("elapsed {} ms", (now.elapsed().as_millis()/50));
+        println!("32bit elapsed {} ms", (now.elapsed().as_millis()/50));
+
+        let mut buf = GFXBuffer::new(CD24(),1360,768);
+        let now = Instant::now();
+        for i in 0..50 {
+            buf.clear(&BLACK);
+        }
+        println!("24 bit elapsed {} ms", (now.elapsed().as_millis()/50));
+        let mut buf = GFXBuffer::new(CD16(),1360,768);
+        let now = Instant::now();
+        for i in 0..50 {
+            buf.clear(&BLACK);
+        }
+        println!("16 bit elapsed {} ms", (now.elapsed().as_millis()/50));
+
     }
 }
