@@ -114,9 +114,13 @@ pub fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender
                         let w = screen_size.w as f32;
                         let h = screen_size.h as f32;
                         let v = ev.value() as f32;
+                        let mut was_y = false;
                         match abs {
                             AbsoluteAxisType::ABS_X => cx = v/max_u16*w,
-                            AbsoluteAxisType::ABS_Y => cy = v/max_u16*h,
+                            AbsoluteAxisType::ABS_Y => {
+                                cy = v/max_u16*h;
+                                was_y = true
+                            },
                             _ => {
                                 warn!("unknown aboslute axis type")
                             }
@@ -131,8 +135,9 @@ pub fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender
                                 y: cy as i32
                             }),
                         };
-                        tx.send(cmd).unwrap();
-                        // stop.store(true,Ordering::Relaxed);
+                        if was_y {
+                            tx.send(cmd).unwrap();
+                        }
                     },
                     _ => {}
                 }
