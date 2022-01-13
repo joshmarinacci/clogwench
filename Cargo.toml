@@ -6,6 +6,7 @@ members = [
     "test-wm",
     "demo-moveplayer",
     "central",
+    "graphics_tests",
     "tools-input",
     "common"
 ]
