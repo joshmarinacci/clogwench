@@ -524,6 +524,7 @@ name = "graphics_tests"
 version = "0.1.0"
 dependencies = [
  "common",
+ "ctrlc",
  "evdev",
  "framebuffer",
  "libc",
