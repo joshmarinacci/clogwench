@@ -83,7 +83,7 @@ pub struct WindowManagerState {
 impl WindowManagerState {
     pub fn is_focused_window(&self, win: &Window) -> bool {
         if let Some(foc) = self.get_focused_window() {
-            if foc == win.id {
+            if foc == &(win.id) {
                 return true
             }
         }
