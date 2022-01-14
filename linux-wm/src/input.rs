@@ -72,10 +72,10 @@ pub fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender
             }
             for ev in device.fetch_events().unwrap() {
                 // println!("{:?}", ev);
-                // info!("type {:?}", ev.event_type());
+                // info!("type {:?}", ev.event_type()); //type and kind are the same. kind is just nicer
                 match ev.kind() {
                     InputEventKind::Key(key) => {
-                        // info!("evdev:key {}",key.code());
+                        info!("evdev:key {} value {}",key.code(),ev.value());
                         let keycode = linuxkernel_to_KeyCode(key.code());
                         let appcmd = match keycode {
                             KeyCode::MOUSE_PRIMARY => APICommand::MouseDown(MouseDownEvent{
