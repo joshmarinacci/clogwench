@@ -7,7 +7,7 @@ use std::thread;
 use std::thread::JoinHandle;
 use log::{error, info};
 use uuid::Uuid;
-use common::{APICommand, ARGBColor, BLACK, IncomingMessage, Point, Rect};
+use common::{APICommand, ARGBColor, BLACK, IncomingMessage, Point, Rect, Size};
 use serde::{Deserialize, Serialize};
 use common::graphics::ColorDepth::CD24;
 use common::graphics::GFXBuffer;
@@ -26,12 +26,54 @@ pub struct App {
     pub id:Uuid,
     windows:Vec<Window>,
 }
+
+const TITLE_BAR_HEIGHT:i32 = 10;
+const WINDOW_BORDER_WIDTH:i32 = 5;
+const WINDOW_COLOR:ARGBColor = ARGBColor { r: 100, g: 0, b: 0, a: 255 };
+const TITLEBAR_COLOR:ARGBColor = ARGBColor { r: 250, g: 100, b: 50, a: 255 };
+const FOCUSED_WINDOW_COLOR:ARGBColor = ARGBColor { r: 255, g: 255, b: 255, a: 255 };
+const FOCUSED_TITLEBAR_COLOR:ARGBColor = ARGBColor { r: 255, g: 200, b: 200, a: 255 };
+
+pub enum WindowType {
+    Plain(),
+    Popup(),
+}
 pub struct Window {
     pub id:Uuid,
-    pub bounds:Rect,
     pub owner:Uuid,
     pub backbuffer:GFXBuffer,
+    pub position:Point,
+    pub content_size: Size,
+    pub window_type:WindowType
 }
+
+impl Window {
+    pub fn content_bounds(&self) -> Rect {
+        return Rect {
+            x:self.position.x + WINDOW_BORDER_WIDTH,
+            y:self.position.y + WINDOW_BORDER_WIDTH + TITLE_BAR_HEIGHT,
+            w:self.content_size.w,
+            h:self.content_size.h,
+        }
+    }
+    pub fn external_bounds(&self) -> Rect {
+        return Rect {
+            x:self.position.x,
+            y:self.position.y,
+            w:WINDOW_BORDER_WIDTH+self.content_size.w+WINDOW_BORDER_WIDTH,
+            h:WINDOW_BORDER_WIDTH+TITLE_BAR_HEIGHT+self.content_size.h+WINDOW_BORDER_WIDTH,
+        }
+    }
+    pub fn titlebar_bounds(&self) -> Rect {
+        return Rect {
+            x:self.position.x,
+            y:self.position.y,
+            w:self.content_size.w,
+            h:TITLE_BAR_HEIGHT,
+        }
+    }
+}
+
 
 pub struct WindowManagerState {
     apps:Vec<App>,
@@ -58,7 +100,8 @@ impl WindowManagerState {
     pub fn add_window(&mut self, app_id: Uuid, win_id:Uuid, bounds:&Rect) {
         let win = Window {
             id: win_id,
-            bounds:bounds.clone(),
+            position:bounds.position(),
+            content_size:bounds.size(),
             owner: app_id,
             backbuffer: GFXBuffer::new(CD24(), bounds.w as u32, bounds.h as u32)
         };

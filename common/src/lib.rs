@@ -168,6 +168,19 @@ impl Point {
     }
 }
 
+
+#[derive(Serialize, Deserialize, Debug, Copy, Clone)]
+pub struct Size {
+    pub w:i32,
+    pub h:i32,
+}
+
+impl Size {
+    fn init(w: i32, h: i32) -> Size {
+        Size { w, h }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Copy, Clone)]
 pub struct Rect {
     pub x:i32,
@@ -183,6 +196,12 @@ impl Rect {
         if pt.x > self.x + self.w { return false }
         if pt.y > self.y + self.h { return false}
         return true
+    }
+    pub fn position(&self) -> Point {
+        return Point::init(self.x,self.y);
+    }
+    pub fn size(&self) -> Size {
+        return Size::init(self.w,self.h);
     }
 }
 
@@ -209,64 +228,3 @@ impl Rect {
         return Point::init(x,y);
     }
 }
-/*
-pub struct Window {
-    pub id:Uuid,
-    pub bounds:Rect,
-}
-
-impl Window {
-    pub fn  from_rect(rect: Rect) -> Window {
-        Window {
-            id: Uuid::new_v4(),
-            bounds: rect,
-        }
-    }
-}
-
-pub struct App {
-    pub id:Uuid,
-    pub connection:TcpStream,
-    pub windows:Vec<Window>,
-}
-
-impl App {
-    pub fn from_stream(stream: TcpStream) -> App {
-        App {
-            id:Uuid::new_v4(),
-            connection: stream.try_clone().unwrap(),
-            windows: vec![]
-        }
-    }
-}
-
-
-pub struct CentralState {
-    appmap:HashMap<Uuid,App>
-}
-
-impl CentralState {
-    pub fn init() -> CentralState {
-        CentralState {
-            appmap: Default::default()
-        }
-    }
-}
-
-impl CentralState {
-    pub fn add_window(&mut self, appid: Uuid, window:Window) {
-        if let Some(app) = self.appmap.get_mut(&appid) {
-            app.windows.push(window);
-        }
-    }
-    pub fn add_app(&mut self, app:App) {
-        self.appmap.insert(app.id,app);
-    }
-    pub fn app_list(&mut self) -> std::collections::hash_map::IterMut<'_, Uuid, App> {
-        self.appmap.iter_mut()
-    }
-    pub fn find_app_by_id(&mut self, id:Uuid) -> Option<&App> {
-        self.appmap.get(&id)
-    }
-}
-*/
