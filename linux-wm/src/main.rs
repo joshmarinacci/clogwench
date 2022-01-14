@@ -25,7 +25,7 @@ use uuid::Uuid;
 use common::{APICommand, ARGBColor, HelloWindowManager, IncomingMessage, Point, Rect, BLACK};
 use common::APICommand::KeyDown;
 use common::events::{KeyDownEvent, KeyCode};
-use common_wm::{OutgoingMessage, start_wm_network_connection, WINDOW_COLOR, WindowManagerState};
+use common_wm::{FOCUSED_TITLEBAR_COLOR, FOCUSED_WINDOW_COLOR, OutgoingMessage, start_wm_network_connection, TITLEBAR_COLOR, WINDOW_COLOR, WindowManagerState};
 use surf::Surf;
 use common::graphics::{ColorDepth, GFXBuffer};
 
@@ -228,9 +228,15 @@ fn make_drawing_thread(mut surf: Surf,
                 // let bounds = Rect::from_ints(0,0,200,200);
                 // surf.buf.fill_rect(bounds, ARGBColor::new_rgb(255,0,0));
                 for win in state.window_list() {
-                    surf.buf.fill_rect(win.external_bounds(),WINDOW_COLOR);
+                    if state.is_focused_window(win) {
+                        surf.buf.fill_rect(win.external_bounds(), WINDOW_COLOR);
+                        surf.buf.fill_rect(win.titlebar_bounds(), TITLEBAR_COLOR);
+                    } else {
+                        surf.buf.fill_rect(win.external_bounds(), FOCUSED_WINDOW_COLOR);
+                        surf.buf.fill_rect(win.titlebar_bounds(), FOCUSED_TITLEBAR_COLOR);
+                    }
                     let bd = win.content_bounds();
-                    info!("drawing window {} at {:?}",win.id,bd);
+                    // info!("drawing window {} at {:?}",win.id,bd);
                     surf.copy_from(bd.x, bd.y, &win.backbuffer)
                 }
                 surf.copy_from(cursor.x, cursor.y, &cursor_image);
