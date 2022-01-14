@@ -94,6 +94,13 @@ fn main() {
     let cursor_image:GFXBuffer = GFXBuffer::from_png_file("../resources/cursor.png");
     info!("loaded the cursor image");
 
+    let mut state = WindowManagerState::init();
+    let fake_app = Uuid::new_v4();
+    state.add_app(fake_app);
+    let fake_window_uuid = Uuid::new_v4();
+    let fake_window_bounds = Rect::from_ints(50,50,200,200);
+    state.add_window(fake_app, fake_window_uuid, &fake_window_bounds);
+
     if !args.disable_graphics {
         let pth = "/dev/fb0";
         let mut fb = Framebuffer::new(pth).unwrap();
@@ -104,7 +111,7 @@ fn main() {
         let mut surf:Surf = Surf::make(fb);
         surf.buf.clear(&ARGBColor::new_rgb(0,255,200));
         surf.sync();
-        let drawing_thread = make_drawing_thread(surf,stop.clone(),internal_message_receiver, external_message_sender, cursor_image);
+        let drawing_thread = make_drawing_thread(surf,stop.clone(),internal_message_receiver, external_message_sender, cursor_image, state);
     } else {
         info!("graphics are disabled");
     }
@@ -141,125 +148,116 @@ fn make_drawing_thread(mut surf: Surf,
                        stop: Arc<AtomicBool>,
                        rx: Receiver<IncomingMessage>,
                        tx_out: Sender<OutgoingMessage>,
-                       cursor_image: GFXBuffer
+                       cursor_image: GFXBuffer,
+                       mut state:WindowManagerState
 ) -> JoinHandle<()> {
     return thread::spawn(move ||{
         info!("render thread starting");
-        let mut state = WindowManagerState::init();
-
-        let fake_app = Uuid::new_v4();
-        state.add_app(fake_app);
-        let fake_window_uuid = Uuid::new_v4();
-        let fake_window_bounds = Rect::from_ints(50,50,200,200);
-        state.add_window(fake_app, fake_window_uuid, &fake_window_bounds);
-
         let mut gesture = Box::new(NoOpGesture::init()) as Box<dyn InputGesture>;
         let mut cursor:Point = Point::init(0,0);
         loop {
-            let now = Instant::now();
             if stop.load(Ordering::Relaxed) == true { break; }
-
-            //draw
-            surf.buf.clear(&BLACK);
-            for win in state.window_list() {
-                let (wc,tc) = if state.is_focused_window(win) {
-                    (FOCUSED_WINDOW_COLOR, FOCUSED_TITLEBAR_COLOR)
-                } else {
-                    (WINDOW_COLOR, TITLEBAR_COLOR)
-                };
-                surf.buf.draw_rect(win.external_bounds(), wc,WINDOW_BORDER_WIDTH);
-                surf.buf.fill_rect(win.titlebar_bounds(), tc);
-                let bd = win.content_bounds();
-                surf.copy_from(bd.x, bd.y, &win.backbuffer)
-            }
-            surf.copy_from(cursor.x, cursor.y, &cursor_image);
-            surf.sync();
-
-            info!("drawing {}ms",(now.elapsed().as_millis()));
-
-        for cmd in rx.try_iter() {
-            match cmd.command {
-                APICommand::AppConnectResponse(res) => {
-                    // info!("adding an app {}",res.app_id);
-                    state.add_app(res.app_id);
-                },
-                APICommand::OpenWindowResponse(ow) => {
-                    // info!("adding a window to the app");
-                    state.add_window(ow.app_id, ow.window_id, &ow.bounds);
-                    state.set_focused_window(ow.window_id);
-                },
-                APICommand::DrawRectCommand(dr) => {
-                    // info!("drawing a rect");
-                    if let Some(mut win) = state.lookup_window(dr.window_id) {
-                        win.backbuffer.fill_rect(dr.rect, dr.color);
-                    }
-                },
-                APICommand::KeyUp(ku) => {
-                    // println!("key up");
-                },
-                APICommand::KeyDown(kd) => {
-                    // println!("key down {}",kd.key);
-                    match kd.key {
-                        KeyCode::ESC => {
-                            stop.store(true, Ordering::Relaxed);
-                        },
-                        _ => {
-                            info!("key down");
-                            //send key to the currently focused window
-                            if let Some(winid) = state.get_focused_window() {
-                                if let Some(win) = state.lookup_window(winid.clone()) {
-                                    let msg = OutgoingMessage {
-                                        recipient: win.owner,
-                                        command: KeyDown(KeyDownEvent {
-                                            app_id: win.owner,
-                                            window_id: win.id,
-                                            original_timestamp: 0,
-                                            key: kd.key
-                                        })
-                                    };
-                                    tx_out.send(msg).unwrap();
+            redraw_screen(&mut surf, &state);
+            for cmd in rx.try_iter() {
+                match cmd.command {
+                    APICommand::AppConnectResponse(res) => {
+                        // info!("adding an app {}",res.app_id);
+                        state.add_app(res.app_id);
+                    },
+                    APICommand::OpenWindowResponse(ow) => {
+                        // info!("adding a window to the app");
+                        state.add_window(ow.app_id, ow.window_id, &ow.bounds);
+                        state.set_focused_window(ow.window_id);
+                    },
+                    APICommand::DrawRectCommand(dr) => {
+                        // info!("drawing a rect");
+                        if let Some(mut win) = state.lookup_window(dr.window_id) {
+                            win.backbuffer.fill_rect(dr.rect, dr.color);
+                        }
+                    },
+                    APICommand::KeyUp(ku) => {
+                        // println!("key up");
+                    },
+                    APICommand::KeyDown(kd) => {
+                        // println!("key down {}",kd.key);
+                        match kd.key {
+                            KeyCode::ESC => {
+                                stop.store(true, Ordering::Relaxed);
+                            },
+                            _ => {
+                                info!("key down");
+                                //send key to the currently focused window
+                                if let Some(winid) = state.get_focused_window() {
+                                    if let Some(win) = state.lookup_window(winid.clone()) {
+                                        let msg = OutgoingMessage {
+                                            recipient: win.owner,
+                                            command: KeyDown(KeyDownEvent {
+                                                app_id: win.owner,
+                                                window_id: win.id,
+                                                original_timestamp: 0,
+                                                key: kd.key
+                                            })
+                                        };
+                                        tx_out.send(msg).unwrap();
+                                    }
                                 }
                             }
                         }
-                    }
-                },
-                APICommand::MouseDown(mme) => {
-                    let pt = Point::init(mme.x, mme.y);
-                    info!("mouse down at {:?}",pt);
-                    if let Some(win) = state.pick_window_at(pt) {
-                        debug!("found a window at {:?}", pt);
-                        // //if mouse over titlebar, then start a window_move_gesture
-                        if win.titlebar_bounds().contains(pt) {
-                            debug!("inside the titlebar");
-                            gesture = Box::new(WindowDragGesture::init(pt,win.id))
+                    },
+                    APICommand::MouseDown(mme) => {
+                        let pt = Point::init(mme.x, mme.y);
+                        info!("mouse down at {:?}",pt);
+                        if let Some(win) = state.pick_window_at(pt) {
+                            debug!("found a window at {:?}", pt);
+                            // //if mouse over titlebar, then start a window_move_gesture
+                            if win.titlebar_bounds().contains(pt) {
+                                debug!("inside the titlebar");
+                                gesture = Box::new(WindowDragGesture::init(pt,win.id))
+                            }
+                            // //if mouse over window_contents, then set window focused
+                            if win.content_bounds().contains(pt) {
+                                //     //do nothing
+                            }
+                            state.set_focused_window(win.id);
                         }
-                        // //if mouse over window_contents, then set window focused
-                        if win.content_bounds().contains(pt) {
-                            //     //do nothing
-                        }
-                        state.set_focused_window(win.id);
-                    }
-                },
-                APICommand::MouseMove(mme) => {
-                    let bounds = Rect::from_ints(0,0,500,500);
-                    let pt = bounds.clamp(&Point::init(mme.x,mme.y));
-                    cursor.copy_from(pt);
-                    gesture.mouse_move(mme, &mut state);
-                },
-                APICommand::MouseUp(mme) => {
-                    // println!("mouse move {:?}",mme)
-                    gesture.mouse_up(mme, &mut state);
-                    gesture = Box::new(NoOpGesture::init());
-                },
-                _ => {}
+                    },
+                    APICommand::MouseMove(mme) => {
+                        let bounds = Rect::from_ints(0,0,500,500);
+                        let pt = bounds.clamp(&Point::init(mme.x,mme.y));
+                        cursor.copy_from(pt);
+                        gesture.mouse_move(mme, &mut state);
+                    },
+                    APICommand::MouseUp(mme) => {
+                        // println!("mouse move {:?}",mme)
+                        gesture.mouse_up(mme, &mut state);
+                        gesture = Box::new(NoOpGesture::init());
+                    },
+                    _ => {}
+                }
             }
-        }
-
-            // thread::sleep(Duration::from_millis(10));
         }
 
         info!("render thread stopping");
     });
+}
+
+fn redraw_screen(surf: &mut Surf, state: &WindowManagerState) {            //draw
+    let now = Instant::now();
+    surf.buf.clear(&BLACK);
+    for win in state.window_list() {
+        let (wc,tc) = if state.is_focused_window(win) {
+            (FOCUSED_WINDOW_COLOR, FOCUSED_TITLEBAR_COLOR)
+        } else {
+            (WINDOW_COLOR, TITLEBAR_COLOR)
+        };
+        surf.buf.draw_rect(win.external_bounds(), wc,WINDOW_BORDER_WIDTH);
+        surf.buf.fill_rect(win.titlebar_bounds(), tc);
+        let bd = win.content_bounds();
+        surf.copy_from(bd.x, bd.y, &win.backbuffer)
+    }
+    surf.copy_from(cursor.x, cursor.y, &cursor_image);
+    surf.sync();
+    info!("drawing {}ms",(now.elapsed().as_millis()));
 }
 
 
