@@ -235,7 +235,7 @@ fn make_drawing_thread(mut surf: Surf,
                     } else {
                         (WINDOW_COLOR, TITLEBAR_COLOR)
                     };
-                    // surf.buf.fill_rect(win.external_bounds(), wc);
+                    surf.buf.fill_rect(win.external_bounds(), wc);
                     surf.buf.fill_rect(win.titlebar_bounds(), tc);
                     let bd = win.content_bounds();
                     // info!("drawing window {} at {:?}",win.id,bd);

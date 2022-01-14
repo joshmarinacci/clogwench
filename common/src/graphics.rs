@@ -185,7 +185,7 @@ impl GFXBuffer {
                 for chunk in self.data.chunks_exact_mut((self.width*2) as usize) {
                     chunk.copy_from_slice(&*row);
                 }
-    
+
             }
             CD24() => {
                 let v = color.as_vec();
@@ -203,25 +203,24 @@ impl GFXBuffer {
                 }
             }
             CD32() => {
+                //impl1
+                let v = color.as_vec();
+                let a = v[0];
+                let r = v[1];
+                let g = v[2];
+                let b = v[3];
 
-            //impl1
-            let v = color.as_vec();
-            let a = v[0];
-            let r = v[1];
-            let g = v[2];
-            let b = v[3];
-
-            let vv = &v;
-            let mut row:Vec<u8> = vec![];
-            for i in 0..self.width {
-                row.push(a);
-                row.push(r);
-                row.push(g);
-                row.push(b);
-            }
-            for chunk in self.data.chunks_exact_mut((self.width*4) as usize) {
-                chunk.copy_from_slice(&*row);
-            }
+                let vv = &v;
+                let mut row:Vec<u8> = vec![];
+                for i in 0..self.width {
+                    row.push(r);
+                    row.push(g);
+                    row.push(b);
+                    row.push(a);
+                }
+                for chunk in self.data.chunks_exact_mut((self.width*4) as usize) {
+                    chunk.copy_from_slice(&*row);
+                }
             }
         }
     }
