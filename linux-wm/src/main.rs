@@ -155,27 +155,44 @@ fn make_drawing_thread(mut surf: Surf,
 
         let mut gesture = Box::new(NoOpGesture::init()) as Box<dyn InputGesture>;
         let mut cursor:Point = Point::init(0,0);
-        for cmd in rx {
+        loop {
             let now = Instant::now();
             if stop.load(Ordering::Relaxed) == true { break; }
-            let mut redraw = false;
+
+            //draw
+            surf.buf.clear(&BLACK);
+            for win in state.window_list() {
+                let (wc,tc) = if state.is_focused_window(win) {
+                    (FOCUSED_WINDOW_COLOR, FOCUSED_TITLEBAR_COLOR)
+                } else {
+                    (WINDOW_COLOR, TITLEBAR_COLOR)
+                };
+                surf.buf.draw_rect(win.external_bounds(), wc,WINDOW_BORDER_WIDTH);
+                surf.buf.fill_rect(win.titlebar_bounds(), tc);
+                let bd = win.content_bounds();
+                surf.copy_from(bd.x, bd.y, &win.backbuffer)
+            }
+            surf.copy_from(cursor.x, cursor.y, &cursor_image);
+            surf.sync();
+
+            info!("drawing {}ms",(now.elapsed().as_millis()));
+
+        for cmd in rx.try_iter() {
             match cmd.command {
                 APICommand::AppConnectResponse(res) => {
-                    info!("adding an app {}",res.app_id);
+                    // info!("adding an app {}",res.app_id);
                     state.add_app(res.app_id);
                 },
                 APICommand::OpenWindowResponse(ow) => {
-                    info!("adding a window to the app");
+                    // info!("adding a window to the app");
                     state.add_window(ow.app_id, ow.window_id, &ow.bounds);
                     state.set_focused_window(ow.window_id);
-                    redraw = true;
                 },
                 APICommand::DrawRectCommand(dr) => {
-                    info!("drawing a rect");
+                    // info!("drawing a rect");
                     if let Some(mut win) = state.lookup_window(dr.window_id) {
                         win.backbuffer.fill_rect(dr.rect, dr.color);
                     }
-                    redraw = true;
                 },
                 APICommand::KeyUp(ku) => {
                     // println!("key up");
@@ -227,7 +244,6 @@ fn make_drawing_thread(mut surf: Surf,
                     let bounds = Rect::from_ints(0,0,500,500);
                     let pt = bounds.clamp(&Point::init(mme.x,mme.y));
                     cursor.copy_from(pt);
-                    redraw = true;
                     gesture.mouse_move(mme, &mut state);
                 },
                 APICommand::MouseUp(mme) => {
@@ -237,24 +253,11 @@ fn make_drawing_thread(mut surf: Surf,
                 },
                 _ => {}
             }
-            if redraw {
-                surf.buf.clear(&BLACK);
-                for win in state.window_list() {
-                    let (wc,tc) = if state.is_focused_window(win) {
-                        (FOCUSED_WINDOW_COLOR, FOCUSED_TITLEBAR_COLOR)
-                    } else {
-                        (WINDOW_COLOR, TITLEBAR_COLOR)
-                    };
-                    surf.buf.draw_rect(win.external_bounds(), wc,WINDOW_BORDER_WIDTH);
-                    surf.buf.fill_rect(win.titlebar_bounds(), tc);
-                    let bd = win.content_bounds();
-                    surf.copy_from(bd.x, bd.y, &win.backbuffer)
-                }
-                surf.copy_from(cursor.x, cursor.y, &cursor_image);
-                surf.sync();
-            }
-            info!("drawing {}ms",(now.elapsed().as_millis()));
         }
+
+            // thread::sleep(Duration::from_millis(10));
+        }
+
         info!("render thread stopping");
     });
 }
