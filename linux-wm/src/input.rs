@@ -72,10 +72,10 @@ pub fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender
             }
             for ev in device.fetch_events().unwrap() {
                 // println!("{:?}", ev);
-                info!("type {:?}", ev.event_type());
+                // info!("type {:?}", ev.event_type());
                 match ev.kind() {
                     InputEventKind::Key(key) => {
-                        info!("evdev:key {}",key.code());
+                        // info!("evdev:key {}",key.code());
                         let keycode = linuxkernel_to_KeyCode(key.code());
                         let appcmd = match keycode {
                             KeyCode::MOUSE_PRIMARY => APICommand::MouseDown(MouseDownEvent{
@@ -100,7 +100,7 @@ pub fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender
                         tx.send(cmd).unwrap()
                     },
                     InputEventKind::RelAxis(rel) => {
-                        info!("mouse event {:?} {}",rel, ev.value());
+                        // info!("mouse event {:?} {}",rel, ev.value());
                         let v = ev.value() as f32;
                         match rel {
                             RelativeAxisType::REL_X => cx += v,
@@ -109,7 +109,7 @@ pub fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender
                                 warn!("unknown relative axis type");
                             }
                         }
-                        info!("cursor {},{}",cx, cy);
+                        // info!("cursor {},{}",cx, cy);
                         let cmd = IncomingMessage {
                             source: Default::default(),
                             command: APICommand::MouseMove(MouseMoveEvent{
@@ -122,7 +122,7 @@ pub fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender
                         tx.send(cmd).unwrap()
                     },
                     InputEventKind::AbsAxis(abs) => {
-                        info!("abs event {:?} {:?}",ev.value(), abs);
+                        // info!("abs event {:?} {:?}",ev.value(), abs);
                         let max_u16 = 32767 as f32;
                         let w = screen_size.w as f32;
                         let h = screen_size.h as f32;
@@ -138,7 +138,7 @@ pub fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender
                                 warn!("unknown aboslute axis type")
                             }
                         }
-                        info!("cursor {} , {}",cx, cy);
+                        // info!("cursor {} , {}",cx, cy);
                         let cmd = IncomingMessage {
                             source: Default::default(),
                             command: APICommand::MouseMove(MouseMoveEvent {
