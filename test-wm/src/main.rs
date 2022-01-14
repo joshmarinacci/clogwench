@@ -8,6 +8,7 @@ use std::thread;
 use std::thread::{JoinHandle, Thread};
 use std::time::{Duration, Instant};
 use std::env;
+use std::process::{Child, Command};
 
 use ctrlc;
 use env_logger;
@@ -44,6 +45,9 @@ fn main() -> std::io::Result<()>{
         mut internal_message_receiver) = mpsc::channel::<IncomingMessage>();
     let (mut external_message_sender, rcv2) = mpsc::channel::<OutgoingMessage>();
 
+    let central = start_central_server();
+    thread::sleep(Duration::from_millis(1000));
+
     if !args.disable_network {
         info!("connecting to the central server");
         //open network connection
@@ -53,6 +57,7 @@ fn main() -> std::io::Result<()>{
         network_stream = Option::from(conn.stream);
         internal_message_sender = conn.tx_in;
         external_message_sender = conn.tx_out;
+        info!("fully connected to the network now");
     } else {
         info!("skipping the network connection");
     }
@@ -83,6 +88,20 @@ fn main() -> std::io::Result<()>{
     watchdog.join().unwrap();
     info!("all done now");
     Ok(())
+}
+
+fn start_central_server() -> Child {
+    println!("running some output");
+    return Command::new("../target/debug/central")
+        // .stdin(Stdio::null())
+        // .stdout(Stdio::null())
+        // .stdout(Stdio::inherit())
+        .arg("--debug=true")
+        // .env_clear()
+        // .env("PATH", "/bin")
+        .spawn()
+        .expect("child process failed to start")
+        ;
 }
 
 fn make_watchdog(stop: Arc<AtomicBool>) -> JoinHandle<()> {
