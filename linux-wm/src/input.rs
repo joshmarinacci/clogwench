@@ -76,7 +76,7 @@ pub fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender
                 match ev.kind() {
                     InputEventKind::Key(key) => {
                         info!("evdev:key {}",key.code());
-                        let keycode = linuxkernel_to_KeyCode(key.code);
+                        let keycode = linuxkernel_to_KeyCode(key.code());
                         let appcmd = match keycode {
                             KeyCode::MOUSE_PRIMARY => APICommand::MouseDown(MouseDownEvent{
                                 original_timestamp: 0,
