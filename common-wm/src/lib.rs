@@ -319,11 +319,11 @@ impl InputGesture for NoOpGesture {
     }
 
     fn mouse_move(&mut self, evt: MouseMoveEvent, state:&mut WindowManagerState) {
-        todo!()
+        //info!("got a mouse move event {:?}",evt);
     }
 
     fn mouse_up(&mut self, evt: MouseUpEvent, state:&mut WindowManagerState) {
-        todo!()
+        info!("got a mouse up event {:?}",evt);
     }
 }
 

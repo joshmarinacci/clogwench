@@ -82,7 +82,7 @@ fn main() {
         let conn = start_wm_network_connection(stop.clone())
             .expect("error connecting to the central server");
         conn.send_hello();
-        network_stream = Option::from(conn.stream);
+        //network_stream = Option::from(conn.stream);
         internal_message_sender = conn.tx_in;
         external_message_sender = conn.tx_out;
     } else {
@@ -100,7 +100,7 @@ fn main() {
         print_debug_info(&fb);
         screen_size.w = fb.var_screen_info.xres as i32;
         screen_size.h = fb.var_screen_info.yres as i32;
-        let _ = Framebuffer::set_kd_mode(KdMode::Graphics).unwrap();
+        //let _ = Framebuffer::set_kd_mode(KdMode::Graphics).unwrap();
         let mut surf:Surf = Surf::make(fb);
         surf.buf.clear(&ARGBColor::new_rgb(0,255,200));
         surf.sync();
@@ -116,7 +116,7 @@ fn main() {
     let timeout_handle = start_timeout(stop.clone(),args.timeout);
     timeout_handle.join().unwrap();
     if !args.disable_graphics {
-        let _ = Framebuffer::set_kd_mode(KdMode::Text).unwrap();
+        //let _ = Framebuffer::set_kd_mode(KdMode::Text).unwrap();
     }
     info!("all done now");
 }
@@ -156,7 +156,6 @@ fn make_drawing_thread(mut surf: Surf,
         let mut gesture = Box::new(NoOpGesture::init()) as Box<dyn InputGesture>;
         let mut cursor:Point = Point::init(0,0);
         for cmd in rx {
-            debug!("still")
             let now = Instant::now();
             if stop.load(Ordering::Relaxed) == true { break; }
             let mut redraw = false;
@@ -214,6 +213,7 @@ fn make_drawing_thread(mut surf: Surf,
                         debug!("found a window at {:?}", pt);
                         // //if mouse over titlebar, then start a window_move_gesture
                         if win.titlebar_bounds().contains(pt) {
+                            debug!("inside the titlebar");
                             gesture = Box::new(WindowDragGesture::init(pt,win.id))
                         }
                         // //if mouse over window_contents, then set window focused
