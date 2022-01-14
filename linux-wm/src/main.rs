@@ -229,6 +229,7 @@ fn make_drawing_thread(mut surf: Surf,
                 // surf.buf.fill_rect(bounds, ARGBColor::new_rgb(255,0,0));
                 for win in state.window_list() {
                     let bd = win.content_bounds();
+                    info!("drawing window {} at {:?}",win.id,bd);
                     surf.copy_from(bd.x, bd.y, &win.backbuffer)
                 }
                 surf.copy_from(cursor.x, cursor.y, &cursor_image);
