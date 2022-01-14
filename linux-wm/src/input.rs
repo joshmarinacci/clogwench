@@ -81,8 +81,8 @@ pub fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender
                             KeyCode::MOUSE_PRIMARY => APICommand::MouseDown(MouseDownEvent{
                                 original_timestamp: 0,
                                 button: MouseButton::Primary,
-                                x: 0,
-                                y: 0
+                                x: cx as i32,
+                                y: cy as i32,
                             }),
                             _ => {
                                 APICommand::KeyDown(KeyDownEvent{
