@@ -56,7 +56,7 @@ fn linuxkernel_to_KeyCode(code:u16) -> KeyCode {
         Key::KEY_DOWN => KeyCode::ARROW_DOWN,
         Key::KEY_SPACE => KeyCode::SPACE,
         Key::KEY_ENTER => KeyCode::ENTER,
-        Key::BTN_0 => KeyCode::MOUSE_PRIMARY,
+        Key::BTN_LEFT => KeyCode::MOUSE_PRIMARY,
         _ => KeyCode::UNKNOWN
     }
 }
