@@ -23,7 +23,7 @@ use common::APICommand::KeyDown;
 use common::events::{KeyCode, KeyDownEvent, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent};
 use common::graphics::ColorDepth::CD32;
 use common::graphics::GFXBuffer;
-use common_wm::{OutgoingMessage, start_wm_network_connection, Window, WindowManagerState};
+use common_wm::{InputGesture, NoOpGesture, OutgoingMessage, start_wm_network_connection, Window, WindowDragGesture, WindowManagerState};
 
 fn main() -> std::io::Result<()>{
     let args:Cli = init_setup();
@@ -149,71 +149,6 @@ fn make_watchdog(stop: Arc<AtomicBool>, stream: TcpStream) -> JoinHandle<()> {
     })
 }
 
-trait InputGesture {
-    fn mouse_down(&mut self, evt:MouseDownEvent, state:&mut WindowManagerState);
-    fn mouse_move(&mut self, evt:MouseMoveEvent, state:&mut WindowManagerState);
-    fn mouse_up(  &mut self, evt:MouseUpEvent, state:&mut WindowManagerState);
-}
-
-
-struct NoOpGesture {
-
-}
-
-impl NoOpGesture {
-    fn init() -> NoOpGesture {
-        NoOpGesture {}
-    }
-}
-
-impl InputGesture for NoOpGesture {
-    fn mouse_down(&mut self, evt: MouseDownEvent, state:&mut WindowManagerState) {
-        info!("got a mouse down event {:?}",evt);
-    }
-
-    fn mouse_move(&mut self, evt: MouseMoveEvent, state:&mut WindowManagerState) {
-        todo!()
-    }
-
-    fn mouse_up(&mut self, evt: MouseUpEvent, state:&mut WindowManagerState) {
-        todo!()
-    }
-}
-struct WindowDragGesture {
-    start:Point,
-    winid:Uuid,
-}
-impl WindowDragGesture {
-    fn init(start: Point, win: Uuid) -> WindowDragGesture {
-        WindowDragGesture {
-            start:Point::init(0,0),
-            winid:win
-        }
-    }
-}
-impl InputGesture for WindowDragGesture {
-    fn mouse_down(&mut self, evt: MouseDownEvent, state:&mut WindowManagerState) {
-        info!("WDG: mouse down {:?}",evt);
-        self.start = Point::init(evt.x,evt.y);
-    }
-
-    fn mouse_move(&mut self, evt: MouseMoveEvent, state:&mut WindowManagerState) {
-        info!("WDG: mouse move {:?}",evt);
-        let curr = Point::init(evt.x,evt.y);
-        let diff = curr.subtract(self.start);
-        info!("dragging window {} by {:?}",self.winid,diff)
-    }
-
-    fn mouse_up(&mut self, evt: MouseUpEvent, state:&mut WindowManagerState) {
-        info!("WDG completed");
-        let curr = Point::init(evt.x,evt.y);
-        info!("new window position is {} to {:?}",self.winid,curr);
-        if let Some(win) = state.lookup_window(self.winid) {
-            win.position.x = curr.x;
-            win.position.y = curr.y;
-        }
-    }
-}
 
 fn start_event_processor(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, tx_out: Sender<OutgoingMessage>) -> JoinHandle<()> {
     return thread::spawn(move || {
