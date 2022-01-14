@@ -12,6 +12,8 @@ pub enum KeyCode {
     ARROW_DOWN,
     SPACE,
     ENTER,
+
+    MOUSE_PRIMARY,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

@@ -56,6 +56,7 @@ fn linuxkernel_to_KeyCode(code:u16) -> KeyCode {
         Key::KEY_DOWN => KeyCode::ARROW_DOWN,
         Key::KEY_SPACE => KeyCode::SPACE,
         Key::KEY_ENTER => KeyCode::ENTER,
+        Key::BTN_0 => KeyCode::MOUSE_PRIMARY,
         _ => KeyCode::UNKNOWN
     }
 }
@@ -74,15 +75,27 @@ pub fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender
                 info!("type {:?}", ev.event_type());
                 match ev.kind() {
                     InputEventKind::Key(key) => {
-                        info!("   evdev:key {}",key.code());
+                        info!("evdev:key {}",key.code());
+                        let keycode = linuxkernel_to_KeyCode(key.code);
+                        let appcmd = match keycode {
+                            KeyCode::MOUSE_PRIMARY => APICommand::MouseDown(MouseDownEvent{
+                                original_timestamp: 0,
+                                button: MouseButton::Primary,
+                                x: 0,
+                                y: 0
+                            }),
+                            _ => {
+                                APICommand::KeyDown(KeyDownEvent{
+                                    app_id: Default::default(),
+                                    window_id: Default::default(),
+                                    original_timestamp: 0,
+                                    key:keycode,
+                                })
+                            }
+                        };
                         let cmd = IncomingMessage {
                             source: Default::default(),
-                            command: APICommand::KeyDown(KeyDownEvent{
-                                app_id: Default::default(),
-                                window_id: Default::default(),
-                                original_timestamp: 0,
-                                key:linuxkernel_to_KeyCode(key.code()),
-                            })
+                            command: appcmd
                         };
                         tx.send(cmd).unwrap()
                     },
