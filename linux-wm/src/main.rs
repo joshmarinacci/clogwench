@@ -4,7 +4,7 @@ use std::fs::File;
 use std::thread;
 // use std::io::Write;
 use std::process::{Child, Command};
-use std::sync::{Arc};
+use std::sync::{Arc, mpsc};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread::JoinHandle;
@@ -72,24 +72,22 @@ fn main() {
     let mut keyboard = input::find_keyboard().expect("Couldn't find the keyboard");
     let mut mouse = input::find_mouse().expect("Couldn't find the mouse");
 
-    //connect to network
-    let conn = start_wm_network_connection(stop.clone())
-        .expect("error connecting to the central server");
-    //send hello window manager
-    let msg = OutgoingMessage {
-        recipient: Default::default(),
-        command: APICommand::WMConnect(HelloWindowManager {
-        })
-    };
-    conn.tx_out.send(msg).unwrap();
+    let (mut internal_message_sender,
+        mut internal_message_receiver) = mpsc::channel::<IncomingMessage>();
+    let (mut external_message_sender, rcv2) = mpsc::channel::<OutgoingMessage>();
 
-    let resp = conn.rx_in.recv().unwrap();
-    let selfid = if let APICommand::WMConnectResponse(res) = resp.command {
-        info!("got response back from the server {:?}",res);
-        res.wm_id
+    if !args.disable_network {
+        info!("connecting to the central server");
+        //open network connection
+        let conn = start_wm_network_connection(stop.clone())
+            .expect("error connecting to the central server");
+        conn.send_hello();
+        network_stream = Option::from(conn.stream);
+        internal_message_sender = conn.tx_in;
+        external_message_sender = conn.tx_out;
     } else {
-        panic!("did not get the window manager connect response. gah!");
-    };
+        info!("skipping the network connection");
+    }
 
     let mut screen_size = Rect::from_ints(0,0,100,100);
 
@@ -104,15 +102,16 @@ fn main() {
         screen_size.h = fb.var_screen_info.yres as i32;
         let _ = Framebuffer::set_kd_mode(KdMode::Graphics).unwrap();
         let mut surf:Surf = Surf::make(fb);
-        // surf.sync();
-        let drawing_thread = make_drawing_thread(surf,stop.clone(),conn.rx_in, conn.tx_out.clone(), cursor_image);
+        surf.buf.clear(&ARGBColor::new_rgb(0,255,200));
+        surf.sync();
+        let drawing_thread = make_drawing_thread(surf,stop.clone(),internal_message_receiver, external_message_sender, cursor_image);
     } else {
         info!("graphics are disabled");
     }
 
     //start input watchers
-    input::setup_evdev_watcher(keyboard, stop.clone(), conn.tx_in.clone(), screen_size);
-    input::setup_evdev_watcher(mouse, stop.clone(), conn.tx_in.clone(), screen_size);
+    input::setup_evdev_watcher(keyboard, stop.clone(), internal_message_sender.clone(), screen_size);
+    input::setup_evdev_watcher(mouse, stop.clone(), internal_message_sender.clone(), screen_size);
 
     let timeout_handle = start_timeout(stop.clone(),args.timeout);
     timeout_handle.join().unwrap();
@@ -270,6 +269,8 @@ struct Cli {
     timeout:u32,
     #[structopt(long)]
     disable_graphics:bool,
+    #[structopt(long)]
+    disable_network:bool,
 }
 
 fn init_setup() -> Cli {
