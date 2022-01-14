@@ -71,10 +71,10 @@ pub fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender
             }
             for ev in device.fetch_events().unwrap() {
                 // println!("{:?}", ev);
-                println!("type {:?}", ev.event_type());
+                info!("type {:?}", ev.event_type());
                 match ev.kind() {
                     InputEventKind::Key(key) => {
-                        println!("   evdev:key {}",key.code());
+                        info!("   evdev:key {}",key.code());
                         let cmd = IncomingMessage {
                             source: Default::default(),
                             command: APICommand::KeyDown(KeyDownEvent{
