@@ -66,8 +66,8 @@ impl Window {
     }
     pub fn titlebar_bounds(&self) -> Rect {
         return Rect {
-            x:self.position.x,
-            y:self.position.y,
+            x:self.position.x + WINDOW_BORDER_WIDTH,
+            y:self.position.y + WINDOW_BORDER_WIDTH,
             w:self.content_size.w,
             h:TITLE_BAR_HEIGHT,
         }
