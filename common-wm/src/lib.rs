@@ -103,7 +103,8 @@ impl WindowManagerState {
             position:bounds.position(),
             content_size:bounds.size(),
             owner: app_id,
-            backbuffer: GFXBuffer::new(CD24(), bounds.w as u32, bounds.h as u32)
+            backbuffer: GFXBuffer::new(CD24(), bounds.w as u32, bounds.h as u32),
+            window_type: WindowType::Plain()
         };
         if let Some(app) = self.find_app(app_id) {
             app.windows.push(win);
@@ -128,7 +129,7 @@ impl WindowManagerState {
     pub fn pick_window_at<'a>(&'a self, pt: Point) -> Option<&'a Window> {
         for app in &self.apps {
             for win in &app.windows {
-                if win.bounds.contains(pt) {
+                if win.external_bounds().contains(pt) {
                     return Some(win)
                 }
             }
