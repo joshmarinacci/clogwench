@@ -92,6 +92,12 @@ impl GFXBuffer {
                 self.set_pixel_32argb(i as u32, (bounds.y+bounds.h-j) as u32, color.as_32bit());
             }
         }
+        for j in bounds.y .. (bounds.y+bounds.h) {
+            for i in 0..size {
+                self.set_pixel_32argb( (bounds.x+i) as u32, j as u32,color.as_32bit());
+                self.set_pixel_32argb( (bounds.x+bounds.w-i) as u32, j as u32, color.as_32bit());
+            }
+        }
     }
 
     pub fn get_pixel_32argb(&self, x: u32, y: u32) -> u32 {
