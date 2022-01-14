@@ -96,7 +96,7 @@ impl WindowManagerState {
     pub fn init() -> WindowManagerState {
         WindowManagerState {
             apps: Vec::new(),
-            focused: None
+            focused: None,
         }
     }
     pub fn add_app(&mut self, app_id: Uuid) {

@@ -67,9 +67,18 @@ fn main() -> std::io::Result<()>{
         inputtests::simulate_window_drag(stop.clone(), internal_message_sender.clone());
     }
 
+
+    //setup the window manager state
+    let mut state = WindowManagerState::init();
+    //preload a fake app and window
+    let fake_app = Uuid::new_v4();
+    state.add_app(fake_app);
+    let fake_window_uuid = Uuid::new_v4();
+    let fake_window_bounds = Rect::from_ints(50,50,200,200);
+    state.add_window(fake_app, fake_window_uuid, &fake_window_bounds);
+
     //event processing thread
-    //TODO: give this a fake rx_in and tx_out when not using the network.
-    start_event_processor(stop.clone(), internal_message_receiver, external_message_sender.clone());
+    start_event_processor(stop.clone(), internal_message_receiver, external_message_sender.clone(), state);
     info!("waiting for the watch dog");
     watchdog.join().unwrap();
     info!("all done now");
@@ -94,16 +103,10 @@ fn make_watchdog(stop: Arc<AtomicBool>) -> JoinHandle<()> {
 }
 
 
-fn start_event_processor(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, tx_out: Sender<OutgoingMessage>) -> JoinHandle<()> {
+fn start_event_processor(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, tx_out: Sender<OutgoingMessage>, mut state: WindowManagerState) -> JoinHandle<()> {
     return thread::spawn(move || {
         info!("event thread starting");
         //TODO: move the total state to outside the thread, but moves into the thread.
-        let mut state = WindowManagerState::init();
-        let fake_app = Uuid::new_v4();
-        state.add_app(fake_app);
-        let fake_window_uuid = Uuid::new_v4();
-        let fake_window_bounds = Rect::from_ints(50,50,200,200);
-        state.add_window(fake_app, fake_window_uuid, &fake_window_bounds);
 
         //TODO:  move the screen to outside this function
         //TODO: move the current gesture holder into the WM state? or just outside here?
