@@ -20,6 +20,7 @@ use log4rs::append::file::FileAppender;
 use log4rs::Config;
 use log4rs::config::{Appender, Root};
 use structopt::StructOpt;
+use uuid::Uuid;
 
 use common::{APICommand, ARGBColor, HelloWindowManager, IncomingMessage, Point, Rect, BLACK};
 use common::APICommand::KeyDown;
@@ -144,6 +145,13 @@ fn make_drawing_thread(mut surf: Surf,
     return thread::spawn(move ||{
         info!("render thread starting");
         let mut state = WindowManagerState::init();
+
+        let fake_app = Uuid::new_v4();
+        state.add_app(fake_app);
+        let fake_window_uuid = Uuid::new_v4();
+        let fake_window_bounds = Rect::from_ints(50,50,200,200);
+        state.add_window(fake_app, fake_window_uuid, &fake_window_bounds);
+
         let mut cursor:Point = Point::init(0,0);
         for cmd in rx {
             let now = Instant::now();
