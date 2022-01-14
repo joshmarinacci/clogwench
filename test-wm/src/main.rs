@@ -4,13 +4,13 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread;
 use std::thread::JoinHandle;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use std::env;
 
 use ctrlc;
 use env_logger;
 use env_logger::Env;
-use log::{debug, info, LevelFilter};
+use log::{debug, error, info, LevelFilter};
 use log4rs::append::file::FileAppender;
 use log4rs::Config;
 use log4rs::config::{Appender, Root};
@@ -47,22 +47,7 @@ fn main() -> std::io::Result<()>{
         //open network connection
         let conn = start_wm_network_connection(stop.clone())
             .expect("error connecting to the central server");
-
-        //TODO: move this initial connection work into common-wm
-        //send hello window manager
-        let msg = OutgoingMessage {
-            recipient: Default::default(),
-            command: APICommand::WMConnect(HelloWindowManager {})
-        };
-        conn.tx_out.send(msg).unwrap();
-
-        let resp = conn.rx_in.recv().unwrap();
-        let selfid = if let APICommand::WMConnectResponse(res) = resp.command {
-            info!("got response back from the server {:?}",res);
-            res.wm_id
-        } else {
-            panic!("did not get the window manager connect response. gah!");
-        };
+        conn.send_hello();
         network_stream = Option::from(conn.stream);
         internal_message_sender = conn.tx_in;
         external_message_sender = conn.tx_out;
@@ -70,7 +55,7 @@ fn main() -> std::io::Result<()>{
         info!("skipping the network connection");
     }
 
-    let watchdog = make_watchdog(stop.clone(),network_stream);
+    let watchdog = make_watchdog(stop.clone());
 
     //make thread for fake incoming events. sends to the main event thread
     if args.keyboard {
@@ -139,19 +124,17 @@ fn send_fake_mouse(stop: Arc<AtomicBool>, sender: Sender<IncomingMessage>) {
 
 }
 
-fn make_watchdog(stop: Arc<AtomicBool>, stream: Option<TcpStream>) -> JoinHandle<()> {
+fn make_watchdog(stop: Arc<AtomicBool>) -> JoinHandle<()> {
     thread::spawn({
         move ||{
+            let start = Instant::now();
             info!("watchdog thread starting");
-            loop {
-                if stop.load(Ordering::Relaxed) {
-                    info!("shutting down the network");
-                    if let Some(stream) = stream {
-                        stream.shutdown(Shutdown::Both).unwrap();
-                    }
-                    break;
+            while stop.load(Ordering::Relaxed) == false {
+                thread::sleep(Duration::from_millis(1000));
+                if start.elapsed().gt(&Duration::from_secs(10)) {
+                    info!("timeout of ten seconds. lets bail");
+                    stop.store(true, Ordering::Relaxed);
                 }
-                thread::sleep(Duration::from_millis(1000))
             }
             info!("watchdog thread ending");
         }
@@ -322,8 +305,8 @@ fn init_setup() -> Cli {
 }
 
 fn setup_c_handler(stop: Arc<AtomicBool>) {
-    // ctrlc::set_handler(move || {
-    //     error!("control C pressed. stopping everything");
-    //     stop.store(true, Ordering::Relaxed)
-    // }).expect("error setting control C handler");
+    ctrlc::set_handler(move || {
+        error!("control C pressed. stopping everything");
+        stop.store(true, Ordering::Relaxed)
+    }).expect("error setting control C handler");
 }

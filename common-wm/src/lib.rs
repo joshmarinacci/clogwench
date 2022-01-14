@@ -7,7 +7,7 @@ use std::thread;
 use std::thread::JoinHandle;
 use log::{error, info};
 use uuid::Uuid;
-use common::{APICommand, ARGBColor, BLACK, IncomingMessage, Point, Rect, Size};
+use common::{APICommand, ARGBColor, BLACK, HelloWindowManager, IncomingMessage, Point, Rect, Size};
 use serde::{Deserialize, Serialize};
 use common::events::{MouseDownEvent, MouseMoveEvent, MouseUpEvent};
 use common::graphics::ColorDepth::CD24;
@@ -204,6 +204,26 @@ pub struct CentralConnection {
     pub tx_out: Sender<OutgoingMessage>,
     pub rx_in: Receiver<IncomingMessage>,
     pub tx_in: Sender<IncomingMessage>,
+}
+
+impl CentralConnection {
+    pub fn send_hello(&self) {
+        //TODO: move this initial connection work into common-wm
+        //send hello window manager
+        let msg = OutgoingMessage {
+            recipient: Default::default(),
+            command: APICommand::WMConnect(HelloWindowManager {})
+        };
+        self.tx_out.send(msg).unwrap();
+
+        let resp = self.rx_in.recv().unwrap();
+        let selfid = if let APICommand::WMConnectResponse(res) = resp.command {
+            info!("got response back from the server {:?}",res);
+            res.wm_id
+        } else {
+            panic!("did not get the window manager connect response. gah!");
+        };
+    }
 }
 
 pub fn start_wm_network_connection(stop: Arc<AtomicBool>) -> Option<CentralConnection> {
