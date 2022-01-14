@@ -1,9 +1,11 @@
+mod inputtests;
+
 use std::net::{Shutdown, TcpStream};
 use std::sync::{Arc, mpsc};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread;
-use std::thread::JoinHandle;
+use std::thread::{JoinHandle, Thread};
 use std::time::{Duration, Instant};
 use std::env;
 
@@ -24,6 +26,7 @@ use common::events::{KeyCode, KeyDownEvent, MouseButton, MouseDownEvent, MouseMo
 use common::graphics::ColorDepth::CD32;
 use common::graphics::GFXBuffer;
 use common_wm::{InputGesture, NoOpGesture, OutgoingMessage, start_wm_network_connection, Window, WindowDragGesture, WindowManagerState};
+use crate::inputtests::send_fake_mouse;
 
 fn main() -> std::io::Result<()>{
     let args:Cli = init_setup();
@@ -59,7 +62,7 @@ fn main() -> std::io::Result<()>{
 
     //make thread for fake incoming events. sends to the main event thread
     if args.keyboard {
-        send_fake_keyboard(stop.clone(), internal_message_sender.clone());
+        inputtests::send_fake_keyboard(stop.clone(), internal_message_sender.clone());
     }
     if args.mouse {
         send_fake_mouse(stop.clone(), internal_message_sender.clone());
@@ -72,56 +75,6 @@ fn main() -> std::io::Result<()>{
     watchdog.join().unwrap();
     info!("all done now");
     Ok(())
-}
-
-fn send_fake_mouse(stop: Arc<AtomicBool>, sender: Sender<IncomingMessage>) {
-    thread::spawn({
-        info!("starting fake mouse events");
-        move || {
-            let mut rng = rand::thread_rng();
-            loop {
-                if stop.load(Ordering::Relaxed) { break; }
-                //mouse down at 55,55, drag to 200,100, release
-                let command: APICommand = APICommand::MouseDown(MouseDownEvent {
-                    original_timestamp: 0,
-                    button: MouseButton::Primary,
-                    x: 55,//rng.gen_range(0..500),
-                    y: 55,
-                });
-                sender.send(IncomingMessage{
-                    source: Default::default(),
-                    command
-                }).unwrap();
-                thread::sleep(Duration::from_millis(1000));
-
-                //drag over 5 spots to the right
-                for off in 0..5 {
-                    sender.send(IncomingMessage{
-                        source: Default::default(),
-                        command:APICommand::MouseMove(MouseMoveEvent{
-                            original_timestamp: 0,
-                            button: MouseButton::Primary,
-                            x: 55+off*10,
-                            y: 55
-                        })
-                    }).unwrap();
-                    thread::sleep(Duration::from_millis(1000))
-                }
-
-                //release
-                let command: APICommand = APICommand::MouseUp(MouseUpEvent {
-                    original_timestamp: 0,
-                    button: MouseButton::Primary,
-                    x: 55+4*10,//rng.gen_range(0..500),
-                    y: 55,
-                });
-                sender.send(IncomingMessage{ source: Default::default(),  command }).unwrap();
-                thread::sleep(Duration::from_millis(1000));
-                break;
-            }
-        }
-    });
-
 }
 
 fn make_watchdog(stop: Arc<AtomicBool>) -> JoinHandle<()> {
@@ -235,28 +188,6 @@ fn start_event_processor(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, t
         }
         info!("event thread ending");
     });
-}
-
-fn send_fake_keyboard(stop: Arc<AtomicBool>, sender: Sender<IncomingMessage>) {
-    thread::spawn({
-        move || {
-            loop {
-                if stop.load(Ordering::Relaxed) { break; }
-                let command: APICommand = APICommand::KeyDown(KeyDownEvent {
-                    app_id: Default::default(),
-                    window_id: Default::default(),
-                    original_timestamp: 0,
-                    key: KeyCode::ARROW_RIGHT
-                });
-                sender.send(IncomingMessage{
-                    source: Default::default(),
-                    command
-                }).unwrap();
-                thread::sleep(Duration::from_millis(1000));
-            }
-        }
-    });
-
 }
 
 #[derive(StructOpt, Debug)]
