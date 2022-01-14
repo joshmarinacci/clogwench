@@ -26,6 +26,8 @@ pub struct KeyDownEvent {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct KeyUpEvent {
+    pub app_id:Uuid,
+    pub window_id:Uuid,
     pub original_timestamp:i64,
     pub key:KeyCode
 }

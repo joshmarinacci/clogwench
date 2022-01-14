@@ -76,21 +76,44 @@ pub fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender
                 match ev.kind() {
                     InputEventKind::Key(key) => {
                         info!("evdev:key {} value {}",key.code(),ev.value());
+                        //pressed is value=1
+                        //repeat is value = 2
+                        //released is value = 0
                         let keycode = linuxkernel_to_KeyCode(key.code());
                         let appcmd = match keycode {
-                            KeyCode::MOUSE_PRIMARY => APICommand::MouseDown(MouseDownEvent{
-                                original_timestamp: 0,
-                                button: MouseButton::Primary,
-                                x: cx as i32,
-                                y: cy as i32,
-                            }),
+                            KeyCode::MOUSE_PRIMARY => {
+                                if ev.value() == 1 {
+                                    APICommand::MouseDown(MouseDownEvent {
+                                        original_timestamp: 0,
+                                        button: MouseButton::Primary,
+                                        x: cx as i32,
+                                        y: cy as i32,
+                                    })
+                                } else {
+                                    APICommand::MouseUp(MouseUpEvent {
+                                        original_timestamp: 0,
+                                        button: MouseButton::Primary,
+                                        x: cx as i32,
+                                        y: cy as i32,
+                                    })
+                                }
+                            },
                             _ => {
-                                APICommand::KeyDown(KeyDownEvent{
-                                    app_id: Default::default(),
-                                    window_id: Default::default(),
-                                    original_timestamp: 0,
-                                    key:keycode,
-                                })
+                                if ev.value() == 1 {
+                                    APICommand::KeyDown(KeyDownEvent {
+                                        app_id: Default::default(),
+                                        window_id: Default::default(),
+                                        original_timestamp: 0,
+                                        key: keycode,
+                                    })
+                                } else {
+                                    APICommand::KeyUp(KeyUpEvent {
+                                        app_id: Default::default(),
+                                        window_id: Default::default(),
+                                        original_timestamp: 0,
+                                        key: keycode,
+                                    })
+                                }
                             }
                         };
                         let cmd = IncomingMessage {
