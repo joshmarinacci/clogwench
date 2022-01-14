@@ -106,6 +106,8 @@ fn main() {
         let mut surf:Surf = Surf::make(fb);
         // surf.sync();
         let drawing_thread = make_drawing_thread(surf,stop.clone(),conn.rx_in, conn.tx_out.clone(), cursor_image);
+    } else {
+        info!("graphics are disabled");
     }
 
     //start input watchers
@@ -155,6 +157,7 @@ fn make_drawing_thread(mut surf: Surf,
         let mut gesture = Box::new(NoOpGesture::init()) as Box<dyn InputGesture>;
         let mut cursor:Point = Point::init(0,0);
         for cmd in rx {
+            debug!("still")
             let now = Instant::now();
             if stop.load(Ordering::Relaxed) == true { break; }
             let mut redraw = false;
@@ -226,11 +229,11 @@ fn make_drawing_thread(mut surf: Surf,
                     let pt = bounds.clamp(&Point::init(mme.x,mme.y));
                     cursor.copy_from(pt);
                     redraw = true;
-                    gesture.mouse_move(ev, &mut state);
+                    gesture.mouse_move(mme, &mut state);
                 },
                 APICommand::MouseUp(mme) => {
                     // println!("mouse move {:?}",mme)
-                    gesture.mouse_up(ev, &mut state);
+                    gesture.mouse_up(mme, &mut state);
                     gesture = Box::new(NoOpGesture::init());
                 },
                 _ => {}
