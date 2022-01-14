@@ -27,8 +27,8 @@ pub struct App {
     windows:Vec<Window>,
 }
 
-const TITLE_BAR_HEIGHT:i32 = 10;
-const WINDOW_BORDER_WIDTH:i32 = 5;
+pub const TITLE_BAR_HEIGHT:i32 = 10;
+pub const WINDOW_BORDER_WIDTH:i32 = 5;
 pub const WINDOW_COLOR:ARGBColor           = ARGBColor { r: 100, g: 0, b: 0, a: 255 };
 pub const TITLEBAR_COLOR:ARGBColor         = ARGBColor { r: 250, g: 100, b: 50, a: 255 };
 pub const FOCUSED_WINDOW_COLOR:ARGBColor   = ARGBColor { r: 255, g: 255, b: 255, a: 255 };

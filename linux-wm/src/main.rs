@@ -25,7 +25,7 @@ use uuid::Uuid;
 use common::{APICommand, ARGBColor, HelloWindowManager, IncomingMessage, Point, Rect, BLACK};
 use common::APICommand::KeyDown;
 use common::events::{KeyDownEvent, KeyCode};
-use common_wm::{FOCUSED_TITLEBAR_COLOR, FOCUSED_WINDOW_COLOR, OutgoingMessage, start_wm_network_connection, TITLEBAR_COLOR, WINDOW_COLOR, WindowManagerState};
+use common_wm::{FOCUSED_TITLEBAR_COLOR, FOCUSED_WINDOW_COLOR, OutgoingMessage, start_wm_network_connection, TITLEBAR_COLOR, WINDOW_BORDER_WIDTH, WINDOW_COLOR, WindowManagerState};
 use surf::Surf;
 use common::graphics::{ColorDepth, GFXBuffer};
 
@@ -225,20 +225,15 @@ fn make_drawing_thread(mut surf: Surf,
             }
             if redraw {
                 surf.buf.clear(&BLACK);
-                // let bounds = Rect::from_ints(0,0,200,200);
-                // surf.buf.fill_rect(bounds, ARGBColor::new_rgb(255,0,0));
                 for win in state.window_list() {
                     let (wc,tc) = if state.is_focused_window(win) {
                         (FOCUSED_WINDOW_COLOR, FOCUSED_TITLEBAR_COLOR)
-                        // surf.buf.fill_rect(win.external_bounds(), FOCUSED_WINDOW_COLOR);
-                        // surf.buf.fill_rect(win.titlebar_bounds(), FOCUSED_TITLEBAR_COLOR);
                     } else {
                         (WINDOW_COLOR, TITLEBAR_COLOR)
                     };
-                    surf.buf.fill_rect(win.external_bounds(), wc);
+                    surf.buf.draw_rect(win.external_bounds(), wc,WINDOW_BORDER_WIDTH);
                     surf.buf.fill_rect(win.titlebar_bounds(), tc);
                     let bd = win.content_bounds();
-                    // info!("drawing window {} at {:?}",win.id,bd);
                     surf.copy_from(bd.x, bd.y, &win.backbuffer)
                 }
                 surf.copy_from(cursor.x, cursor.y, &cursor_image);
