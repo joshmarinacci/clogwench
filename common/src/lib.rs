@@ -148,6 +148,15 @@ pub struct Point {
     pub y:i32,
 }
 
+impl Point {
+    pub fn subtract(&self, pt: Point) -> Point {
+        Point {
+            x:self.x - pt.x,
+            y:self.y - pt.y,
+        }
+    }
+}
+
 
 impl Point {
     pub fn add(&self, pt:Point) -> Point {

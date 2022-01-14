@@ -17,9 +17,10 @@ use log4rs::config::{Appender, Root};
 use log4rs::encode::pattern::PatternEncoder;
 use rand::Rng;
 use structopt::StructOpt;
-use common::{APICommand, BLACK, HelloWindowManager, IncomingMessage, Point};
+use uuid::Uuid;
+use common::{APICommand, BLACK, HelloWindowManager, IncomingMessage, Point, Rect};
 use common::APICommand::KeyDown;
-use common::events::{KeyCode, KeyDownEvent, MouseButton, MouseDownEvent};
+use common::events::{KeyCode, KeyDownEvent, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent};
 use common::graphics::ColorDepth::CD32;
 use common::graphics::GFXBuffer;
 use common_wm::{OutgoingMessage, start_wm_network_connection, Window, WindowManagerState};
@@ -83,21 +84,48 @@ fn main() -> std::io::Result<()>{
 
 fn send_fake_mouse(stop: Arc<AtomicBool>, sender: Sender<IncomingMessage>) {
     thread::spawn({
+        info!("starting fake mouse events");
         move || {
             let mut rng = rand::thread_rng();
             loop {
                 if stop.load(Ordering::Relaxed) { break; }
+                //mouse down at 55,55, drag to 200,100, release
                 let command: APICommand = APICommand::MouseDown(MouseDownEvent {
                     original_timestamp: 0,
                     button: MouseButton::Primary,
-                    x: rng.gen_range(0..500),
-                    y: rng.gen_range(0..500),
+                    x: 55,//rng.gen_range(0..500),
+                    y: 55,
                 });
                 sender.send(IncomingMessage{
                     source: Default::default(),
                     command
                 }).unwrap();
                 thread::sleep(Duration::from_millis(1000));
+
+                //drag over 5 spots to the right
+                for off in 0..5 {
+                    sender.send(IncomingMessage{
+                        source: Default::default(),
+                        command:APICommand::MouseMove(MouseMoveEvent{
+                            original_timestamp: 0,
+                            button: MouseButton::Primary,
+                            x: 55+off*10,
+                            y: 55
+                        })
+                    }).unwrap();
+                    thread::sleep(Duration::from_millis(1000))
+                }
+
+                //release
+                let command: APICommand = APICommand::MouseUp(MouseUpEvent {
+                    original_timestamp: 0,
+                    button: MouseButton::Primary,
+                    x: 55+4*10,//rng.gen_range(0..500),
+                    y: 55,
+                });
+                sender.send(IncomingMessage{ source: Default::default(),  command }).unwrap();
+                thread::sleep(Duration::from_millis(1000));
+                break;
             }
         }
     });
@@ -121,12 +149,84 @@ fn make_watchdog(stop: Arc<AtomicBool>, stream: TcpStream) -> JoinHandle<()> {
     })
 }
 
+trait InputGesture {
+    fn mouse_down(&mut self, evt:MouseDownEvent, state:&mut WindowManagerState);
+    fn mouse_move(&mut self, evt:MouseMoveEvent, state:&mut WindowManagerState);
+    fn mouse_up(  &mut self, evt:MouseUpEvent, state:&mut WindowManagerState);
+}
+
+
+struct NoOpGesture {
+
+}
+
+impl NoOpGesture {
+    fn init() -> NoOpGesture {
+        NoOpGesture {}
+    }
+}
+
+impl InputGesture for NoOpGesture {
+    fn mouse_down(&mut self, evt: MouseDownEvent, state:&mut WindowManagerState) {
+        info!("got a mouse down event {:?}",evt);
+    }
+
+    fn mouse_move(&mut self, evt: MouseMoveEvent, state:&mut WindowManagerState) {
+        todo!()
+    }
+
+    fn mouse_up(&mut self, evt: MouseUpEvent, state:&mut WindowManagerState) {
+        todo!()
+    }
+}
+struct WindowDragGesture {
+    start:Point,
+    winid:Uuid,
+}
+impl WindowDragGesture {
+    fn init(start: Point, win: Uuid) -> WindowDragGesture {
+        WindowDragGesture {
+            start:Point::init(0,0),
+            winid:win
+        }
+    }
+}
+impl InputGesture for WindowDragGesture {
+    fn mouse_down(&mut self, evt: MouseDownEvent, state:&mut WindowManagerState) {
+        info!("WDG: mouse down {:?}",evt);
+        self.start = Point::init(evt.x,evt.y);
+    }
+
+    fn mouse_move(&mut self, evt: MouseMoveEvent, state:&mut WindowManagerState) {
+        info!("WDG: mouse move {:?}",evt);
+        let curr = Point::init(evt.x,evt.y);
+        let diff = curr.subtract(self.start);
+        info!("dragging window {} by {:?}",self.winid,diff)
+    }
+
+    fn mouse_up(&mut self, evt: MouseUpEvent, state:&mut WindowManagerState) {
+        info!("WDG completed");
+        let curr = Point::init(evt.x,evt.y);
+        info!("new window position is {} to {:?}",self.winid,curr);
+        if let Some(win) = state.lookup_window(self.winid) {
+            win.position.x = curr.x;
+            win.position.y = curr.y;
+        }
+    }
+}
 
 fn start_event_processor(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, tx_out: Sender<OutgoingMessage>) -> JoinHandle<()> {
     return thread::spawn(move || {
         info!("event thread starting");
         let mut state = WindowManagerState::init();
+        let fake_app = Uuid::new_v4();
+        state.add_app(fake_app);
+        let fake_window_uuid = Uuid::new_v4();
+        let fake_window_bounds = Rect::from_ints(50,50,200,200);
+        state.add_window(fake_app, fake_window_uuid, &fake_window_bounds);
+
         let mut screen = GFXBuffer::new(CD32(),640,480);
+        let mut gesture = Box::new(NoOpGesture::init()) as Box<dyn InputGesture>;
         for cmd in rx {
             if stop.load(Ordering::Relaxed) { break; }
             info!("processing event {:?}",cmd);
@@ -146,7 +246,7 @@ fn start_event_processor(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, t
                     }
                     screen.clear(&BLACK);
                     for win in state.window_list() {
-                        screen.copy_from(win.bounds.x, win.bounds.y, &win.backbuffer)
+                        screen.copy_from(win.content_bounds().x, win.content_bounds().y, &win.backbuffer)
                     }
                 },
                 APICommand::KeyDown(kd) => {
@@ -170,20 +270,35 @@ fn start_event_processor(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, t
                 APICommand::KeyUp(ku) => {
                     info!("key down")
                 },
-                APICommand::MouseDown(ku) => {
-                    let pt = Point::init(ku.x, ku.y);
+                APICommand::MouseDown(ev) => {
+                    let pt = Point::init(ev.x, ev.y);
                     info!("mouse down at {:?}",pt);
                     state.dump();
-                    if let Some(win) = state.pick_window_at(pt) {
+                    //if inside a window
+                    if let Some(win) = state.pick_window_at(pt.clone()) {
                         debug!("found a window at {:?}", pt);
-                        state.set_focused_window(win.id);
+                        let id = win.id.clone();
+                        // //if mouse over titlebar, then start a window_move_gesture
+                        if win.titlebar_bounds().contains(pt) {
+                            gesture = Box::new(WindowDragGesture::init(pt,id));
+                        }
+                        // //if mouse over window_contents, then set window focused
+                        if win.content_bounds().contains(pt) {
+                        //     //do nothing
+                        }
+                        state.set_focused_window(id);
                     }
+                    gesture.mouse_down(ev, &mut state);
+                }
+                APICommand::MouseMove(ev) => {
+                    info!("mouse move");
+                    gesture.mouse_move(ev, &mut state);
                 },
-                APICommand::MouseMove(ku) => {
-                    info!("mouse move")
-                },
-                APICommand::MouseUp(ku) => {
-                    info!("mouse up")
+                APICommand::MouseUp(ev) => {
+                    info!("mouse up");
+                    gesture.mouse_up(ev, &mut state);
+                    gesture = Box::new(NoOpGesture::init());
+                    state.dump();
                 },
                 _ => {}
             };
