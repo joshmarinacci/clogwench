@@ -151,7 +151,7 @@ impl WindowManagerState {
         for app in &self.apps {
             println!("  app  {}",app.id);
             for win in &app.windows {
-                println!("    win {:?}",win.bounds)
+                println!("    win {:?} {:?}",win.position, win.content_size)
             }
         }
     }
