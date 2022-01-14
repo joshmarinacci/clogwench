@@ -157,7 +157,7 @@ fn make_drawing_thread(mut surf: Surf,
         let mut cursor:Point = Point::init(0,0);
         loop {
             if stop.load(Ordering::Relaxed) == true { break; }
-            redraw_screen(&mut surf, &state);
+            redraw_screen(&mut surf, &state, &cursor, &cursor_image);
             for cmd in rx.try_iter() {
                 match cmd.command {
                     APICommand::AppConnectResponse(res) => {
@@ -241,7 +241,7 @@ fn make_drawing_thread(mut surf: Surf,
     });
 }
 
-fn redraw_screen(surf: &mut Surf, state: &WindowManagerState) {            //draw
+fn redraw_screen(surf: &mut Surf, state: &WindowManagerState, cursor:&Point, cursor_image:&GFXBuffer) {            //draw
     let now = Instant::now();
     surf.buf.clear(&BLACK);
     for win in state.window_list() {
