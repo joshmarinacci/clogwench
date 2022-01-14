@@ -159,11 +159,11 @@ impl WindowManagerState {
         return None
     }
     pub fn dump(&self) {
-        println!("WM State");
+        info!("WM State");
         for app in &self.apps {
-            println!("  app  {}",app.id);
+            info!("  app  {}",app.id);
             for win in &app.windows {
-                println!("    win {:?} {:?}",win.position, win.content_size)
+                info!("    win {:?} {:?}",win.position, win.content_size)
             }
         }
     }

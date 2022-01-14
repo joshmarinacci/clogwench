@@ -1,5 +1,5 @@
 use std::net::{Shutdown, TcpStream};
-use std::sync::Arc;
+use std::sync::{Arc, mpsc};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread;
@@ -33,49 +33,56 @@ fn main() -> std::io::Result<()>{
 
     //try loading a resource
     let cwd = env::current_dir()?;
-    println!("cwd is {}", cwd.display());
+    info!("cwd is {}", cwd.display());
     let cursor_image:GFXBuffer = GFXBuffer::from_png_file("../resources/cursor.png");
 
-    //open network connection
-    let conn = start_wm_network_connection(stop.clone())
-        .expect("error connecting to the central server");
+    let mut network_stream:Option<TcpStream> = None;
+    //create empty channel first
+    let (mut internal_message_sender,
+        mut internal_message_receiver) = mpsc::channel::<IncomingMessage>();
+    let (mut external_message_sender, rcv2) = mpsc::channel::<OutgoingMessage>();
 
-    //send hello window manager
-    let msg = OutgoingMessage {
-        recipient: Default::default(),
-        command: APICommand::WMConnect(HelloWindowManager {
-        })
-    };
-    conn.tx_out.send(msg).unwrap();
+    if !args.disable_network {
+        info!("connecting to the central server");
+        //open network connection
+        let conn = start_wm_network_connection(stop.clone())
+            .expect("error connecting to the central server");
 
-    let resp = conn.rx_in.recv().unwrap();
-    let selfid = if let APICommand::WMConnectResponse(res) = resp.command {
-        info!("got response back from the server {:?}",res);
-        res.wm_id
+        //TODO: move this initial connection work into common-wm
+        //send hello window manager
+        let msg = OutgoingMessage {
+            recipient: Default::default(),
+            command: APICommand::WMConnect(HelloWindowManager {})
+        };
+        conn.tx_out.send(msg).unwrap();
+
+        let resp = conn.rx_in.recv().unwrap();
+        let selfid = if let APICommand::WMConnectResponse(res) = resp.command {
+            info!("got response back from the server {:?}",res);
+            res.wm_id
+        } else {
+            panic!("did not get the window manager connect response. gah!");
+        };
+        network_stream = Option::from(conn.stream);
+        internal_message_sender = conn.tx_in;
+        external_message_sender = conn.tx_out;
     } else {
-        panic!("did not get the window manager connect response. gah!");
-    };
+        info!("skipping the network connection");
+    }
 
-    let watchdog = make_watchdog(stop.clone(),conn.stream.try_clone().unwrap());
+    let watchdog = make_watchdog(stop.clone(),network_stream);
 
     //make thread for fake incoming events. sends to the main event thread
     if args.keyboard {
-        send_fake_keyboard(stop.clone(), conn.tx_in.clone());
+        send_fake_keyboard(stop.clone(), internal_message_sender.clone());
     }
     if args.mouse {
-        send_fake_mouse(stop.clone(), conn.tx_in.clone());
+        send_fake_mouse(stop.clone(), internal_message_sender.clone());
     }
 
     //event processing thread
-    start_event_processor(stop.clone(), conn.rx_in, conn.tx_out.clone());
-        //draw commands. can immediately draw to the fake screen
-        //app added, add to own app list
-        //window added, add to own app window list
-        //key pressed in event thread
-        //on keypress, send to app owner of focused window
-        //on mouse press, maybe change the focused window
-        //on mouse press, send to window under the cursor
-        //can all state live on this thread?
+    //TODO: give this a fake rx_in and tx_out when not using the network.
+    start_event_processor(stop.clone(), internal_message_receiver, external_message_sender.clone());
     info!("waiting for the watch dog");
     watchdog.join().unwrap();
     info!("all done now");
@@ -132,14 +139,16 @@ fn send_fake_mouse(stop: Arc<AtomicBool>, sender: Sender<IncomingMessage>) {
 
 }
 
-fn make_watchdog(stop: Arc<AtomicBool>, stream: TcpStream) -> JoinHandle<()> {
+fn make_watchdog(stop: Arc<AtomicBool>, stream: Option<TcpStream>) -> JoinHandle<()> {
     thread::spawn({
         move ||{
             info!("watchdog thread starting");
             loop {
                 if stop.load(Ordering::Relaxed) {
                     info!("shutting down the network");
-                    stream.shutdown(Shutdown::Both).unwrap();
+                    if let Some(stream) = stream {
+                        stream.shutdown(Shutdown::Both).unwrap();
+                    }
                     break;
                 }
                 thread::sleep(Duration::from_millis(1000))
@@ -153,6 +162,7 @@ fn make_watchdog(stop: Arc<AtomicBool>, stream: TcpStream) -> JoinHandle<()> {
 fn start_event_processor(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, tx_out: Sender<OutgoingMessage>) -> JoinHandle<()> {
     return thread::spawn(move || {
         info!("event thread starting");
+        //TODO: move the total state to outside the thread, but moves into the thread.
         let mut state = WindowManagerState::init();
         let fake_app = Uuid::new_v4();
         state.add_app(fake_app);
@@ -160,6 +170,8 @@ fn start_event_processor(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, t
         let fake_window_bounds = Rect::from_ints(50,50,200,200);
         state.add_window(fake_app, fake_window_uuid, &fake_window_bounds);
 
+        //TODO:  move the screen to outside this function
+        //TODO: move the current gesture holder into the WM state? or just outside here?
         let mut screen = GFXBuffer::new(CD32(),640,480);
         let mut gesture = Box::new(NoOpGesture::init()) as Box<dyn InputGesture>;
         for cmd in rx {
@@ -275,6 +287,8 @@ struct Cli {
     keyboard:bool,
     #[structopt(long)]
     mouse:bool,
+    #[structopt(long)]
+    disable_network:bool
 }
 
 fn init_setup() -> Cli {
@@ -284,7 +298,6 @@ fn init_setup() -> Cli {
     // create file appender with target file path
     let logfile = FileAppender::builder()
         .build("log/output.log").expect("error setting up file appender");
-    println!("logging to log/output.log");
 
     // make a config
     let config = Config::builder()
@@ -297,6 +310,13 @@ fn init_setup() -> Cli {
 
     log4rs::init_config(config).expect("error initing config");
 
+    thread::sleep(Duration::from_millis(100));
+    println!("logging to log/output.log");
+    for i in 0..5 {
+        info!("        ");
+    }
+    info!("==============");
+    info!("starting new run");
     info!("running with args {:?}",args);
     return args;
 }
