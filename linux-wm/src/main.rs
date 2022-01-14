@@ -220,7 +220,8 @@ fn make_drawing_thread(mut surf: Surf,
                 // let bounds = Rect::from_ints(0,0,200,200);
                 // surf.buf.fill_rect(bounds, ARGBColor::new_rgb(255,0,0));
                 for win in state.window_list() {
-                    surf.copy_from(win.bounds.x, win.bounds.y, &win.backbuffer)
+                    let bd = win.content_bounds();
+                    surf.copy_from(bd.x, bd.y, &win.backbuffer)
                 }
                 surf.copy_from(cursor.x, cursor.y, &cursor_image);
                 surf.sync();
