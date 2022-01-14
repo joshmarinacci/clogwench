@@ -8,7 +8,7 @@ use std::sync::mpsc::Sender;
 use std::thread;
 use log::info;
 
-pub fn send_fake_mouse(stop: Arc<AtomicBool>, sender: Sender<IncomingMessage>) {
+pub fn simulate_window_drag(stop: Arc<AtomicBool>, sender: Sender<IncomingMessage>) {
     thread::spawn({
         info!("starting fake mouse events");
         move || {

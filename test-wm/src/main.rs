@@ -26,7 +26,6 @@ use common::events::{KeyCode, KeyDownEvent, MouseButton, MouseDownEvent, MouseMo
 use common::graphics::ColorDepth::CD32;
 use common::graphics::GFXBuffer;
 use common_wm::{InputGesture, NoOpGesture, OutgoingMessage, start_wm_network_connection, Window, WindowDragGesture, WindowManagerState};
-use crate::inputtests::send_fake_mouse;
 
 fn main() -> std::io::Result<()>{
     let args:Cli = init_setup();
@@ -65,7 +64,7 @@ fn main() -> std::io::Result<()>{
         inputtests::send_fake_keyboard(stop.clone(), internal_message_sender.clone());
     }
     if args.mouse {
-        send_fake_mouse(stop.clone(), internal_message_sender.clone());
+        inputtests::simulate_window_drag(stop.clone(), internal_message_sender.clone());
     }
 
     //event processing thread
