@@ -351,7 +351,11 @@ impl InputGesture for WindowDragGesture {
         info!("WDG: mouse move {:?}",evt);
         let curr = Point::init(evt.x,evt.y);
         let diff = curr.subtract(self.start);
-        info!("dragging window {} by {:?}",self.winid,diff)
+        info!("dragging window {} by {:?}",self.winid,diff);
+        if let Some(win) = state.lookup_window(self.winid) {
+            win.position.x = curr.x;
+            win.position.y = curr.y;
+        }
     }
 
     fn mouse_up(&mut self, evt: MouseUpEvent, state:&mut WindowManagerState) {
