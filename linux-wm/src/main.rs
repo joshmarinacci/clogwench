@@ -25,7 +25,7 @@ use uuid::Uuid;
 use common::{APICommand, ARGBColor, HelloWindowManager, IncomingMessage, Point, Rect, BLACK};
 use common::APICommand::KeyDown;
 use common::events::{KeyDownEvent, KeyCode};
-use common_wm::{FOCUSED_TITLEBAR_COLOR, FOCUSED_WINDOW_COLOR, OutgoingMessage, start_wm_network_connection, TITLEBAR_COLOR, WINDOW_BORDER_WIDTH, WINDOW_COLOR, WindowManagerState};
+use common_wm::{FOCUSED_TITLEBAR_COLOR, FOCUSED_WINDOW_COLOR, InputGesture, NoOpGesture, OutgoingMessage, start_wm_network_connection, TITLEBAR_COLOR, WINDOW_BORDER_WIDTH, WINDOW_COLOR, WindowDragGesture, WindowManagerState};
 use surf::Surf;
 use common::graphics::{ColorDepth, GFXBuffer};
 
@@ -152,6 +152,7 @@ fn make_drawing_thread(mut surf: Surf,
         let fake_window_bounds = Rect::from_ints(50,50,200,200);
         state.add_window(fake_app, fake_window_uuid, &fake_window_bounds);
 
+        let mut gesture = Box::new(NoOpGesture::init()) as Box<dyn InputGesture>;
         let mut cursor:Point = Point::init(0,0);
         for cmd in rx {
             let now = Instant::now();
@@ -209,6 +210,14 @@ fn make_drawing_thread(mut surf: Surf,
                     info!("mouse down at {:?}",pt);
                     if let Some(win) = state.pick_window_at(pt) {
                         debug!("found a window at {:?}", pt);
+                        // //if mouse over titlebar, then start a window_move_gesture
+                        if win.titlebar_bounds().contains(pt) {
+                            gesture = Box::new(WindowDragGesture::init(pt,win.id))
+                        }
+                        // //if mouse over window_contents, then set window focused
+                        if win.content_bounds().contains(pt) {
+                            //     //do nothing
+                        }
                         state.set_focused_window(win.id);
                     }
                 },
@@ -217,9 +226,12 @@ fn make_drawing_thread(mut surf: Surf,
                     let pt = bounds.clamp(&Point::init(mme.x,mme.y));
                     cursor.copy_from(pt);
                     redraw = true;
+                    gesture.mouse_move(ev, &mut state);
                 },
                 APICommand::MouseUp(mme) => {
                     // println!("mouse move {:?}",mme)
+                    gesture.mouse_up(ev, &mut state);
+                    gesture = Box::new(NoOpGesture::init());
                 },
                 _ => {}
             }
