@@ -229,11 +229,11 @@ fn make_drawing_thread(mut surf: Surf,
                 // surf.buf.fill_rect(bounds, ARGBColor::new_rgb(255,0,0));
                 for win in state.window_list() {
                     if state.is_focused_window(win) {
-                        surf.buf.fill_rect(win.external_bounds(), WINDOW_COLOR);
-                        surf.buf.fill_rect(win.titlebar_bounds(), TITLEBAR_COLOR);
-                    } else {
                         surf.buf.fill_rect(win.external_bounds(), FOCUSED_WINDOW_COLOR);
                         surf.buf.fill_rect(win.titlebar_bounds(), FOCUSED_TITLEBAR_COLOR);
+                    } else {
+                        surf.buf.fill_rect(win.external_bounds(), WINDOW_COLOR);
+                        surf.buf.fill_rect(win.titlebar_bounds(), TITLEBAR_COLOR);
                     }
                     let bd = win.content_bounds();
                     // info!("drawing window {} at {:?}",win.id,bd);
