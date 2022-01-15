@@ -67,3 +67,6 @@ create plat crate. provides
 create plat-linux crate: uses my kernel work
 
 create plat-mac crate: uses sdl
+
+for the mac simulator pre-install  sdl2 and sdl2-image with
+`brew install sdl2 sdl2_image`

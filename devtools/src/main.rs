@@ -12,7 +12,7 @@ use log4rs::config::{Appender, Root};
 use log::{error, info, LevelFilter};
 use uuid::Uuid;
 use common::graphics::GFXBuffer;
-use common::{BLACK, IncomingMessage, Point, Rect};
+use common::{APICommand, ARGBColor, IncomingMessage, Point, Rect, WHITE};
 use common_wm::{FOCUSED_TITLEBAR_COLOR, FOCUSED_WINDOW_COLOR, OutgoingMessage, start_wm_network_connection, TITLEBAR_COLOR, WINDOW_BORDER_WIDTH, WINDOW_COLOR, WindowManagerState};
 use plat::Plat;
 
@@ -36,7 +36,7 @@ fn main() -> std::io::Result<()>{
     let (mut external_message_sender, rcv2) = mpsc::channel::<OutgoingMessage>();
 
     //start the central server
-    start_central_server(stop.clone());
+    // start_central_server(stop.clone());
     sleep(1000);
 
     //connect to the central server
@@ -74,12 +74,13 @@ fn main() -> std::io::Result<()>{
     state.add_window(fake_app, fake_window_uuid, &fake_window_bounds);
 
     //start test app
-    start_test_app(stop.clone());
+    // start_test_app(stop.clone());
 
 
     //make the platform specific graphics
     let mut plat = Plat::init(internal_message_sender.clone()).unwrap();
     println!("Made a plat");
+    register_image(plat,cursor_image);
 
     let bounds:Rect = plat.get_screen_bounds();
     println!("screen bounds are {:?}",bounds);
@@ -87,11 +88,31 @@ fn main() -> std::io::Result<()>{
 
     let mut count = 0;
     loop {
-        if stop.load(Ordering::Relaxed) { break; }
+        if stop.load(Ordering::Relaxed)==true { break; }
         plat.service_input();
-        for cmd in &internal_message_receiver {
+        info!("checking for incoming events");
+        for cmd in internal_message_receiver.try_iter() {
             info!("incoming {:?}",cmd);
-            if stop.load(Ordering::Relaxed) { break; }
+            if stop.load(Ordering::Relaxed) == true { break; }
+            match cmd.command {
+                // APICommand::AppConnect(_) => {}
+                // APICommand::AppConnectResponse(_) => {}
+                // APICommand::WMConnect(_) => {}
+                // APICommand::WMConnectResponse(_) => {}
+                // APICommand::OpenWindowCommand(_) => {}
+                // APICommand::OpenWindowResponse(_) => {}
+                // APICommand::DrawRectCommand(_) => {}
+                // APICommand::KeyDown(_) => {}
+                // APICommand::KeyUp(_) => {}
+                // APICommand::MouseDown(_) => {}
+                APICommand::MouseMove(evt) => {
+                    cursor.x = evt.x;
+                    cursor.y = evt.y;
+
+                }
+                // APICommand::MouseUp(_) => {}
+                _ => {}
+            }
         }
         redraw_screen(&state, &cursor, &cursor_image, &mut plat);
         plat.service_loop();
@@ -101,6 +122,7 @@ fn main() -> std::io::Result<()>{
             break;
         }
     }
+    info!("shutting down");
     plat.shutdown();
     info!("waiting for the watch dog");
     watchdog.join().unwrap();
@@ -108,22 +130,26 @@ fn main() -> std::io::Result<()>{
     Ok(())
 }
 
+
 fn redraw_screen(state: &WindowManagerState, cursor:&Point, cursor_image:&GFXBuffer, plat: &mut Plat) {            //draw
     let now = Instant::now();
+    plat.clear();
     // surf.buf.clear(&BLACK);
     for win in state.window_list() {
-        // let (wc,tc) = if state.is_focused_window(win) {
-        //     (FOCUSED_WINDOW_COLOR, FOCUSED_TITLEBAR_COLOR)
-        // } else {
-        //     (WINDOW_COLOR, TITLEBAR_COLOR)
-        // };
+        let (wc,tc) = if state.is_focused_window(win) {
+            (FOCUSED_WINDOW_COLOR, FOCUSED_TITLEBAR_COLOR)
+        } else {
+            (WINDOW_COLOR, TITLEBAR_COLOR)
+        };
         // surf.buf.draw_rect(win.external_bounds(), wc,WINDOW_BORDER_WIDTH);
-        // plat.draw_rect(win.external_bounds(), )
-        plat.fill_rect(win.titlebar_bounds(), &TITLEBAR_COLOR);
-        info!("drawing at {:?}",win.titlebar_bounds());
-        // let bd = win.content_bounds();
+        plat.draw_rect(win.external_bounds(), &wc, WINDOW_BORDER_WIDTH );
+        plat.fill_rect(win.titlebar_bounds(), &tc);
+        let bd = win.content_bounds();
+        plat.fill_rect(bd, &WHITE);
         // surf.copy_from(bd.x, bd.y, &win.backbuffer)
     }
+    plat.fill_rect(Rect::from_ints(cursor.x,cursor.y,10,10), &ARGBColor::new_rgb(255, 255, 225));
+    plat.draw_image(cursor.x,cursor.y,cursor_image);
     // surf.copy_from(cursor.x, cursor.y, &cursor_image);
     // surf.sync();
     info!("drawing {}ms",(now.elapsed().as_millis()));

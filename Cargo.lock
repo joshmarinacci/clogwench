@@ -753,7 +753,9 @@ name = "native-macos"
 version = "0.1.0"
 dependencies = [
  "common",
+ "log",
  "sdl2",
+ "uuid",
 ]
 
 [[package]]

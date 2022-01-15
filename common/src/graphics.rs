@@ -10,6 +10,7 @@
 
 use std::fs::File;
 use png;
+use uuid::Uuid;
 use crate::{ARGBColor, Rect};
 use crate::graphics::ColorDepth::{CD24, CD32};
 
@@ -20,9 +21,10 @@ pub enum ColorDepth {
 }
 
 pub struct GFXBuffer {
-    bitdepth:ColorDepth,
-    width:u32,
-    height:u32,
+    pub bitdepth:ColorDepth,
+    pub id:Uuid,
+    pub width:u32,
+    pub height:u32,
     pub data: Vec<u8>,
 }
 
@@ -276,7 +278,8 @@ impl GFXBuffer {
             bitdepth,
             data,
             width,
-            height
+            height,
+            id: Uuid::new_v4(),
         }
     }
 }
