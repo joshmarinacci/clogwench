@@ -10,6 +10,6 @@ common = { path="../../common"}
 uuid = { version="0.8.2", features=["v4","serde"]}
 log = "0.4.14"
 [dependencies.sdl2]
-version = "0.34.5"
+version = "=0.35.1"
 default-features = false
-features = ["use-pkgconfig"]
+features = ["use-pkgconfig", "unsafe_textures"]

@@ -14,7 +14,7 @@ use uuid::Uuid;
 use common::graphics::GFXBuffer;
 use common::{APICommand, ARGBColor, IncomingMessage, Point, Rect, WHITE};
 use common_wm::{FOCUSED_TITLEBAR_COLOR, FOCUSED_WINDOW_COLOR, OutgoingMessage, start_wm_network_connection, TITLEBAR_COLOR, WINDOW_BORDER_WIDTH, WINDOW_COLOR, WindowManagerState};
-use plat::Plat;
+use plat::{make_plat, TM};
 
 fn main() -> std::io::Result<()>{
     //initial setup
@@ -78,9 +78,9 @@ fn main() -> std::io::Result<()>{
 
 
     //make the platform specific graphics
-    let mut plat = Plat::init(internal_message_sender.clone()).unwrap();
+    let mut plat = make_plat(internal_message_sender.clone()).unwrap();
     println!("Made a plat");
-    register_image(plat,cursor_image);
+    plat.register_image2();
 
     let bounds:Rect = plat.get_screen_bounds();
     println!("screen bounds are {:?}",bounds);
@@ -131,7 +131,7 @@ fn main() -> std::io::Result<()>{
 }
 
 
-fn redraw_screen(state: &WindowManagerState, cursor:&Point, cursor_image:&GFXBuffer, plat: &mut Plat) {            //draw
+fn redraw_screen(state: &WindowManagerState, cursor:&Point, cursor_image:&GFXBuffer, plat: &mut TM) {            //draw
     let now = Instant::now();
     plat.clear();
     // surf.buf.clear(&BLACK);
