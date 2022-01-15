@@ -1,0 +1,15 @@
+[package]
+name = "plat"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+common = { path="../common"}
+
+[target.'cfg(target_os="macos")'.dependencies]
+native-macos = { path="native-macos" }
+
+[target.'cfg(target_os="linux")'.dependencies]
+native-linux = { path="native-linux" }

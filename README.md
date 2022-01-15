@@ -56,3 +56,14 @@ https://github.com/joshmarinacci/clogwench.git
 
 
 
+plan for platform independence
+
+create plat crate. provides
+  init_plat() returns a Plat object
+  get_screen() a screen object with key fields on it
+  get_input_stream() which is a channel that returns incoming messages
+  plat.stop() shuts down everything, including any internal threads
+
+create plat-linux crate: uses my kernel work
+
+create plat-mac crate: uses sdl

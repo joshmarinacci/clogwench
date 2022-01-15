@@ -8,5 +8,7 @@ members = [
     "central",
     "graphics_tests",
     "tools-input",
-    "common"
+    "common",
+    "plat",
+    "devtools"
 ]
