@@ -1,4 +1,5 @@
 use std::error::Error;
+use std::sync::mpsc::Sender;
 use std::time::Duration;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
@@ -6,16 +7,17 @@ use sdl2::render::WindowCanvas;
 use sdl2::{EventPump, Sdl};
 use sdl2::pixels::Color;
 use sdl2::rect::Rect as SDLRect;
-use common::{ARGBColor, Rect as CommonRect, Rect};
+use common::{ARGBColor, IncomingMessage, Rect as CommonRect, Rect};
 
 pub struct Plat {
     pub sdl_context: Sdl,
     pub canvas: WindowCanvas,
     pub event_pump: EventPump,
+    pub sender: Sender<IncomingMessage>,
 }
 
 impl Plat {
-    pub fn init() -> Result<Plat, String> {
+    pub fn init(sender: Sender<IncomingMessage>) -> Result<Plat, String> {
         let sdl_context = sdl2::init()?;
         let video_subsystem = sdl_context.video()?;
         println!("verison is {}", sdl2::version::version());
@@ -43,6 +45,7 @@ impl Plat {
             sdl_context:sdl_context,
             canvas:canvas,
             event_pump:event_pump,
+            sender:sender,
         })
     }
 
@@ -56,7 +59,7 @@ impl Plat {
         }
     }
 
-    pub fn service_loop(&mut self) {
+    pub fn service_input(&mut self) {
         for event in self.event_pump.poll_iter() {
             match event {
                 Event::Quit { .. }
@@ -73,8 +76,11 @@ impl Plat {
                 _ => {}
             }
         }
-        self.canvas.set_draw_color(Color::RED);
-        self.canvas.fill_rect(SDLRect::new(0,0,100,100));
+    }
+
+    pub fn service_loop(&mut self) {
+        // self.canvas.set_draw_color(Color::RED);
+        // self.canvas.fill_rect(SDLRect::new(0,0,100,100));
         self.canvas.present();
         ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
     }

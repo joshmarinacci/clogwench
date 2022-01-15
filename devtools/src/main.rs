@@ -17,11 +17,14 @@ use common_wm::{FOCUSED_TITLEBAR_COLOR, FOCUSED_WINDOW_COLOR, OutgoingMessage, s
 use plat::Plat;
 
 fn main() -> std::io::Result<()>{
+    //initial setup
     let args:Cli = init_setup();
     let stop:Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
     setup_c_handler(stop.clone());
 
-    //try loading a resource
+    let watchdog = make_watchdog(stop.clone());
+
+    //load the cursor image
     let cwd = env::current_dir()?;
     info!("cwd is {}", cwd.display());
     let cursor_image:GFXBuffer = GFXBuffer::from_png_file("../resources/cursor.png");
@@ -32,9 +35,11 @@ fn main() -> std::io::Result<()>{
         mut internal_message_receiver) = mpsc::channel::<IncomingMessage>();
     let (mut external_message_sender, rcv2) = mpsc::channel::<OutgoingMessage>();
 
+    //start the central server
     start_central_server(stop.clone());
     sleep(1000);
 
+    //connect to the central server
     if !args.disable_network {
         info!("connecting to the central server");
         //open network connection
@@ -49,7 +54,6 @@ fn main() -> std::io::Result<()>{
         info!("skipping the network connection");
     }
 
-    let watchdog = make_watchdog(stop.clone());
 
     //make thread for fake incoming events. sends to the main event thread
     // if args.keyboard {
@@ -73,7 +77,8 @@ fn main() -> std::io::Result<()>{
     start_test_app(stop.clone());
 
 
-    let mut plat = Plat::init().unwrap();
+    //make the platform specific graphics
+    let mut plat = Plat::init(internal_message_sender.clone()).unwrap();
     println!("Made a plat");
 
     let bounds:Rect = plat.get_screen_bounds();
@@ -82,6 +87,8 @@ fn main() -> std::io::Result<()>{
 
     let mut count = 0;
     loop {
+        if stop.load(Ordering::Relaxed) { break; }
+        plat.service_input();
         for cmd in &internal_message_receiver {
             info!("incoming {:?}",cmd);
             if stop.load(Ordering::Relaxed) { break; }
@@ -145,17 +152,17 @@ fn sleep(dur: u64) {
 
 fn start_central_server(stop: Arc<AtomicBool>)  {
     info!("running some output");
-    let mut child = Command::new("../target/debug/central")
-        // .stdin(Stdio::null())
-        // .stdout(Stdio::null())
-        // .stdout(Stdio::inherit())
-        .arg("--debug=true")
-        // .env_clear()
-        // .env("PATH", "/bin")
-        .spawn()
-        .expect("child process failed to start")
-        ;
     thread::spawn(move||{
+        let mut child = Command::new("../target/debug/central")
+            // .stdin(Stdio::null())
+            // .stdout(Stdio::null())
+            // .stdout(Stdio::inherit())
+            .arg("--debug=true")
+            // .env_clear()
+            // .env("PATH", "/bin")
+            .spawn()
+            .expect("child process failed to start")
+            ;
         loop {
             sleep(100);
             if stop.load(Ordering::Relaxed) == true {
@@ -170,12 +177,12 @@ fn start_central_server(stop: Arc<AtomicBool>)  {
 
 fn start_test_app(stop: Arc<AtomicBool>) {
     info!("starting test app");
-    let mut child = Command::new("../target/debug/demo-moveplayer")
-        .arg("--debug=true")
-        .spawn()
-        .expect("child process failed to start")
-        ;
     thread::spawn(move||{
+        let mut child = Command::new("../target/debug/demo-moveplayer")
+            .arg("--debug=true")
+            .spawn()
+            .expect("child process failed to start")
+            ;
         loop {
             sleep(100);
             if stop.load(Ordering::Relaxed) == true {
