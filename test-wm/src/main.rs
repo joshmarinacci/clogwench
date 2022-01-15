@@ -45,8 +45,8 @@ fn main() -> std::io::Result<()>{
         mut internal_message_receiver) = mpsc::channel::<IncomingMessage>();
     let (mut external_message_sender, rcv2) = mpsc::channel::<OutgoingMessage>();
 
-    let central = start_central_server();
-    thread::sleep(Duration::from_millis(1000));
+    start_central_server(stop.clone());
+    sleep(1000);
 
     if !args.disable_network {
         info!("connecting to the central server");
@@ -82,6 +82,9 @@ fn main() -> std::io::Result<()>{
     let fake_window_bounds = Rect::from_ints(50,50,200,200);
     state.add_window(fake_app, fake_window_uuid, &fake_window_bounds);
 
+    //start test app
+    start_test_app(stop.clone());
+
     //event processing thread
     start_event_processor(stop.clone(), internal_message_receiver, external_message_sender.clone(), state);
     info!("waiting for the watch dog");
@@ -90,9 +93,32 @@ fn main() -> std::io::Result<()>{
     Ok(())
 }
 
-fn start_central_server() -> Child {
+fn sleep(dur: u64) {
+    thread::sleep(Duration::from_millis(dur))
+}
+
+fn start_test_app(stop: Arc<AtomicBool>) {
+    let mut child = Command::new("../target/debug/demo-moveplayer")
+        .arg("--debug=true")
+        .spawn()
+        .expect("child process failed to start")
+        ;
+    thread::spawn(move||{
+        loop {
+            sleep(100);
+            if stop.load(Ordering::Relaxed) == true {
+                info!("killing the child");
+                let res = child.kill();
+                info!("killed status {:?}",res);
+                break;
+            }
+        }
+    });
+}
+
+fn start_central_server(stop: Arc<AtomicBool>)  {
     println!("running some output");
-    return Command::new("../target/debug/central")
+    let mut child = Command::new("../target/debug/central")
         // .stdin(Stdio::null())
         // .stdout(Stdio::null())
         // .stdout(Stdio::inherit())
@@ -102,6 +128,17 @@ fn start_central_server() -> Child {
         .spawn()
         .expect("child process failed to start")
         ;
+    thread::spawn(move||{
+        loop {
+            sleep(100);
+            if stop.load(Ordering::Relaxed) == true {
+                info!("killing the child");
+                let res = child.kill();
+                info!("killed status {:?}",res);
+                break;
+            }
+        }
+    });
 }
 
 fn make_watchdog(stop: Arc<AtomicBool>) -> JoinHandle<()> {
