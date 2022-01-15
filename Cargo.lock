@@ -741,6 +741,19 @@ dependencies = [
 [[package]]
 name = "native-linux"
 version = "0.1.0"
+dependencies = [
+ "common",
+ "ctrlc",
+ "env_logger",
+ "errno",
+ "framebuffer",
+ "libc",
+ "log",
+ "log4rs",
+ "memmap",
+ "structopt",
+ "uuid",
+]
 
 [[package]]
 name = "native-macos"
