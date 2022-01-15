@@ -6,7 +6,7 @@ use sdl2::render::WindowCanvas;
 use sdl2::{EventPump, Sdl};
 use sdl2::pixels::Color;
 use sdl2::rect::Rect as SDLRect;
-use common::Rect as CommonRect;
+use common::{ARGBColor, Rect as CommonRect, Rect};
 
 pub struct Plat {
     pub sdl_context: Sdl,
@@ -77,6 +77,11 @@ impl Plat {
         self.canvas.fill_rect(SDLRect::new(0,0,100,100));
         self.canvas.present();
         ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
+    }
+
+    pub fn fill_rect(&mut self, rect:CommonRect, color:&ARGBColor) {
+        self.canvas.set_draw_color(Color::RED);
+        self.canvas.fill_rect(SDLRect::new(rect.x, rect.y, rect.w as u32, rect.h as u32));
     }
 
     pub fn shutdown(&mut self) {

@@ -268,7 +268,14 @@ name = "devtools"
 version = "0.1.0"
 dependencies = [
  "common",
+ "common-wm",
+ "ctrlc",
+ "env_logger",
+ "log",
+ "log4rs",
  "plat",
+ "structopt",
+ "uuid",
 ]
 
 [[package]]
