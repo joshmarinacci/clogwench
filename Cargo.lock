@@ -746,6 +746,7 @@ dependencies = [
  "ctrlc",
  "env_logger",
  "errno",
+ "evdev",
  "framebuffer",
  "libc",
  "log",

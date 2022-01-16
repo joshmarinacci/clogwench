@@ -14,7 +14,7 @@ use uuid::Uuid;
 use common::graphics::GFXBuffer;
 use common::{APICommand, ARGBColor, IncomingMessage, Point, Rect, WHITE};
 use common_wm::{FOCUSED_TITLEBAR_COLOR, FOCUSED_WINDOW_COLOR, OutgoingMessage, start_wm_network_connection, TITLEBAR_COLOR, WINDOW_BORDER_WIDTH, WINDOW_COLOR, WindowManagerState};
-use plat::{make_plat, TM};
+use plat::{make_plat, Plat};
 
 fn main() -> std::io::Result<()>{
     //initial setup
@@ -78,7 +78,7 @@ fn main() -> std::io::Result<()>{
 
 
     //make the platform specific graphics
-    let mut plat = make_plat(internal_message_sender.clone()).unwrap();
+    let mut plat = make_plat(stop.clone(), internal_message_sender.clone()).unwrap();
     println!("Made a plat");
     plat.register_image2();
 
@@ -90,7 +90,7 @@ fn main() -> std::io::Result<()>{
     loop {
         if stop.load(Ordering::Relaxed)==true { break; }
         plat.service_input();
-        info!("checking for incoming events");
+        //info!("checking for incoming events");
         for cmd in internal_message_receiver.try_iter() {
             info!("incoming {:?}",cmd);
             if stop.load(Ordering::Relaxed) == true { break; }
@@ -131,7 +131,7 @@ fn main() -> std::io::Result<()>{
 }
 
 
-fn redraw_screen(state: &WindowManagerState, cursor:&Point, cursor_image:&GFXBuffer, plat: &mut TM) {            //draw
+fn redraw_screen(state: &WindowManagerState, cursor:&Point, cursor_image:&GFXBuffer, plat: &mut Plat) {            //draw
     let now = Instant::now();
     plat.clear();
     // surf.buf.clear(&BLACK);
@@ -152,7 +152,7 @@ fn redraw_screen(state: &WindowManagerState, cursor:&Point, cursor_image:&GFXBuf
     plat.draw_image(cursor.x,cursor.y,cursor_image);
     // surf.copy_from(cursor.x, cursor.y, &cursor_image);
     // surf.sync();
-    info!("drawing {}ms",(now.elapsed().as_millis()));
+    //info!("drawing {}ms",(now.elapsed().as_millis()));
 }
 
 fn make_watchdog(stop: Arc<AtomicBool>) -> JoinHandle<()> {

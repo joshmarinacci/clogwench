@@ -69,4 +69,23 @@ create plat-linux crate: uses my kernel work
 create plat-mac crate: uses sdl
 
 for the mac simulator pre-install  sdl2 and sdl2-image with
+
 `brew install sdl2 sdl2_image`
+
+
+
+To get this running on your real pi, get rust and git on your Pi then
+ssh in and check out the code. Inside the clogwench repo do:
+
+``` shell
+cargo build
+cd devtools
+cargo run -- --debug=true --disable-network=true
+```
+
+This will start the window manager and test out graphics with a fake app.  To use a real central
+server use `--disable-network=false`  
+then start a demo app from another ssh session.
+
+
+
