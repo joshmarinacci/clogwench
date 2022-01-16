@@ -46,17 +46,21 @@ pub fn make_plat<'a>(stop:Arc<AtomicBool>, sender: Sender<IncomingMessage>) -> R
 fn print_debug_info(framebuffer: &Framebuffer) {
     let s = String::from_utf8_lossy(&framebuffer.fix_screen_info.id);
     let v = &framebuffer.var_screen_info;
-    println!("id {}",s);
-    println!("x {} y {}",framebuffer.fix_screen_info.xpanstep, framebuffer.fix_screen_info.ypanstep);
+    info!("id {}",s);
+    info!("x {} y {}",framebuffer.fix_screen_info.xpanstep, framebuffer.fix_screen_info.ypanstep);
     info!("width {} height {}",v.xres, v.yres);
     info!("width {} height {}", v.width, v.height);
     info!("{:?}",v);
-    println!("bits per pixel {}",framebuffer.var_screen_info.bits_per_pixel);
+    info!("bits per pixel {}",framebuffer.var_screen_info.bits_per_pixel);
     println!("rotate {}",framebuffer.var_screen_info.rotate);
     println!("xoff {} yoff {}",framebuffer.var_screen_info.xoffset, framebuffer.var_screen_info.yoffset);
     println!("type {} {}", framebuffer.fix_screen_info.fb_type, framebuffer.fix_screen_info.type_aux);
     println!("accell {}", framebuffer.fix_screen_info.accel);
     println!("grayscale {}", framebuffer.var_screen_info.grayscale);
+
+    info!("red bif {:?}",v.red);
+    info!("red bif {:?}",v.green);
+    info!("red bif {:?}",v.blue);
 
 }
 
