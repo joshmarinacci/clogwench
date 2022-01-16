@@ -168,7 +168,7 @@ impl Plat {
                             ColorDepth::CD24() => {}
                             ColorDepth::CD32() => {
                                 //let px = img.get_pixel_32argb(i,j);
-                                let ve = img.get_vec_pixel_32argb(i as i32,j as i32);
+                                let ve = img.get_pixel_vec_argb(i as u32,j as u32);
                                 let col = Color::RGBA(ve[1],ve[2],ve[3], ve[0]);
                                 can.set_draw_color(col);
                                 can.fill_rect(SDLRect::new(i as i32, j as i32, 1, 1));
