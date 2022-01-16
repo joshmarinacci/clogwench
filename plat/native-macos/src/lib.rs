@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use log::{error, info};
 use std::sync::mpsc::Sender;
 use std::time::Duration;
@@ -17,7 +19,7 @@ use common::events::{MouseButton, MouseMoveEvent};
 use common::graphics::GFXBuffer;
 
 
-pub struct TM {
+pub struct Plat {
     pub event_pump: EventPump,
     pub canvas: WindowCanvas,
     pub textures: HashMap<Uuid, Texture>,
@@ -25,7 +27,7 @@ pub struct TM {
     pub sender: Sender<IncomingMessage>,
 }
 
-pub fn make_plat<'a>(sender: Sender<IncomingMessage>) -> Result<TM, String> {
+pub fn make_plat<'a>(stop:Arc<AtomicBool>, sender: Sender<IncomingMessage>) -> Result<Plat, String> {
     let sdl_context = sdl2::init().unwrap();
     let window = sdl_context.video()?
         .window("rust-sdl2 demo: Video", 512 * 2, 320 * 2)
@@ -35,7 +37,7 @@ pub fn make_plat<'a>(sender: Sender<IncomingMessage>) -> Result<TM, String> {
         .map_err(|e| e.to_string())?;
     let canvas:WindowCanvas = window.into_canvas().software().build().map_err(|e| e.to_string())?;
 
-    return Ok(TM {
+    return Ok(Plat {
         textures: Default::default(),
         creator: canvas.texture_creator(),
         canvas: canvas,
@@ -44,7 +46,7 @@ pub fn make_plat<'a>(sender: Sender<IncomingMessage>) -> Result<TM, String> {
     });
 }
 
-impl TM {
+impl Plat {
 
     pub fn get_screen_bounds(&self) -> CommonRect {
         let r2 = self.canvas.viewport();
