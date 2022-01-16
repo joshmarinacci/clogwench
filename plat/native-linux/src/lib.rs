@@ -5,6 +5,7 @@ use std::sync::{Arc, mpsc};
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use framebuffer::{Framebuffer, KdMode, VarScreeninfo};
+use log::info;
 
 use surf::Surf;
 mod surf;
@@ -44,9 +45,12 @@ pub fn make_plat<'a>(stop:Arc<AtomicBool>, sender: Sender<IncomingMessage>) -> R
 
 fn print_debug_info(framebuffer: &Framebuffer) {
     let s = String::from_utf8_lossy(&framebuffer.fix_screen_info.id);
+    let v = &framebuffer.var_screen_info;
     println!("id {}",s);
     println!("x {} y {}",framebuffer.fix_screen_info.xpanstep, framebuffer.fix_screen_info.ypanstep);
-    println!("width {} height {}",framebuffer.var_screen_info.xres, framebuffer.var_screen_info.yres);
+    info!("width {} height {}",v.xres, v.yres);
+    info!("width {} height {}", v.width, v.height);
+    info!("{:?}",v);
     println!("bits per pixel {}",framebuffer.var_screen_info.bits_per_pixel);
     println!("rotate {}",framebuffer.var_screen_info.rotate);
     println!("xoff {} yoff {}",framebuffer.var_screen_info.xoffset, framebuffer.var_screen_info.yoffset);
