@@ -24,6 +24,7 @@ impl Surf {
             }
         };
         info!("made surface {}x{} px with  {} bits per pixel",w,h,fb.var_screen_info.bits_per_pixel);
+        info!("buffer is {:?} {:?}",buf.bitdepth, buf.layout);
         Surf { fb, w, h, buf }
     }
 }
