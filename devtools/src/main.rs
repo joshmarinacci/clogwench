@@ -27,6 +27,11 @@ fn main() -> std::io::Result<()>{
 
     let watchdog = make_watchdog(stop.clone());
 
+    let tv:u32 = 0xFF;
+    let tv_b = u32::from_be(tv);
+    let tv_l = u32::from_le(tv);
+    info!("normal {} big {} le{}",tv,tv_b,tv_l);
+
     //load the cursor image
     let cwd = env::current_dir()?;
     info!("cwd is {}", cwd.display());

@@ -175,9 +175,9 @@ impl GFXBuffer {
                         self.data[n*4+3] = v[3];
                     }
                     PixelLayout::RGBA() => {
-                        self.data[n*4+0] = v[1];
+                        self.data[n*4+0] = v[3];
                         self.data[n*4+1] = v[2];
-                        self.data[n*4+2] = v[3];
+                        self.data[n*4+2] = v[1];
                         self.data[n*4+3] = v[0];
                     }
                     _ => {}
