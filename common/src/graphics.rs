@@ -153,8 +153,8 @@ impl GFXBuffer {
                         let b = v[3];
                         let upper = ((r >> 3)<<3) | ((g & 0b111_00000) >> 5);
                         let lower = (((g & 0b00011100) >> 2) << 5) | ((b & 0b1111_1000) >> 3);
-                        self.data[n*2+0] = upper;
-                        self.data[n*2+1] = lower;
+                        self.data[n*2+0] = lower;
+                        self.data[n*2+1] = upper;
                     }
                     _ => {}
                 }
