@@ -10,13 +10,14 @@ use sdl2::keyboard::Keycode;
 use sdl2::render::{Texture, WindowCanvas, TextureCreator, TextureAccess};
 use sdl2::video::{Window, WindowContext};
 use sdl2::{EventPump, Sdl};
-use sdl2::pixels::{Color, PixelFormatEnum};
+use sdl2::keyboard::Keycode::D;
+use sdl2::pixels::{Color, PixelFormat, PixelFormatEnum};
 use sdl2::rect::Rect as SDLRect;
 
 use uuid::Uuid;
 use common::{APICommand, ARGBColor, IncomingMessage, Rect as CommonRect, Rect};
-use common::events::{MouseButton, MouseMoveEvent};
-use common::graphics::GFXBuffer;
+use common::events::{MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent};
+use common::graphics::{ColorDepth, GFXBuffer};
 
 
 pub struct Plat {
@@ -59,7 +60,7 @@ impl Plat {
     }
 
     pub fn service_input(&mut self) {
-        info!("mac doing events");
+        // info!("mac doing events");
         for event in self.event_pump.poll_iter() {
             match event {
                 Event::Quit { .. }
@@ -71,8 +72,31 @@ impl Plat {
                     break;
                 },
                 // Event::KeyDown {keycode,keymod,..} => self.process_keydown(keycode, keymod, windows,output),
-                // Event::MouseButtonDown { x, y,mouse_btn, .. } => self.process_mousedown(x,y,mouse_btn, windows, output),
-                // Event::MouseButtonUp {x,y,mouse_btn,..} =>  self.process_mouseup(x,y,mouse_btn,windows,output),
+                Event::MouseButtonDown { x, y,mouse_btn, .. } => {
+                    let cmd = IncomingMessage {
+                        source: Default::default(),
+                        command: APICommand::MouseDown(MouseDownEvent{
+                            original_timestamp: 0,
+                            button: MouseButton::Primary,
+                            x,
+                            y
+                        })
+                    };
+                    self.sender.send(cmd).unwrap();
+                },
+                Event::MouseButtonUp {x,y,mouse_btn,..} =>  {
+                    let cmd = IncomingMessage {
+                        source: Default::default(),
+                        command: APICommand::MouseUp(MouseUpEvent{
+                            original_timestamp: 0,
+                            button: MouseButton::Primary,
+                            x,
+                            y
+                        })
+                    };
+                    self.sender.send(cmd).unwrap();
+                    //self.process_mouseup(x,y,mouse_btn,windows,output)
+                },
                 Event::MouseMotion {
                     timestamp, window_id, which, mousestate, x, y, xrel, yrel
                 } => {
@@ -90,7 +114,7 @@ impl Plat {
                 _ => {}
             }
         }
-        info!("mac done events");
+        // info!("mac done events");
     }
 
     pub fn service_loop(&mut self) {
@@ -127,12 +151,56 @@ impl Plat {
 
     }
 
-    pub fn register_image2(&mut self) {
-        let tc = self.canvas.texture_creator();
-        let tex = tc.create_texture(
+    pub fn register_image2(&mut self, img:&GFXBuffer) {
+        let tex_creator = self.canvas.texture_creator();
+        let tex = tex_creator.create_texture(
             PixelFormatEnum::RGBA8888,
-            TextureAccess::Target, 20, 20).unwrap();
-        self.textures.insert(Uuid::new_v4(), tex);
+            TextureAccess::Target, img.width, img.height).unwrap();
+        self.textures.insert(img.id, tex);
+
+        if let Some(tx) = self.textures.get_mut(&img.id) {
+            self.canvas.with_texture_canvas(tx, |can| {
+                for i in 0..img.width {
+                    for j in 0..img.height {
+                        let n:usize = ((j * img.width + i) * 4) as usize;
+                        match img.bitdepth {
+                            ColorDepth::CD16() => {}
+                            ColorDepth::CD24() => {}
+                            ColorDepth::CD32() => {
+                                let px = img.get_pixel_32argb(i,j);
+                                let pf = PixelFormat::try_from(PixelFormatEnum::ARGB8888).unwrap();
+                                let col = Color::from_u32(&pf, px);
+                                can.set_draw_color(col);
+                                can.fill_rect(SDLRect::new(i as i32, j as i32, 1, 1));
+                            }
+                        }
+                        // // let alpha = m.pixels[n+3];
+                        // if m.depth == 8 {
+                        //     //if 8bit depth then it's a real RGBA image
+                        //     if alpha > 0 {
+                        //         let col = Color::RGBA(m.pixels[n + 0], m.pixels[n + 1], m.pixels[n + 2], m.pixels[n + 3]);
+                        //         can.set_draw_color(col);
+                        //         can.fill_rect(Rect::new((m.x + i) as i32, (m.y + j) as i32, 1, 1));
+                        //     }
+                        // } else if m.depth == 1 {
+                        //     //if 1bit depth and a color is set, then draw with that color wherever not transparent (alpha > 0)
+                        //     if alpha > 0 {
+                        //         let col = lookup_color(&m.color);
+                        //         can.set_draw_color(col);
+                        //         can.fill_rect(Rect::new((m.x + i) as i32, (m.y + j) as i32, 1, 1));
+                        //     }
+                        //     //else assume it's just black wherever not transparent (alpha > 0)
+                        // } else {
+                        //     if alpha > 0 {
+                        //         let col = Color::RGBA(m.pixels[n + 0], m.pixels[n + 1], m.pixels[n + 2], m.pixels[n + 3]);
+                        //         can.set_draw_color(col);
+                        //         can.fill_rect(Rect::new((m.x + i) as i32, (m.y + j) as i32, 1, 1));
+                        //     }
+                        // }
+                    }
+                }
+            });
+        }
     }
 }
 

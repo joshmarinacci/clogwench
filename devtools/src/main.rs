@@ -9,11 +9,14 @@ use std::time::{Duration, Instant};
 use log4rs::append::file::FileAppender;
 use log4rs::Config;
 use log4rs::config::{Appender, Root};
-use log::{error, info, LevelFilter};
+use log::{debug, error, info, LevelFilter};
 use uuid::Uuid;
 use common::graphics::GFXBuffer;
 use common::{APICommand, ARGBColor, IncomingMessage, Point, Rect, WHITE};
-use common_wm::{FOCUSED_TITLEBAR_COLOR, FOCUSED_WINDOW_COLOR, OutgoingMessage, start_wm_network_connection, TITLEBAR_COLOR, WINDOW_BORDER_WIDTH, WINDOW_COLOR, WindowManagerState};
+use common::APICommand::KeyDown;
+use common::events::{KeyCode, KeyDownEvent};
+use common::graphics::ColorDepth::CD32;
+use common_wm::{FOCUSED_TITLEBAR_COLOR, FOCUSED_WINDOW_COLOR, InputGesture, NoOpGesture, OutgoingMessage, start_wm_network_connection, TITLEBAR_COLOR, WINDOW_BORDER_WIDTH, WINDOW_COLOR, WindowDragGesture, WindowManagerState};
 use plat::{make_plat, Plat};
 
 fn main() -> std::io::Result<()>{
@@ -55,38 +58,37 @@ fn main() -> std::io::Result<()>{
     }
 
 
-    //make thread for fake incoming events. sends to the main event thread
-    // if args.keyboard {
-    //     inputtests::send_fake_keyboard(stop.clone(), internal_message_sender.clone());
-    // }
-    // if args.mouse {
-    //     inputtests::simulate_window_drag(stop.clone(), internal_message_sender.clone());
-    // }
-
 
     //setup the window manager state
     let mut state = WindowManagerState::init();
-    //preload a fake app and window
-    let fake_app = Uuid::new_v4();
-    state.add_app(fake_app);
-    let fake_window_uuid = Uuid::new_v4();
-    let fake_window_bounds = Rect::from_ints(50,50,200,200);
-    state.add_window(fake_app, fake_window_uuid, &fake_window_bounds);
+    {
+        //preload a fake app and window
+        let fake_app_1 = Uuid::new_v4();
+        state.add_app(fake_app_1);
+        state.add_window(fake_app_1, Uuid::new_v4(), &Rect::from_ints(50, 50, 100, 200));
+
+        let fake_app_2 = Uuid::new_v4();
+        state.add_app(fake_app_2);
+        state.add_window(fake_app_2, Uuid::new_v4(), &Rect::from_ints(250, 50, 100, 200));
+    }
 
     //start test app
     // start_test_app(stop.clone());
 
 
+    let mut test_pattern = GFXBuffer::new(CD32(), 64, 64);
+    common::graphics::draw_test_pattern(&mut test_pattern);
     //make the platform specific graphics
     let mut plat = make_plat(stop.clone(), internal_message_sender.clone()).unwrap();
     println!("Made a plat");
-    plat.register_image2();
+    plat.register_image2(&test_pattern);
 
     let bounds:Rect = plat.get_screen_bounds();
     println!("screen bounds are {:?}",bounds);
     let mut cursor:Point = Point::init(0,0);
 
     let mut count = 0;
+    let mut gesture = Box::new(NoOpGesture::init()) as Box<dyn InputGesture>;
     loop {
         if stop.load(Ordering::Relaxed)==true { break; }
         plat.service_input();
@@ -95,26 +97,76 @@ fn main() -> std::io::Result<()>{
             //info!("incoming {:?}",cmd);
             if stop.load(Ordering::Relaxed) == true { break; }
             match cmd.command {
-                // APICommand::AppConnect(_) => {}
-                // APICommand::AppConnectResponse(_) => {}
-                // APICommand::WMConnect(_) => {}
-                // APICommand::WMConnectResponse(_) => {}
-                // APICommand::OpenWindowCommand(_) => {}
-                // APICommand::OpenWindowResponse(_) => {}
-                // APICommand::DrawRectCommand(_) => {}
-                // APICommand::KeyDown(_) => {}
-                // APICommand::KeyUp(_) => {}
-                // APICommand::MouseDown(_) => {}
-                APICommand::MouseMove(evt) => {
-                    cursor.x = evt.x;
-                    cursor.y = evt.y;
-
+                APICommand::AppConnectResponse(res) => {
+                    state.add_app(res.app_id);
                 }
-                // APICommand::MouseUp(_) => {}
+                APICommand::OpenWindowResponse(ow) => {
+                    state.add_window(ow.app_id, ow.window_id, &ow.bounds);
+                    state.set_focused_window(ow.window_id);
+                }
+                APICommand::DrawRectCommand(dr) => {
+                    if let Some(mut win) = state.lookup_window(dr.window_id) {
+                        win.backbuffer.fill_rect(dr.rect, dr.color);
+                    }
+                }
+                APICommand::KeyDown(kd) => {
+                    info!("key down {:?}",kd.key);
+                    match kd.key {
+                        KeyCode::ESC => {
+                            stop.store(true, Ordering::Relaxed);
+                        },
+                        _ => {
+                            info!("key down");
+                            //send key to the currently focused window
+                            if let Some(winid) = state.get_focused_window() {
+                                if let Some(win) = state.lookup_window(winid.clone()) {
+                                    let msg = OutgoingMessage {
+                                        recipient: win.owner,
+                                        command: KeyDown(KeyDownEvent {
+                                            app_id: win.owner,
+                                            window_id: win.id,
+                                            original_timestamp: 0,
+                                            key: kd.key
+                                        })
+                                    };
+                                    external_message_sender.send(msg).unwrap();
+                                }
+                            }
+                        }
+                    }
+                }
+                // APICommand::KeyUp(_) => {}
+                APICommand::MouseDown(mme) => {
+                    let pt = Point::init(mme.x, mme.y);
+                    info!("mouse down at {:?}",pt);
+                    if let Some(win) = state.pick_window_at(pt) {
+                        debug!("found a window at {:?}", pt);
+                        // //if mouse over titlebar, then start a window_move_gesture
+                        if win.titlebar_bounds().contains(pt) {
+                            debug!("inside the titlebar");
+                            gesture = Box::new(WindowDragGesture::init(pt,win.id))
+                        }
+                        // //if mouse over window_contents, then set window focused
+                        if win.content_bounds().contains(pt) {
+                            //     //do nothing
+                        }
+                        state.set_focused_window(win.id);
+                    }
+                }
+                APICommand::MouseMove(evt) => {
+                    let bounds = Rect::from_ints(0,0,500,500);
+                    let pt = bounds.clamp(&Point::init(evt.x,evt.y));
+                    cursor.copy_from(pt);
+                    gesture.mouse_move(evt, &mut state);
+                }
+                APICommand::MouseUp(mme) => {
+                    gesture.mouse_up(mme, &mut state);
+                    gesture = Box::new(NoOpGesture::init());
+                }
                 _ => {}
             }
         }
-        redraw_screen(&state, &cursor, &cursor_image, &mut plat);
+        redraw_screen(&state, &cursor, &cursor_image, &mut plat, &test_pattern);
         plat.service_loop();
         count += 1;
         // println!("count {}",count);
@@ -131,7 +183,7 @@ fn main() -> std::io::Result<()>{
 }
 
 
-fn redraw_screen(state: &WindowManagerState, cursor:&Point, cursor_image:&GFXBuffer, plat: &mut Plat) {            //draw
+fn redraw_screen(state: &WindowManagerState, cursor:&Point, cursor_image:&GFXBuffer, plat: &mut Plat, test_pattern: &GFXBuffer) {            //draw
     let now = Instant::now();
     plat.clear();
     // surf.buf.clear(&BLACK);
@@ -150,8 +202,7 @@ fn redraw_screen(state: &WindowManagerState, cursor:&Point, cursor_image:&GFXBuf
     }
     plat.fill_rect(Rect::from_ints(cursor.x,cursor.y,10,10), &ARGBColor::new_rgb(255, 255, 225));
     plat.draw_image(cursor.x,cursor.y,cursor_image);
-    // surf.copy_from(cursor.x, cursor.y, &cursor_image);
-    // surf.sync();
+    plat.draw_image(50, 300, test_pattern)
     //info!("drawing {}ms",(now.elapsed().as_millis()));
 }
 
