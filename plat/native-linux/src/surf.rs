@@ -23,7 +23,7 @@ impl Surf {
                 panic!("unsupported resolution {}",fb.var_screen_info.bits_per_pixel);
             }
         };
-        info!("made surface {}x{} at {}",w,h,fb.var_screen_info.bits_per_pixel);
+        info!("made surface {}x{} px with  {} bits per pixel",w,h,fb.var_screen_info.bits_per_pixel);
         Surf { fb, w, h, buf }
     }
 }

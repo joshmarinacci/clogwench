@@ -92,7 +92,7 @@ fn main() -> std::io::Result<()>{
         plat.service_input();
         //info!("checking for incoming events");
         for cmd in internal_message_receiver.try_iter() {
-            info!("incoming {:?}",cmd);
+            //info!("incoming {:?}",cmd);
             if stop.load(Ordering::Relaxed) == true { break; }
             match cmd.command {
                 // APICommand::AppConnect(_) => {}

@@ -75,7 +75,9 @@ impl Plat {
     pub fn draw_rect(&mut self, rect: Rect, color: &ARGBColor, width: i32) {
         self.surf.buf.draw_rect(rect,color.clone(),width);
     }
-    pub fn draw_image(&mut self, x: i32, y: i32, img: &GFXBuffer) {}
+    pub fn draw_image(&mut self, x: i32, y: i32, img: &GFXBuffer) {
+        self.surf.copy_from(x, y, img);
+    }
     pub fn clear(&mut self) {
         self.surf.buf.clear(&BLACK);
     }
