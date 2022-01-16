@@ -84,7 +84,7 @@ impl Plat {
     pub fn shutdown(&mut self) {
 
     }
-    pub fn register_image2(&mut self) {
+    pub fn register_image2(&mut self, img:&GFXBuffer) {
 
     }
 }
