@@ -119,6 +119,34 @@ impl GFXBuffer {
             }
         }
     }
+    pub fn set_pixel_argb(&mut self, x:u32, y:u32, a:u8,r:u8,g:u8,b:u8) {
+        if x >= self.width || y >= self.height {
+            println!("error. pixel {},{} out of bounds {}x{}",x,y,self.width,self.height);
+            return;
+        }
+        match self.bitdepth {
+            ColorDepth::CD16() => {
+                // let vv = ARGBColor::from_24bit(v).as_16bit();
+                // let n = (x + y * (self.width as u32)) as usize;
+                // self.data[n*2+0] = ((vv & 0xFF00) >> 8) as u8;
+                // self.data[n*2+1] = ((vv & 0x00FF) >> 0) as u8;
+            }
+            ColorDepth::CD24() => {
+                // self.data[n*4+0] = (v & 0xFF000000 >> 24) as u8;
+                // let n = (x + y * (self.width as u32)) as usize;
+                // self.data[n*3+0] = ((v & 0x00FF0000) >> 16) as u8;
+                // self.data[n*3+1] = ((v & 0x0000FF00) >> 8) as u8;
+                // self.data[n*3+2] = ((v & 0x000000FF) >> 0) as u8;
+            }
+            ColorDepth::CD32() => {
+                let n = (x + y * (self.width as u32)) as usize;
+                self.data[n*4+0] = a;
+                self.data[n*4+1] = r;
+                self.data[n*4+2] = g;
+                self.data[n*4+3] = b;
+            }
+        }
+    }
     pub fn set_pixel_32argb(&mut self, x: u32, y: u32, v: u32) {
         if x >= self.width || y >= self.height {
             println!("error. pixel {},{} out of bounds {}x{}",x,y,self.width,self.height);
@@ -150,7 +178,7 @@ impl GFXBuffer {
 }
 
 impl GFXBuffer {
-    pub(crate) fn get_vec_pixel_32argb(&self, x: i32, y: i32) -> Vec<u8> {
+    pub fn get_vec_pixel_32argb(&self, x: i32, y: i32) -> Vec<u8> {
         match self.bitdepth {
             ColorDepth::CD16() => {
                 let n = (x + y * (self.width as i32)) as usize;
@@ -288,20 +316,29 @@ pub fn draw_test_pattern(buf:&mut GFXBuffer) {
     for j in 0..buf.height {
         for i in 0..buf.width {
             let v = (i*4) as u8;
+            if j == 0 { //|| j == (buf.height-1) {
+                buf.set_pixel_32argb(i,j,0xFFFFFFFF);
+                continue;
+            }
             if j < (buf.height/4)*1 {
-                buf.set_pixel_32argb(i,j,ARGBColor::new_rgb(v, 0, 0).as_32bit());
+                // buf.set_pixel_32argb(i,j,ARGBColor::new_rgb(v, 0, 0).as_32bit());
+                buf.set_pixel_argb(i,j,255,v,0,0);
+                //buf.set_pixel_32argb(i,j,0xFF0000FF);
                 continue;
             }
             if j < (buf.height/4)*2 {
-                buf.set_pixel_32argb(i,j,ARGBColor::new_rgb(0,v,  0).as_32bit());
+                buf.set_pixel_argb(i,j,255,0,v,0);
+                // buf.set_pixel_32argb(i,j,ARGBColor::new_rgb(0,v,  0).as_32bit());
                 continue;
             }
             if j < (buf.height/4)*3 {
-                buf.set_pixel_32argb(i,j,ARGBColor::new_rgb(0,0,v).as_32bit());
+                buf.set_pixel_argb(i,j,255,0,0,v);
+                // buf.set_pixel_32argb(i,j,ARGBColor::new_rgb(0,0,v).as_32bit());
                 continue;
             }
             if j < (buf.height/4)*4 {
-                buf.set_pixel_32argb(i, j, ARGBColor{r:0, g:0, b:0, a:v}.as_32bit());
+                // buf.set_pixel_32argb(i, j, ARGBColor::new_argb(v,128,128,128).as_32bit());
+                buf.set_pixel_argb(i,j,v,128,128,128);
                 continue;
             }
         }
