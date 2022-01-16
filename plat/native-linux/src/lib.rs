@@ -59,8 +59,9 @@ fn print_debug_info(framebuffer: &Framebuffer) {
     println!("grayscale {}", framebuffer.var_screen_info.grayscale);
 
     info!("red bif {:?}",v.red);
-    info!("red bif {:?}",v.green);
-    info!("red bif {:?}",v.blue);
+    info!("gre bif {:?}",v.green);
+    info!("blu bif {:?}",v.blue);
+    info!("tra bif {:?}",v.transp);
 
 }
 
