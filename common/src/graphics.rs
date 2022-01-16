@@ -74,8 +74,8 @@ impl GFXBuffer {
     pub fn copy_from(&mut self, x:i32, y:i32, src: &GFXBuffer) {
         for i in 0..src.width {
             for j in 0..src.height {
-                let v:u32 = src.get_pixel_32argb(i, j);
-                self.set_pixel_32argb(i+(x as u32), j+(y as u32), v);
+                let v = src.get_pixel_vec_argb(i,j);
+                self.set_pixel_vec_argb(i+(x as u32), j+(y as u32), &v);
             }
         }
     }
@@ -119,6 +119,62 @@ impl GFXBuffer {
             }
         }
     }
+    pub fn get_pixel_vec_argb(&self, x:u32, y:u32) -> Vec<u8>{
+        let mut v:Vec<u8> = vec![0,0,0,0];
+        if x >= self.width || y >= self.height {
+            println!("error. pixel {},{} out of bounds {}x{}",x,y,self.width,self.height);
+            return v;
+        }
+        match self.bitdepth {
+            ColorDepth::CD16() => {
+                let n = (x + y * (self.width as u32)) as usize;
+                let packed_color:u16 = ((self.data[n*2+0] as u16) << 8) | (self.data[n*2+1] as u16);
+                return ARGBColor::from_16bit(packed_color).to_argb_vec();
+            }
+            ColorDepth::CD24() => {
+                let n = (x + y * (self.width as u32)) as usize;
+                v[0] = self.data[n*3+0];
+                v[1] = self.data[n*3+1];
+                v[2] = self.data[n*3+2];
+            }
+            ColorDepth::CD32() => {
+                let n = (x + y * (self.width as u32)) as usize;
+                v[0] = self.data[n*4+0];
+                v[1] = self.data[n*4+1];
+                v[2] = self.data[n*4+2];
+                v[3] = self.data[n*4+3];
+            }
+        }
+        return v
+    }
+    pub fn set_pixel_vec_argb(&mut self, x:u32, y:u32, v:&Vec<u8>) {
+        if x >= self.width || y >= self.height {
+            println!("error. pixel {},{} out of bounds {}x{}",x,y,self.width,self.height);
+            return;
+        }
+        match self.bitdepth {
+            ColorDepth::CD16() => {
+                let vv = ARGBColor::from_argb_vec(v).as_16bit();
+                let n = (x + y * (self.width as u32)) as usize;
+                self.data[n*2+0] = ((vv & 0xFF00) >> 8) as u8;
+                self.data[n*2+1] = ((vv & 0x00FF) >> 0) as u8;
+            }
+            ColorDepth::CD24() => {
+                let n = (x + y * (self.width as u32)) as usize;
+                self.data[n*3+0] = v[0];
+                self.data[n*3+1] = v[1];
+                self.data[n*3+2] = v[2];
+            }
+            ColorDepth::CD32() => {
+                let n = (x + y * (self.width as u32)) as usize;
+                self.data[n*4+0] = v[0];
+                self.data[n*4+1] = v[1];
+                self.data[n*4+2] = v[2];
+                self.data[n*4+3] = v[3];
+            }
+        }
+    }
+
     pub fn set_pixel_argb(&mut self, x:u32, y:u32, a:u8,r:u8,g:u8,b:u8) {
         if x >= self.width || y >= self.height {
             println!("error. pixel {},{} out of bounds {}x{}",x,y,self.width,self.height);

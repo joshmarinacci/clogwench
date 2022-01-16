@@ -62,6 +62,12 @@ impl ARGBColor {
     pub(crate) fn as_vec(&self) -> Vec<u8> {
         Vec::from([self.a, self.r, self.g, self.b])
     }
+    pub fn to_argb_vec(&self) -> Vec<u8> {
+        vec![self.a,self.r,self.g,self.b]
+    }
+    pub fn from_argb_vec(v:&Vec<u8>) -> ARGBColor {
+        ARGBColor { a:v[0], r:v[1],g:v[2],b:v[3]}
+    }
 }
 
 impl ARGBColor {
