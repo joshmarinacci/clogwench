@@ -192,59 +192,68 @@ impl GFXBuffer {
 
 impl GFXBuffer {
     pub fn clear(&mut self, color: &ARGBColor) {
-        self.fill_rect(Rect::from_ints(0, 0, self.width as i32, self.height as i32),color);
-/*        match self.bitdepth {
+        //self.fill_rect(Rect::from_ints(0, 0, self.width as i32, self.height as i32),color);
+        match self.bitdepth {
             ColorDepth::CD16() => {
-                let c1 = color.as_16bit();
-                let p1 = ((0xFF00 | c1) >> 8) as u8;
-                let p2 = ((0x00FF | c1) >> 0) as u8;
-                //make a complete row
-                let mut row:Vec<u8> = vec![];
-                for i in 0..self.width {
-                    row.push(p1);
-                    row.push(p2);
+                match self.layout {
+                    PixelLayout::RGB565() => {
+                        //let n = (x + y * (self.width as u32)) as usize;
+                        let v = color.to_argb_vec();
+                        let r = v[1];
+                        let g = v[2];
+                        let b = v[3];
+                        let upper = ((r >> 3)<<3) | ((g & 0b111_00000) >> 5);
+                        let lower = (((g & 0b00011100) >> 2) << 5) | ((b & 0b1111_1000) >> 3);
+                        let mut row:Vec<u8> = vec![];
+                        for i in 0..self.width {
+                            row.push(lower);
+                            row.push(upper);
+                        }
+                        for chunk in self.data.chunks_exact_mut((self.width*2) as usize) {
+                            chunk.copy_from_slice(&*row);
+                        }
+                    }
+                    _ => {}
                 }
-                for chunk in self.data.chunks_exact_mut((self.width*2) as usize) {
-                    chunk.copy_from_slice(&*row);
-                }
-
             }
             CD24() => {
-                let v = color.as_vec();
-                let r = v[1];
-                let g = v[2];
-                let b = v[3];
-                let mut row:Vec<u8> = vec![];
-                for i in 0..self.width {
-                    row.push(r);
-                    row.push(g);
-                    row.push(b);
-                }
-                for chunk in self.data.chunks_exact_mut((self.width*3) as usize) {
-                    chunk.copy_from_slice(&*row);
-                }
+                self.fill_rect(Rect::from_ints(0, 0, self.width as i32, self.height as i32),color);
+                // let v = color.as_vec();
+                // let r = v[1];
+                // let g = v[2];
+                // let b = v[3];
+                // let mut row:Vec<u8> = vec![];
+                // for i in 0..self.width {
+                //     row.push(r);
+                //     row.push(g);
+                //     row.push(b);
+                // }
+                // for chunk in self.data.chunks_exact_mut((self.width*3) as usize) {
+                //     chunk.copy_from_slice(&*row);
+                // }
             }
             CD32() => {
-                //impl1
-                let v = color.as_vec();
-                let a = v[0];
-                let r = v[1];
-                let g = v[2];
-                let b = v[3];
+                self.fill_rect(Rect::from_ints(0, 0, self.width as i32, self.height as i32),color);
+                // //impl1
+                // let v = color.as_vec();
+                // let a = v[0];
+                // let r = v[1];
+                // let g = v[2];
+                // let b = v[3];
 
-                let vv = &v;
-                let mut row:Vec<u8> = vec![];
-                for i in 0..self.width {
-                    row.push(r);
-                    row.push(g);
-                    row.push(b);
-                    row.push(a);
-                }
-                for chunk in self.data.chunks_exact_mut((self.width*4) as usize) {
-                    chunk.copy_from_slice(&*row);
-                }
+                // let vv = &v;
+                // let mut row:Vec<u8> = vec![];
+                // for i in 0..self.width {
+                //     row.push(r);
+                //     row.push(g);
+                //     row.push(b);
+                //     row.push(a);
+                // }
+                // for chunk in self.data.chunks_exact_mut((self.width*4) as usize) {
+                //     chunk.copy_from_slice(&*row);
+                // }
             }
-        }*/
+        }
     }
 }
 
