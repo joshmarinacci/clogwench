@@ -11,7 +11,7 @@ use log4rs::Config;
 use log4rs::config::{Appender, Root};
 use log::{debug, error, info, LevelFilter};
 use uuid::Uuid;
-use common::graphics::GFXBuffer;
+use common::graphics::{GFXBuffer, PixelLayout};
 use common::{APICommand, ARGBColor, IncomingMessage, Point, Rect, WHITE};
 use common::APICommand::KeyDown;
 use common::events::{KeyCode, KeyDownEvent};
@@ -76,7 +76,7 @@ fn main() -> std::io::Result<()>{
     // start_test_app(stop.clone());
 
 
-    let mut test_pattern = GFXBuffer::new(CD32(), 64, 64);
+    let mut test_pattern = GFXBuffer::new(CD32(), 64, 64, PixelLayout::ARGB());
     common::graphics::draw_test_pattern(&mut test_pattern);
     //make the platform specific graphics
     let mut plat = make_plat(stop.clone(), internal_message_sender.clone()).unwrap();
@@ -106,7 +106,7 @@ fn main() -> std::io::Result<()>{
                 }
                 APICommand::DrawRectCommand(dr) => {
                     if let Some(mut win) = state.lookup_window(dr.window_id) {
-                        win.backbuffer.fill_rect(dr.rect, dr.color);
+                        win.backbuffer.fill_rect(dr.rect, &dr.color);
                     }
                 }
                 APICommand::KeyDown(kd) => {

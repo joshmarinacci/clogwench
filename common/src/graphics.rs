@@ -13,15 +13,23 @@ use png;
 use uuid::Uuid;
 use crate::{ARGBColor, Rect};
 use crate::graphics::ColorDepth::{CD24, CD32};
+use crate::graphics::PixelLayout::RGBA;
 
 pub enum ColorDepth {
     CD16(),
     CD24(),
     CD32(),
 }
+pub enum PixelLayout {
+    RGB565(),
+    RGB(),
+    RGBA(),
+    ARGB(),
+}
 
 pub struct GFXBuffer {
     pub bitdepth:ColorDepth,
+    pub layout:PixelLayout,
     pub id:Uuid,
     pub width:u32,
     pub height:u32,
@@ -37,7 +45,7 @@ impl GFXBuffer {
         let info = reader.next_frame(&mut buf).unwrap();
         println!("size {}x{} bitdepth={:?} colortype={:?}",info.width, info.height, info.bit_depth, info.color_type);
         let bytes = &buf[..info.buffer_size()];
-        let mut gfx = GFXBuffer::new(CD32(), info.width, info.height);
+        let mut gfx = GFXBuffer::new(CD32(), info.width, info.height, PixelLayout::ARGB());
         for j in 0..info.height {
             for i in 0..info.width {
                 let n = (i + j*info.width) as usize;
@@ -47,7 +55,6 @@ impl GFXBuffer {
         return gfx
     }
 }
-
 
 impl GFXBuffer {
     pub fn copy_from(&mut self, x:i32, y:i32, src: &GFXBuffer) {
@@ -59,7 +66,7 @@ impl GFXBuffer {
         }
     }
 
-    pub fn fill_rect(&mut self, bounds: Rect, color: ARGBColor) {
+    pub fn fill_rect(&mut self, bounds: Rect, color: &ARGBColor) {
         let v = color.to_argb_vec();
         for i in bounds.x .. (bounds.x+bounds.w) {
             for j in bounds.y .. (bounds.y+bounds.h) {
@@ -67,7 +74,7 @@ impl GFXBuffer {
             }
         }
     }
-    pub fn draw_rect(&mut self, bounds: Rect, color: ARGBColor, size: i32) {
+    pub fn draw_rect(&mut self, bounds: Rect, color: &ARGBColor, size: i32) {
         let v = color.to_argb_vec();
         for i in bounds.x .. (bounds.x+bounds.w) {
             for j in 0..size {
@@ -110,10 +117,21 @@ impl GFXBuffer {
             }
             ColorDepth::CD32() => {
                 let n = (x + y * (self.width as u32)) as usize;
-                v[0] = self.data[n*4+0];
-                v[1] = self.data[n*4+1];
-                v[2] = self.data[n*4+2];
-                v[3] = self.data[n*4+3];
+                match self.layout {
+                    PixelLayout::ARGB() => {
+                        v[0] = self.data[n*4+0];
+                        v[1] = self.data[n*4+1];
+                        v[2] = self.data[n*4+2];
+                        v[3] = self.data[n*4+3];
+                    }
+                    PixelLayout::RGBA() => {
+                        v[0] = self.data[n*4+3];
+                        v[1] = self.data[n*4+0];
+                        v[2] = self.data[n*4+1];
+                        v[3] = self.data[n*4+2];
+                    }
+                    _ => {}
+                }
             }
         }
         return v
@@ -125,10 +143,19 @@ impl GFXBuffer {
         }
         match self.bitdepth {
             ColorDepth::CD16() => {
-                let vv = ARGBColor::from_argb_vec(v).as_16bit();
-                let n = (x + y * (self.width as u32)) as usize;
-                self.data[n*2+0] = ((vv & 0x00FF) >> 0) as u8;
-                self.data[n*2+1] = ((vv & 0xFF00) >> 8) as u8;
+                match self.layout {
+                    PixelLayout::RGB565() => {
+                        let n = (x + y * (self.width as u32)) as usize;
+                        let r = v[1];
+                        let g = v[2];
+                        let b = v[3];
+                        let upper = ((r >> 3)<<3) | ((g & 0b111_00000) >> 5);
+                        let lower = (((g & 0b00011100) >> 2) << 5) | ((b & 0b1111_1000) >> 3);
+                        self.data[n*2+0] = upper;
+                        self.data[n*2+1] = lower;
+                    }
+                    _ => {}
+                }
             }
             ColorDepth::CD24() => {
                 let n = (x + y * (self.width as u32)) as usize;
@@ -138,10 +165,21 @@ impl GFXBuffer {
             }
             ColorDepth::CD32() => {
                 let n = (x + y * (self.width as u32)) as usize;
-                self.data[n*4+0] = v[0];
-                self.data[n*4+1] = v[1];
-                self.data[n*4+2] = v[2];
-                self.data[n*4+3] = v[3];
+                match self.layout {
+                    PixelLayout::ARGB() => {
+                        self.data[n*4+0] = v[0];
+                        self.data[n*4+1] = v[1];
+                        self.data[n*4+2] = v[2];
+                        self.data[n*4+3] = v[3];
+                    }
+                    PixelLayout::RGBA() => {
+                        self.data[n*4+0] = v[1];
+                        self.data[n*4+1] = v[2];
+                        self.data[n*4+2] = v[3];
+                        self.data[n*4+3] = v[0];
+                    }
+                    _ => {}
+                }
             }
         }
     }
@@ -152,7 +190,8 @@ impl GFXBuffer {
 
 impl GFXBuffer {
     pub fn clear(&mut self, color: &ARGBColor) {
-        match self.bitdepth {
+        self.fill_rect(Rect::from_ints(0, 0, self.width as i32, self.height as i32),color);
+/*        match self.bitdepth {
             ColorDepth::CD16() => {
                 let c1 = color.as_16bit();
                 let p1 = ((0xFF00 | c1) >> 8) as u8;
@@ -203,12 +242,12 @@ impl GFXBuffer {
                     chunk.copy_from_slice(&*row);
                 }
             }
-        }
+        }*/
     }
 }
 
 impl GFXBuffer {
-    pub fn new(bitdepth:ColorDepth, width:u32, height:u32) -> GFXBuffer {
+    pub fn new(bitdepth:ColorDepth, width:u32, height:u32, layout: PixelLayout) -> GFXBuffer {
         let byte_length = match bitdepth {
             ColorDepth::CD16() => {width*height*2}
             ColorDepth::CD24() => {width*height*3}
@@ -221,6 +260,7 @@ impl GFXBuffer {
             width,
             height,
             id: Uuid::new_v4(),
+            layout,
         }
     }
 }
@@ -259,10 +299,84 @@ mod tests {
     use std::io::BufWriter;
     use std::path::Path;
     use std::time::Instant;
-    use crate::{ARGBColor, BLACK, WHITE};
+    use crate::{ARGBColor, BLACK, Rect, WHITE};
     use crate::graphics::ColorDepth::{CD16, CD24, CD32};
-    use crate::graphics::{draw_test_pattern, GFXBuffer};
+    use crate::graphics::{draw_test_pattern, GFXBuffer, PixelLayout};
 
+    // check ARGB memory buffer copied to RGBA() framebuffer
+    // check color drawn to RGBA() framebuffer
+    // check ARGB memory buffer copied to RGB565() framebuffer
+    #[test]
+    fn ARGB_to_RGBA() {
+        let RED = ARGBColor::new_rgb(255,0,0);
+        let GREEN = ARGBColor::new_rgb(0,255,0);
+        let BLUE = ARGBColor::new_rgb(0,0,255);
+        // let ARGB_RED = vec![255,255,0,0];
+
+        //=== RGBA ===
+        let mut buf2 = GFXBuffer::new(CD32(), 1, 1, PixelLayout::RGBA());
+        buf2.clear(&RED);
+        assert_eq!(buf2.data,vec![255,0,0,255]);
+        buf2.clear(&GREEN);
+        assert_eq!(buf2.data,vec![0,255,0,255]);
+        buf2.fill_rect(Rect::from_ints(0,0,1,1), &RED);
+        assert_eq!(buf2.data,vec![255,0,0,255]);
+        buf2.fill_rect(Rect::from_ints(0,0,1,1), &GREEN);
+        assert_eq!(buf2.data,vec![0,255,0,255]);
+
+        //=== ARGB ===
+        let mut buf1 = GFXBuffer::new(CD32(), 1, 1, PixelLayout::ARGB());
+        buf1.clear(&RED);
+        assert_eq!(buf1.data,vec![255,255,0,0]);
+        buf1.clear(&GREEN);
+        assert_eq!(buf1.data,vec![255,0,255,0]);
+
+
+        //copy ARGB to RGBA
+        buf1.clear(&BLUE);
+        assert_eq!(buf1.data,vec![255,0,0,255]);
+        buf2.copy_from(0,0,&buf1);
+        assert_eq!(buf2.data,vec![0,0,255,255]);
+
+        //copy RGBA to ARGB
+        buf2.clear(&BLUE);
+        assert_eq!(buf2.data,vec![0,0,255,255]);
+        buf1.copy_from(0,0,&buf2);
+        assert_eq!(buf1.data,vec![255,0,0,255]);
+    }
+
+    #[test]
+    fn ARGB_to_RGB565() {
+        let RED = ARGBColor::new_rgb(255,0,0);
+        let GREEN = ARGBColor::new_rgb(0,255,0);
+        let BLUE = ARGBColor::new_rgb(0,0,255);
+
+        //=== RGB565 ===
+        let mut buf2 = GFXBuffer::new(CD16(), 1, 1, PixelLayout::RGB565());
+        buf2.clear(&RED);
+        assert_eq!(buf2.data,vec![0b11111_000,0b000_00000,]);
+        buf2.clear(&GREEN);
+        assert_eq!(buf2.data,vec![0b00000_111,0b111_00000,]);
+        buf2.fill_rect(Rect::from_ints(0,0,1,1), &RED);
+        assert_eq!(buf2.data,vec![0b11111_000,0b000_00000,]);
+        buf2.fill_rect(Rect::from_ints(0,0,1,1), &GREEN);
+        assert_eq!(buf2.data,vec![0b00000_111,0b111_00000,]);
+
+        // === copy ARGB to RGB565
+        let mut buf1 = GFXBuffer::new(CD32(), 1, 1, PixelLayout::ARGB());
+        buf1.clear(&BLUE);
+        assert_eq!(buf1.data,vec![255,0,0,255]);
+        buf2.copy_from(0,0,&buf1);
+        assert_eq!(buf2.data,vec![0b00000_000, 0b000_11111]);
+
+        //copy RGB565 to ARGB
+        buf2.clear(&BLUE);
+        assert_eq!(buf2.data,vec![0b00000_000, 0b000_11111]);
+        buf1.copy_from(0,0,&buf2);
+        assert_eq!(buf1.data,vec![255,0,0,248]);
+    }
+
+    /*
     #[test]
     fn color_checks() {
         let color = ARGBColor::new_rgb(255, 255, 255);
@@ -296,13 +410,13 @@ mod tests {
 
         for set_color in &colors {
             println!("color is {:x}",set_color.as_32bit());
-            let mut buf = GFXBuffer::new(CD24(),2,2);
+            let mut buf = GFXBuffer::new(CD24(), 2, 2, );
             buf.clear(&set_color);
             let color = buf.get_pixel_vec_argb(0, 0);
             assert_eq!(color,set_color.as_vec());
         }
         for set_color in &colors {
-            let mut buf = GFXBuffer::new(CD32(),2,2);
+            let mut buf = GFXBuffer::new(CD32(), 2, 2, );
             buf.clear(&set_color);
             let color = buf.get_pixel_vec_argb(0, 0);
             assert_eq!(color,set_color.as_vec());
@@ -313,10 +427,10 @@ mod tests {
 
     #[test]
     fn check_24_to_16() {
-        let mut buf24 = GFXBuffer::new(CD24(), 2, 2);
+        let mut buf24 = GFXBuffer::new(CD24(), 2, 2, );
         let green = ARGBColor::new_rgb(0, 255, 0);
         buf24.clear(&green);
-        let mut buf16 = GFXBuffer::new(CD16(), 2, 2);
+        let mut buf16 = GFXBuffer::new(CD16(), 2, 2, );
         buf16.copy_from(0,0,&buf24);
         {
             let c1 = buf16.get_pixel_vec_argb(1, 1);
@@ -326,7 +440,7 @@ mod tests {
 
     #[test]
     fn check_32_to_32() {
-        let mut buf = GFXBuffer::new(CD32(),2,2);
+        let mut buf = GFXBuffer::new(CD32(), 2, 2, );
         buf.set_pixel_argb(0,0, 255,255,254,253);
         // buf.set_pixel_32argb(0,0, ARGBColor::new_rgb(255,254,253).as_32bit());
         // print!("{:x} vs {:x}", ARGBColor::new_rgb(255,254,253).as_32bit(), buf.get_pixel_32argb(0,0));
@@ -336,7 +450,7 @@ mod tests {
 
     #[test]
     fn try_test_pattern() {
-        let mut buf = GFXBuffer::new(CD32(),64,64);
+        let mut buf = GFXBuffer::new(CD32(), 64, 64, );
         draw_test_pattern(&mut buf);
 
         // buf = GFXBuffer::new(CD32(),32,32);
@@ -370,20 +484,20 @@ mod tests {
 
     #[test]
     fn drawing_speed() {
-        let mut buf = GFXBuffer::new(CD32(),1360,768);
+        let mut buf = GFXBuffer::new(CD32(), 1360, 768, );
         let now = Instant::now();
         for i in 0..50 {
             buf.clear(&BLACK);
         }
         println!("32bit elapsed {} ms", (now.elapsed().as_millis()/50));
 
-        let mut buf = GFXBuffer::new(CD24(),1360,768);
+        let mut buf = GFXBuffer::new(CD24(), 1360, 768, );
         let now = Instant::now();
         for i in 0..50 {
             buf.clear(&BLACK);
         }
         println!("24 bit elapsed {} ms", (now.elapsed().as_millis()/50));
-        let mut buf = GFXBuffer::new(CD16(),1360,768);
+        let mut buf = GFXBuffer::new(CD16(), 1360, 768, );
         let now = Instant::now();
         for i in 0..50 {
             buf.clear(&BLACK);
@@ -391,4 +505,6 @@ mod tests {
         println!("16 bit elapsed {} ms", (now.elapsed().as_millis()/50));
 
     }
+    */
+
 }

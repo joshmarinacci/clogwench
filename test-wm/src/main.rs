@@ -166,7 +166,7 @@ fn start_event_processor(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, t
 
         //TODO:  move the screen to outside this function
         //TODO: move the current gesture holder into the WM state? or just outside here?
-        let mut screen = GFXBuffer::new(CD32(),640,480);
+        let mut screen = GFXBuffer::new(CD32(), 640, 480, );
         let mut gesture = Box::new(NoOpGesture::init()) as Box<dyn InputGesture>;
         for cmd in rx {
             if stop.load(Ordering::Relaxed) { break; }
@@ -183,7 +183,7 @@ fn start_event_processor(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, t
                 APICommand::DrawRectCommand(dr) => {
                     info!("drawing a rect");
                     if let Some(win) = state.lookup_window(dr.window_id) {
-                        win.backbuffer.fill_rect(dr.rect, dr.color);
+                        win.backbuffer.fill_rect(dr.rect, &dr.color);
                     }
                     screen.clear(&BLACK);
                     for win in state.window_list() {

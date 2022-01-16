@@ -89,3 +89,7 @@ then start a demo app from another ssh session.
 
 
 
+
+the Qemu screen is RGBA  but my standard 32bit is ARGB.
+The gfxbuffer format needs to account for bit length and order of components.
+

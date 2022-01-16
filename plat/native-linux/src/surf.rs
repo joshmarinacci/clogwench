@@ -1,7 +1,7 @@
 use framebuffer::Framebuffer;
 use log::info;
 use common::{ARGBColor, BLACK, Rect};
-use common::graphics::{ColorDepth, GFXBuffer};
+use common::graphics::{ColorDepth, GFXBuffer, PixelLayout};
 use common::graphics::ColorDepth::{CD16, CD24, CD32};
 
 pub struct Surf {
@@ -16,9 +16,9 @@ impl Surf {
         let w = fb.var_screen_info.xres;
         let h = fb.var_screen_info.yres;
         let mut buf = match fb.var_screen_info.bits_per_pixel {
-            16 => GFXBuffer::new(CD16(),w,h),
-            24 => GFXBuffer::new(CD24(),w,h),
-            32 => GFXBuffer::new(CD32(),w,h),
+            16 => GFXBuffer::new(CD16(),w,h, PixelLayout::RGB565()),
+            24 => GFXBuffer::new(CD24(),w,h, PixelLayout::RGB()),
+            32 => GFXBuffer::new(CD32(),w,h, PixelLayout::RGBA()),
             _ => {
                 panic!("unsupported resolution {}",fb.var_screen_info.bits_per_pixel);
             }

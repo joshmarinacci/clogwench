@@ -16,9 +16,9 @@ impl Surf {
         let w = fb.var_screen_info.xres;
         let h = fb.var_screen_info.yres;
         let mut buf = match fb.var_screen_info.bits_per_pixel {
-            16 => GFXBuffer::new(CD16(),w,h),
-            24 => GFXBuffer::new(CD24(),w,h),
-            32 => GFXBuffer::new(CD32(),w,h),
+            16 => GFXBuffer::new(CD16(), w, h, ),
+            24 => GFXBuffer::new(CD24(), w, h, ),
+            32 => GFXBuffer::new(CD32(), w, h, ),
             _ => {
                 panic!("unsupported resolution {}",fb.var_screen_info.bits_per_pixel);
             }

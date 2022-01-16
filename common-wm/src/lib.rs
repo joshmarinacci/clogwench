@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 use common::events::{MouseDownEvent, MouseMoveEvent, MouseUpEvent};
 use common::graphics::ColorDepth::CD24;
 use common::graphics::GFXBuffer;
+use common::graphics::PixelLayout::ARGB;
 
 #[cfg(test)]
 mod tests {
@@ -115,7 +116,7 @@ impl WindowManagerState {
             position:bounds.position(),
             content_size:bounds.size(),
             owner: app_id,
-            backbuffer: GFXBuffer::new(CD24(), bounds.w as u32, bounds.h as u32),
+            backbuffer: GFXBuffer::new(CD24(), bounds.w as u32, bounds.h as u32, ARGB()),
             window_type: WindowType::Plain()
         };
         if let Some(app) = self.find_app(app_id) {

@@ -24,7 +24,7 @@ pub struct ARGBColor {
     pub a:u8,
 }
 
-
+/*
 impl ARGBColor {
     pub(crate) fn from_16bit(packed_color: u16) -> ARGBColor {
         let r:u8 = (((packed_color & 0b11111_000000_00000) >> 11) << 3) as u8;
@@ -39,7 +39,8 @@ impl ARGBColor {
         return ARGBColor::new_rgb(r, g, b);
     }
 }
-
+*/
+/*
 impl ARGBColor {
     pub fn as_16bit(&self) -> u16 {
         // println!("color {:?}",self);
@@ -57,11 +58,12 @@ impl ARGBColor {
         return ((self.a as u32)<<24) | ((self.r as u32) << 16) | ((self.g as u32) << 8) | ((self.b as u32) << 0) as u32;
     }
 }
+*/
 
 impl ARGBColor {
-    pub(crate) fn as_vec(&self) -> Vec<u8> {
-        Vec::from([self.a, self.r, self.g, self.b])
-    }
+    // pub(crate) fn as_vec(&self) -> Vec<u8> {
+    //     Vec::from([self.a, self.r, self.g, self.b])
+    // }
     pub fn to_argb_vec(&self) -> Vec<u8> {
         vec![self.a,self.r,self.g,self.b]
     }
@@ -69,6 +71,7 @@ impl ARGBColor {
         ARGBColor { a:v[0], r:v[1],g:v[2],b:v[3]}
     }
 }
+
 
 impl ARGBColor {
     pub fn new_rgb(r: u8, g: u8, b: u8) -> ARGBColor {
