@@ -15,13 +15,13 @@ use crate::{ARGBColor, Rect};
 use crate::graphics::ColorDepth::{CD24, CD32};
 use crate::graphics::PixelLayout::RGBA;
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub enum ColorDepth {
     CD16(),
     CD24(),
     CD32(),
 }
-#[derive(Serialize, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub enum PixelLayout {
     RGB565(),
     RGB(),
