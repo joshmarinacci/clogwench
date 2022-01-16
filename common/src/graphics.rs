@@ -93,7 +93,14 @@ impl GFXBuffer {
             ColorDepth::CD16() => {
                 let n = (x + y * (self.width as u32)) as usize;
                 let packed_color:u16 = ((self.data[n*2+0] as u16) << 8) | (self.data[n*2+1] as u16);
-                return ARGBColor::from_16bit(packed_color).to_argb_vec();
+                // return ARGBColor::from_16bit(packed_color).to_argb_vec();
+                let r:u8 = (((packed_color & 0b11111_000000_00000) >> 11) << 3) as u8;
+                let g:u8 = (((packed_color & 0b00000_111111_00000) >> 5)  << 2) as u8;
+                let b:u8 = (((packed_color & 0b00000_000000_11111) >> 0)  << 3) as u8;
+                v[0] = 255;
+                v[1] = r;
+                v[2] = g;
+                v[3] = b;
             }
             ColorDepth::CD24() => {
                 let n = (x + y * (self.width as u32)) as usize;
@@ -291,13 +298,13 @@ mod tests {
             println!("color is {:x}",set_color.as_32bit());
             let mut buf = GFXBuffer::new(CD24(),2,2);
             buf.clear(&set_color);
-            let color = buf.get_vec_pixel_32argb(0, 0);
+            let color = buf.get_pixel_vec_argb(0, 0);
             assert_eq!(color,set_color.as_vec());
         }
         for set_color in &colors {
             let mut buf = GFXBuffer::new(CD32(),2,2);
             buf.clear(&set_color);
-            let color = buf.get_vec_pixel_32argb(0, 0);
+            let color = buf.get_pixel_vec_argb(0, 0);
             assert_eq!(color,set_color.as_vec());
         }
         // println!("color is {:?}",color);
@@ -312,18 +319,19 @@ mod tests {
         let mut buf16 = GFXBuffer::new(CD16(), 2, 2);
         buf16.copy_from(0,0,&buf24);
         {
-            let c1 = buf16.get_pixel_32argb(1, 1);
-            let c2 = buf24.get_pixel_32argb(1, 1);
-            assert_eq!(c1, 0b11111111_00000000_11111100_00000000);
+            let c1 = buf16.get_pixel_vec_argb(1, 1);
+            assert_eq!(c1, vec![255,0,248,0]);//0b11111111_00000000_11111100_00000000);
         }
     }
 
     #[test]
     fn check_32_to_32() {
         let mut buf = GFXBuffer::new(CD32(),2,2);
-        buf.set_pixel_32argb(0,0, ARGBColor::new_rgb(255,254,253).as_32bit());
-        print!("{:x} vs {:x}", ARGBColor::new_rgb(255,254,253).as_32bit(), buf.get_pixel_32argb(0,0));
-        assert_eq!(buf.get_pixel_32argb(0,0),0xFFFFFEFD);
+        buf.set_pixel_argb(0,0, 255,255,254,253);
+        // buf.set_pixel_32argb(0,0, ARGBColor::new_rgb(255,254,253).as_32bit());
+        // print!("{:x} vs {:x}", ARGBColor::new_rgb(255,254,253).as_32bit(), buf.get_pixel_32argb(0,0));
+        assert_eq!(buf.get_pixel_vec_argb(0,0),vec![255,255,254,253]);
+        // assert_eq!(buf.get_pixel_32argb(0,0),0xFFFFFEFD);
     }
 
     #[test]
@@ -348,7 +356,7 @@ mod tests {
         let mut data:Vec<u8> = vec![];
         for j in 0..buf.height {
             for i in 0..buf.width {
-                let px = buf.get_vec_pixel_32argb(i as i32, j as i32);
+                let px = buf.get_pixel_vec_argb(i,j);
                 // println!("{},{}  {:x}",i,j, buf.get_pixel_32argb(i,j));
                 data.push(px[1]); //R
                 data.push(px[2]); //G
