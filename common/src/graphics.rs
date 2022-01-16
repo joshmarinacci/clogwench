@@ -42,33 +42,12 @@ impl GFXBuffer {
             for i in 0..info.width {
                 let n = (i + j*info.width) as usize;
                 gfx.set_pixel_argb(i,j, bytes[n*4+3],bytes[n*4+0],bytes[n*4+1],bytes[n*4+2]);
-                // gfx.set_pixel_32argb(i,j,ARGBColor::new_argb(
-                //     bytes[n*4+3],
-                //     bytes[n*4+0],
-                //     bytes[n*4+1],
-                //     bytes[n*4+2],
-                // ).as_32bit())
             }
         }
         return gfx
     }
 }
 
-// fn pixel_16_packed_to_24_rgb(src:u16, dst:u32) {
-//
-// }
-//
-// fn pixel_24_rgb_to_16_packed(src:u32) -> u16 {
-//     //split
-//     let r = src & 0x00FF0000 >> 16;
-//     let g = src & 0x0000FF00 >> 8;
-//     let b = src & 0x000000FF >> 0;
-//     let rp = r >> 3;
-//     let gp = g >> 2;
-//     let bp = b >> 3;
-//     let fbal:u16 = (((rp as u32) << (11)) | ((gp as u32) << 5) | ((bp as u32) << 0)) as u16;
-//     return fbal;
-// }
 
 impl GFXBuffer {
     pub fn copy_from(&mut self, x:i32, y:i32, src: &GFXBuffer) {
@@ -104,23 +83,6 @@ impl GFXBuffer {
         }
     }
 
-    // pub fn get_pixel_32argb(&self, x: u32, y: u32) -> u32 {
-    //     match self.bitdepth {
-    //         ColorDepth::CD16() => {
-    //             let n = (x + y * (self.width as u32)) as usize;
-    //             let packed_color:u16 = ((self.data[n*2+0] as u16) << 8) | (self.data[n*2+1] as u16);
-    //             ARGBColor::from_16bit(packed_color).as_32bit()
-    //         }
-    //         ColorDepth::CD24() => {
-    //             let n = (x + y * (self.width as u32)) as usize;
-    //             ARGBColor::new_rgb(self.data[n*3+0], self.data[n*3+1], self.data[n*3+2]).as_32bit()
-    //         }
-    //         ColorDepth::CD32() => {
-    //             let n = (x + y * (self.width as u32)) as usize;
-    //             ARGBColor::new_argb(self.data[n*4+0], self.data[n*4+1], self.data[n*4+2], self.data[n*4+3]).as_32bit()
-    //         }
-    //     }
-    // }
     pub fn get_pixel_vec_argb(&self, x:u32, y:u32) -> Vec<u8>{
         let mut v:Vec<u8> = vec![0,0,0,0];
         if x >= self.width || y >= self.height {
@@ -158,8 +120,8 @@ impl GFXBuffer {
             ColorDepth::CD16() => {
                 let vv = ARGBColor::from_argb_vec(v).as_16bit();
                 let n = (x + y * (self.width as u32)) as usize;
-                self.data[n*2+0] = ((vv & 0xFF00) >> 8) as u8;
-                self.data[n*2+1] = ((vv & 0x00FF) >> 0) as u8;
+                self.data[n*2+0] = ((vv & 0x00FF) >> 0) as u8;
+                self.data[n*2+1] = ((vv & 0xFF00) >> 8) as u8;
             }
             ColorDepth::CD24() => {
                 let n = (x + y * (self.width as u32)) as usize;
@@ -179,71 +141,7 @@ impl GFXBuffer {
     pub fn set_pixel_argb(&mut self, x:u32, y:u32, a:u8,r:u8,g:u8,b:u8) {
         self.set_pixel_vec_argb(x,y,&vec![a,r,g,b]);
     }
-    // pub fn set_pixel_32argb(&mut self, x: u32, y: u32, v: u32) {
-    //     if x >= self.width || y >= self.height {
-    //         println!("error. pixel {},{} out of bounds {}x{}",x,y,self.width,self.height);
-    //         return;
-    //     }
-    //     match self.bitdepth {
-    //         ColorDepth::CD16() => {
-    //             let vv = ARGBColor::from_24bit(v).as_16bit();
-    //             let n = (x + y * (self.width as u32)) as usize;
-    //             self.data[n*2+0] = ((vv & 0xFF00) >> 8) as u8;
-    //             self.data[n*2+1] = ((vv & 0x00FF) >> 0) as u8;
-    //         }
-    //         ColorDepth::CD24() => {
-    //             // self.data[n*4+0] = (v & 0xFF000000 >> 24) as u8;
-    //             let n = (x + y * (self.width as u32)) as usize;
-    //             self.data[n*3+0] = ((v & 0x00FF0000) >> 16) as u8;
-    //             self.data[n*3+1] = ((v & 0x0000FF00) >> 8) as u8;
-    //             self.data[n*3+2] = ((v & 0x000000FF) >> 0) as u8;
-    //         }
-    //         ColorDepth::CD32() => {
-    //             let n = (x + y * (self.width as u32)) as usize;
-    //             self.data[n*4+0] = ((v & 0x000000FF) >> 0) as u8;
-    //             self.data[n*4+1] = ((v & 0x0000FF00) >> 8) as u8;
-    //             self.data[n*4+2] = ((v & 0x00FF0000) >> 16) as u8;
-    //             self.data[n*4+3] = ((v & 0xFF000000) >> 24) as u8;
-    //         }
-    //     }
-    // }
 }
-
-// impl GFXBuffer {
-//     pub fn get_vec_pixel_32argb(&self, x: i32, y: i32) -> Vec<u8> {
-//         match self.bitdepth {
-//             ColorDepth::CD16() => {
-//                 let n = (x + y * (self.width as i32)) as usize;
-//                 let packed_color:u16 = ((self.data[n*2+0] as u16) << 8) | (self.data[n*2+1] as u16);
-//                 let c = ARGBColor::from_16bit(packed_color);
-//                 let mut data:Vec<u8> = Vec::new();
-//                 data.push(c.a);
-//                 data.push(c.r);
-//                 data.push(c.g);
-//                 data.push(c.b);
-//                 return data;
-//             }
-//             ColorDepth::CD24() => {
-//                 let n = (x + y * (self.width as i32)) as usize;
-//                 let mut data:Vec<u8> = Vec::new();
-//                 data.push(255);
-//                 data.push(self.data[n*3+0]);
-//                 data.push(self.data[n*3+1]);
-//                 data.push(self.data[n*3+2]);
-//                 return data;
-//             }
-//             ColorDepth::CD32() => {
-//                 let n = (x + y * (self.width as i32)) as usize;
-//                 let mut data:Vec<u8> = Vec::new();
-//                 data.push(self.data[n*4+0]);
-//                 data.push(self.data[n*4+1]);
-//                 data.push(self.data[n*4+2]);
-//                 data.push(self.data[n*4+3]);
-//                 return data;
-//             }
-//         }
-//     }
-// }
 
 impl GFXBuffer {
     pub fn clear(&mut self, color: &ARGBColor) {
@@ -300,30 +198,6 @@ impl GFXBuffer {
             }
         }
     }
-    // fn set_pixel_n(&mut self, n: usize, color: &ARGBColor) {
-    //     match self.bitdepth {
-    //         ColorDepth::CD16() => {
-    //             // return (r<<vinfo->red.offset) | (g<<vinfo->green.offset) | (b<<vinfo->blue.offset);
-    //             let val:u16 = color.as_16bit();//color.r << 11 | color.g << 5 | color.b << 0;
-    //             println!("16bit color is {}",val);
-    //             let mask1 = 0x0000ff00;
-    //             let mask2 = 0x000000ff;
-    //             self.data[n*2 + 0] = ((val & mask1) >> 8) as u8;
-    //             self.data[n*2 + 1] = ((val & mask2) >> 0) as u8;
-    //         }
-    //         ColorDepth::CD24() => {
-    //             self.data[n*3 + 0] = color.r;
-    //             self.data[n*3 + 1] = color.g;
-    //             self.data[n*3 + 2] = color.b;
-    //         }
-    //         ColorDepth::CD32() => {
-    //             self.data[n*4 + 0] = color.a;
-    //             self.data[n*4 + 1] = color.r;
-    //             self.data[n*4 + 2] = color.g;
-    //             self.data[n*4 + 3] = color.b;
-    //         }
-    //     }
-    // }
 }
 
 impl GFXBuffer {
@@ -348,7 +222,7 @@ pub fn draw_test_pattern(buf:&mut GFXBuffer) {
     for j in 0..buf.height {
         for i in 0..buf.width {
             let v = (i*4) as u8;
-            if j == 0 { //|| j == (buf.height-1) {
+            if j == 0 || j == (buf.height-1) {
                 buf.set_pixel_argb(i,j,255,255,255,255);
                 continue;
             }
@@ -371,38 +245,6 @@ pub fn draw_test_pattern(buf:&mut GFXBuffer) {
         }
     }
 }
-
-// rs.fillRect(rect,color)
-// rs:fillRect(surf,rect,color)
-// rs.copy(src:Surface,
-// rs.clear(color)
-// rs.setPixel(color,pt)
-// rs.getPixelAsCD16()
-// rs.getPixelAsCD24()
-// rs.getPixelAsCD32(),
-// rs.getColorDepth()->ColorDepth
-// bytes = rs.as_CD16bytes() // something
-
-
-//create 32bit color buffer for each window so we get alpha
-// let winbuf = GFXBuffer::new(CD32(),500,500);
-//create screen buffer in 16bit to match the real screen
-// let screenbuff = GFXBuffer:new(CD16(),1024,768);
-//copy window buffers to screen buffer w/ conversion
-// screenbuff.copy(winbuff:GFXBuffer, winbuff.size():Size, dst:Point)
-//draw to window buffer using ARGB
-// winbuff.fillRect(rect,color)
-//draw to screen buffer using ARGB w/ conversion
-// screenbuff.fillRect(rect,color)
-//sync screenbuffer to real framebuffer. expose as something that the linux crate can consume w/o being platform specific.
-// FrameBuffer.copyFrom(screenbuff.as_bytes())
-
-//tests
-//fill small 24bit buffer with yellow (no alpha). confirm it has the right bits using getPixelAs24()
-//copy small 24bit buffer to small 16bit buffer, confirm it got the right bits. repeat with several colors
-//copy small buffer to bigger buffer, confirm it dioesn't crash.
-//copy big buffer to smaller buffer. confirm it doesn't crash.
-//copy buffer to another but offset so it tries to draw outside the dst area. confirm it doesn't crash.
 
 #[cfg(test)]
 mod tests {

@@ -200,7 +200,7 @@ fn redraw_screen(state: &WindowManagerState, cursor:&Point, cursor_image:&GFXBuf
         plat.fill_rect(bd, &WHITE);
         // surf.copy_from(bd.x, bd.y, &win.backbuffer)
     }
-    plat.fill_rect(Rect::from_ints(cursor.x,cursor.y,10,10), &ARGBColor::new_rgb(255, 255, 225));
+    //plat.fill_rect(Rect::from_ints(cursor.x,cursor.y,10,10), &ARGBColor::new_rgb(255, 255, 255));
     plat.draw_image(cursor.x,cursor.y,cursor_image);
     plat.draw_image(50, 300, test_pattern)
     //info!("drawing {}ms",(now.elapsed().as_millis()));
