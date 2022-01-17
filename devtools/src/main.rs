@@ -1,5 +1,7 @@
 use structopt::StructOpt;
 use std::{env, thread};
+use std::fs::File;
+use std::io::BufWriter;
 use std::net::TcpStream;
 use std::process::Command;
 use std::sync::{Arc, mpsc};
@@ -12,7 +14,7 @@ use log4rs::config::{Appender, Root};
 use log::{debug, error, info, LevelFilter};
 use uuid::Uuid;
 use common::graphics::{GFXBuffer, PixelLayout};
-use common::{APICommand, ARGBColor, IncomingMessage, Point, Rect, WHITE};
+use common::{APICommand, ARGBColor, BLACK, IncomingMessage, Point, Rect, WHITE};
 use common::APICommand::KeyDown;
 use common::events::{KeyCode, KeyDownEvent};
 use common::graphics::ColorDepth::CD32;
@@ -143,6 +145,7 @@ fn main() -> std::io::Result<()>{
                         },
                         KeyCode::LETTER_P => {
                             info!("doing a screencapture request");
+                            capture_screen(&state,plat.get_screen_bounds(),"screencap.png");
                         }
                         _ => {
                             info!("key down");
@@ -211,6 +214,36 @@ fn main() -> std::io::Result<()>{
     watchdog.join().unwrap();
     info!("all done now");
     Ok(())
+}
+
+fn capture_screen(state: &WindowManagerState, bounds: Rect, fname: &str) {
+    let mut plat = GFXBuffer::new(CD32(), bounds.w as u32, bounds.h as u32, PixelLayout::RGBA());
+    plat.clear(&BLACK);
+    for win in state.window_list() {
+        let (wc,tc) = if state.is_focused_window(win) {
+            (FOCUSED_WINDOW_COLOR, FOCUSED_TITLEBAR_COLOR)
+        } else {
+            (WINDOW_COLOR, TITLEBAR_COLOR)
+        };
+        plat.draw_rect(win.external_bounds(), &wc, WINDOW_BORDER_WIDTH );
+        plat.fill_rect(win.titlebar_bounds(), &tc);
+        let bd = win.content_bounds();
+        let MAGENTA = ARGBColor::new_rgb(255,0,255);
+        plat.fill_rect(bd, &MAGENTA);
+        plat.copy_from(win.content_bounds().x, win.content_bounds().y, &win.backbuffer);
+    }
+
+
+    let file = File::create(fname).unwrap();
+    let ref mut writ = BufWriter::new(file);
+    let mut encoder = png::Encoder::new(writ, plat.width, plat.height); // Width is 2 pixels and height is 1.
+    encoder.set_color(png::ColorType::Rgba);
+    encoder.set_depth(png::BitDepth::Eight);
+    let mut writer = encoder.write_header().unwrap();
+    // let data = [255, 0, 0, 255, 0, 0, 0, 255]; // An array containing a RGBA sequence. First pixel is red and second pixel is black.
+    let data = &plat.data;
+    writer.write_image_data(data).unwrap(); // Save
+
 }
 
 
