@@ -76,22 +76,17 @@ impl Plat {
                 },
                 Event::KeyDown {keycode,keymod,..} => {
                     if let Some(kk) = keycode {
-                        match kk {
-                            Keycode::Left => {
-                                let cmd = IncomingMessage {
-                                    source: Default::default(),
-                                    command: APICommand::KeyDown(KeyDownEvent{
-                                        app_id: Default::default(),
-                                        window_id: Default::default(),
-                                        original_timestamp: 0,
-                                        key: KeyCode::ARROW_LEFT,
-                                    })
-                                };
-                                if let Err(e) = self.sender.send(cmd) {
-                                    error!("error sending {}",e);
-                                }
-                            }
-                            _ => {}
+                        let cmd = IncomingMessage {
+                            source: Default::default(),
+                            command: APICommand::KeyDown(KeyDownEvent{
+                                app_id: Default::default(),
+                                window_id: Default::default(),
+                                original_timestamp: 0,
+                                key: sdl_to_common(kk),
+                            })
+                        };
+                        if let Err(e) = self.sender.send(cmd) {
+                            error!("error sending {}",e);
                         }
                     }
                 },
@@ -192,6 +187,18 @@ impl Plat {
 
         if let Some(tx) = self.textures.get_mut(&img.id) {
             sync_texture(&mut self.canvas, tx, img);
+        }
+    }
+}
+
+fn sdl_to_common(kc: Keycode) -> KeyCode {
+    match kc {
+        Keycode::Left => KeyCode::ARROW_LEFT,
+        Keycode::Right => KeyCode::ARROW_RIGHT,
+        Keycode::Up => KeyCode::ARROW_UP,
+        Keycode::Down => KeyCode::ARROW_DOWN,
+        _ => {
+            KeyCode::UNKNOWN
         }
     }
 }
