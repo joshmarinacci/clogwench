@@ -197,6 +197,7 @@ fn sdl_to_common(kc: Keycode) -> KeyCode {
         Keycode::Right => KeyCode::ARROW_RIGHT,
         Keycode::Up => KeyCode::ARROW_UP,
         Keycode::Down => KeyCode::ARROW_DOWN,
+        Keycode::P => KeyCode::LETTER_P,
         _ => {
             KeyCode::UNKNOWN
         }

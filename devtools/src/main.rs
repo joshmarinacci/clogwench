@@ -141,6 +141,9 @@ fn main() -> std::io::Result<()>{
                         KeyCode::ESC => {
                             stop.store(true, Ordering::Relaxed);
                         },
+                        KeyCode::LETTER_P => {
+                            info!("doing a screencapture request");
+                        }
                         _ => {
                             info!("key down");
                             //send key to the currently focused window
