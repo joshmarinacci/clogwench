@@ -145,8 +145,9 @@ impl Plat {
         self.canvas.fill_rect(SDLRect::new(rect.x, rect.y, rect.w as u32, rect.h as u32));
     }
     pub fn draw_image(&mut self, x: i32, y: i32, img: &GFXBuffer) {
-        if let Some(tex) = self.textures.get(&img.id) {
+        if let Some(tex) = self.textures.get_mut(&img.id) {
             let dst: SDLRect = SDLRect::new(x, y, img.width, img.height);
+            sync_texture(&mut self.canvas, tex, img);
             self.canvas.copy(tex, None, dst);
         } else {
             error!("no image found for {}",img.id);
@@ -170,25 +171,29 @@ impl Plat {
         self.textures.insert(img.id, tex);
 
         if let Some(tx) = self.textures.get_mut(&img.id) {
-            self.canvas.with_texture_canvas(tx, |can| {
-                for i in 0..img.width {
-                    for j in 0..img.height {
-                        let n:usize = ((j * img.width + i) * 4) as usize;
-                        match img.bitdepth {
-                            ColorDepth::CD16() => {}
-                            ColorDepth::CD24() => {}
-                            ColorDepth::CD32() => {
-                                //let px = img.get_pixel_32argb(i,j);
-                                let ve = img.get_pixel_vec_argb(i as u32,j as u32);
-                                let col = Color::RGBA(ve[1],ve[2],ve[3], ve[0]);
-                                can.set_draw_color(col);
-                                can.fill_rect(SDLRect::new(i as i32, j as i32, 1, 1));
-                            }
-                        }
-                    }
-                }
-            });
+            sync_texture(&mut self.canvas, tx, img);
         }
     }
+}
+
+fn sync_texture(can: &mut WindowCanvas, tx: &mut Texture, img: &GFXBuffer) {
+    can.with_texture_canvas(tx, |can| {
+        for i in 0..img.width {
+            for j in 0..img.height {
+                let n:usize = ((j * img.width + i) * 4) as usize;
+                match img.bitdepth {
+                    ColorDepth::CD16() => {}
+                    ColorDepth::CD24() => {}
+                    ColorDepth::CD32() => {
+                        //let px = img.get_pixel_32argb(i,j);
+                        let ve = img.get_pixel_vec_argb(i as u32,j as u32);
+                        let col = Color::RGBA(ve[1],ve[2],ve[3], ve[0]);
+                        can.set_draw_color(col);
+                        can.fill_rect(SDLRect::new(i as i32, j as i32, 1, 1));
+                    }
+                }
+            }
+        }
+    });
 }
 

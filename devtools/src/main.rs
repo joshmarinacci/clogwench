@@ -122,8 +122,11 @@ fn main() -> std::io::Result<()>{
                 }
                 APICommand::OpenWindowResponse(ow) => {
                     info!("window opened");
-                    state.add_window(ow.app_id, ow.window_id, &ow.bounds);
-                    state.set_focused_window(ow.window_id);
+                    let winid = state.add_window(ow.app_id, ow.window_id, &ow.bounds);
+                    if let Some(win) = state.lookup_window(winid) {
+                        plat.register_image2(&win.backbuffer);
+                    }
+                    // state.set_focused_window(ow.window_id);
                 }
                 APICommand::DrawRectCommand(dr) => {
                     info!("draw rect command");

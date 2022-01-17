@@ -1,5 +1,5 @@
 use std::sync::mpsc::RecvError;
-use common::{APICommand, BLACK, DrawRectCommand, HelloApp, OpenWindowCommand, Rect, WHITE};
+use common::{APICommand, ARGBColor, BLACK, DrawRectCommand, HelloApp, OpenWindowCommand, Rect, WHITE};
 use common::client::ClientConnection;
 use common::events::KeyCode;
 use uuid::Uuid;
@@ -17,7 +17,7 @@ fn redraw(client: &ClientConnection, appid: Uuid, winid: Uuid, bounds: Rect, px:
         app_id:appid,
         window_id:winid,
         rect:Rect{ x:px, y:py, w:10, h:10},
-        color: BLACK,
+        color: ARGBColor::new_rgb(0,200,255),
     }));
 }
 fn main() {
