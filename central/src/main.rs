@@ -44,8 +44,9 @@ impl CentralState {
     fn add_app_from_stream(&mut self, stream:TcpStream, sender: Sender<IncomingMessage>, stop: Arc<AtomicBool>) {
         let id = Uuid::new_v4();
         self.apps.push(App{ id,stream,windows:vec![] });
-        let app = self.apps.iter().find(|a|a.id == id);
-        self.spawn_app_handler(id.clone(),app.unwrap().stream.try_clone().unwrap(),sender,stop);
+        if let Some(app) = self.apps.iter().find(|a|a.id == id) {
+            self.spawn_app_handler(id.clone(), app.stream.try_clone().unwrap(), sender, stop);
+        }
     }
     fn add_window_to_app(&mut self, appid: Uuid, ow: &OpenWindowCommand) -> Uuid {
         let winid = Uuid::new_v4();
@@ -60,8 +61,9 @@ impl CentralState {
     fn add_wm_from_stream(&mut self, stream:TcpStream, sender: Sender<IncomingMessage>, stop: Arc<AtomicBool>) {
         let id = Uuid::new_v4();
         self.wms.push(WM{id,stream});
-        let win = self.wms.iter().find(|w|w.id == id);
-        self.spawn_wm_handler(id.clone(),win.unwrap().stream.try_clone().unwrap(),sender,stop);
+        if let Some(wm) = self.wms.iter().find(|w|w.id == id) {
+            self.spawn_wm_handler(id.clone(), wm.stream.try_clone().unwrap(), sender, stop);
+        }
     }
     fn spawn_app_handler(&self, appid: Uuid, stream: TcpStream, sender: Sender<IncomingMessage>, stop: Arc<AtomicBool>) -> JoinHandle<()> {
         thread::spawn(move || {
@@ -91,9 +93,9 @@ impl CentralState {
             info!("app thread ending {}",appid);
         })
     }
-    fn spawn_wm_handler(&self, wmid: Uuid, stream: TcpStream, sender: Sender<IncomingMessage>, stop: Arc<AtomicBool>) -> JoinHandle<()> {
+    fn spawn_wm_handler(&self, wm_id: Uuid, stream: TcpStream, sender: Sender<IncomingMessage>, stop: Arc<AtomicBool>) -> JoinHandle<()> {
         thread::spawn(move ||{
-            info!("wm thread starting: {}",wmid);
+            info!("wm thread starting: {}",wm_id);
             let stream2 = stream.try_clone().unwrap();
             let mut de = serde_json::Deserializer::from_reader(stream);
             loop {
@@ -105,13 +107,11 @@ impl CentralState {
                 match IncomingMessage::deserialize(&mut de) {
                     Ok(cmd) => {
                         info!("central received wm command {:?}",cmd);
-
-                        sender.send(IncomingMessage{ source: wmid, command: cmd.command }).unwrap();
+                        sender.send(IncomingMessage{ source: wm_id, command: cmd.command }).unwrap();
                     }
                     Err(e) => {
                         error!("error deserializing from window manager {:?}",e);
                         stream2.shutdown(Shutdown::Both);
-                        stop.store(true,Ordering::Relaxed);
                         break;
                     }
                 }
@@ -120,8 +120,9 @@ impl CentralState {
     }
     fn send_to_app(&mut self, id:Uuid, resp: APICommand) {
         let data = serde_json::to_string(&resp).unwrap();
-        let mut app = self.apps.iter_mut().find(|a|a.id == id).unwrap();
-        app.stream.write_all(data.as_ref()).expect("failed to send rect");
+        if let Some(app) = self.apps.iter_mut().find(|a|a.id == id){
+            app.stream.write_all(data.as_ref()).expect("failed to send rect");
+        }
     }
     fn send_to_wm(&mut self, id:Uuid, resp: APICommand) {
         info!("sending to wm {:?}",resp);
@@ -147,29 +148,6 @@ impl CentralState {
 }
 
 fn main() {
-/*
-the central server manages system state and routes messages between apps and the window manager
-
-* create network server
-* listen for control C to shut things down
-* maintain list of apps with list of windows, search for either by ID
-* command line opts for the port and network interface
-* command line opts for debug
-* sets up logging
-* when window manager first connects
-    * registers as window manager
-    * store network connection
-    * stores screen size
-* when app first connects
-    * register app
-    * store network connection
-    * send message to window manager, if connected
-* when app sends draw command
-    * route to the window manager
-* when window manager sends input event
-    * route to the target app
- */
-
     let args:Cli = init_setup();
     info!("central server starting");
     let state = Arc::new(Mutex::new(CentralState::init()));
@@ -285,14 +263,11 @@ fn start_app_interface(stop: Arc<AtomicBool>,
         let listener = TcpListener::bind(format!("0.0.0.0:{}",port)).unwrap();
         info!("central listening on port {}",port);
         for stream in listener.incoming() {
-            if stop.load(Ordering::Relaxed) { break; }
+            if stop.load(Ordering::Relaxed) == true { break; }
             match stream {
                 Ok(stream) => {
                     info!("got a new app connection");
                     state.lock().unwrap().add_app_from_stream(stream.try_clone().unwrap(),tx.clone(),stop.clone());
-                    // let app = App::from_stream(stream.try_clone().unwrap());
-                    // handle_client(stream.try_clone().unwrap(),tx.clone(),stop.clone(),state.clone(),app.id);
-                    // state.lock().unwrap().add_app(app);
                 }
                 Err(e) => {
                     error!("error: {}",e);
@@ -312,7 +287,7 @@ fn start_wm_interface(stop:Arc<AtomicBool>,
         let listener = TcpListener::bind(format!("0.0.0.0:{}",port)).unwrap();
         info!("central listening on port {}",port);
         for stream in listener.incoming() {
-            if stop.load(Ordering::Relaxed) { break; }
+            if stop.load(Ordering::Relaxed) == true { break; }
             match stream {
                 Ok(stream) => {
                     info!("got a new wm connection");
