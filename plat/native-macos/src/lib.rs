@@ -16,7 +16,7 @@ use sdl2::rect::Rect as SDLRect;
 
 use uuid::Uuid;
 use common::{APICommand, ARGBColor, IncomingMessage, Rect as CommonRect, Rect};
-use common::events::{MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent};
+use common::events::{KeyCode, KeyDownEvent, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent};
 use common::graphics::{ColorDepth, GFXBuffer};
 
 
@@ -74,7 +74,27 @@ impl Plat {
                     self.stop.store(true, Ordering::Relaxed);
                     break;
                 },
-                // Event::KeyDown {keycode,keymod,..} => self.process_keydown(keycode, keymod, windows,output),
+                Event::KeyDown {keycode,keymod,..} => {
+                    if let Some(kk) = keycode {
+                        match kk {
+                            Keycode::Left => {
+                                let cmd = IncomingMessage {
+                                    source: Default::default(),
+                                    command: APICommand::KeyDown(KeyDownEvent{
+                                        app_id: Default::default(),
+                                        window_id: Default::default(),
+                                        original_timestamp: 0,
+                                        key: KeyCode::ARROW_LEFT,
+                                    })
+                                };
+                                if let Err(e) = self.sender.send(cmd) {
+                                    error!("error sending {}",e);
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                },
                 Event::MouseButtonDown { x, y,mouse_btn, .. } => {
                     let cmd = IncomingMessage {
                         source: Default::default(),
