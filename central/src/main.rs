@@ -5,8 +5,12 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread;
 use std::thread::JoinHandle;
+use std::time::Duration;
 use env_logger::Env;
-use log::{error, info, warn};
+use log::{error, info, LevelFilter, warn};
+use log4rs::append::file::FileAppender;
+use log4rs::Config;
+use log4rs::config::{Appender, Root};
 use serde::Deserialize;
 use uuid::Uuid;
 use common::{APICommand, HelloAppResponse, HelloWindowManagerResponse, IncomingMessage, OpenWindowCommand, OpenWindowResponse, Rect};
@@ -73,16 +77,18 @@ impl CentralState {
                     Ok(cmd) => {
                         info!("central received command {:?}",cmd);
                         let im = IncomingMessage { source: appid, command:cmd, };
-                        sender.send(im).unwrap();
+                        if let Err(e) = sender.send(im) {
+                            error!("error sending command {}",e);
+                        }
                     }
                     Err(e) => {
                         error!("error deserializing from demo-clickgrid {:?}",e);
                         stream2.shutdown(Shutdown::Both);
-                        stop.store(true,Ordering::Relaxed);
                         break;
                     }
                 }
             }
+            info!("app thread ending {}",appid);
         })
     }
     fn spawn_wm_handler(&self, wmid: Uuid, stream: TcpStream, sender: Sender<IncomingMessage>, stop: Arc<AtomicBool>) -> JoinHandle<()> {
@@ -233,8 +239,29 @@ struct Cli {
 
 fn init_setup() -> Cli {
     let args:Cli = Cli::from_args();
-    let loglevel = if args.debug { "debug"} else { "error"};
-    env_logger::Builder::from_env(Env::default().default_filter_or(loglevel)).init();
+    let loglevel = if args.debug { LevelFilter::Debug } else { LevelFilter::Error };
+    // create file appender with target file path
+    let logfile = FileAppender::builder()
+        .build("log/output.log").expect("error setting up file appender");
+
+    // make a config
+    let config = Config::builder()
+        //add the file appender
+        .appender(Appender::builder().build("logfile", Box::new(logfile)))
+        //now make it
+        .build(Root::builder()
+            .appender("logfile") // why do we need to mention logfile again?
+            .build(loglevel)).expect("error setting up log file");
+
+    log4rs::init_config(config).expect("error initing config");
+
+    thread::sleep(Duration::from_millis(100));
+    println!("logging to log/output.log");
+    for i in 0..5 {
+        info!("        ");
+    }
+    info!("==============");
+    info!("starting new run");
     info!("running with args {:?}",args);
     return args;
 }

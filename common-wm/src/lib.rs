@@ -1,3 +1,4 @@
+use std::error::Error;
 use std::io::Write;
 use std::net::TcpStream;
 use std::sync::{Arc, mpsc};
@@ -110,7 +111,7 @@ impl WindowManagerState {
     pub fn find_app(&mut self, app_id: Uuid) -> Option<&mut App> {
         self.apps.iter_mut().find(|a|a.id == app_id)
     }
-    pub fn add_window(&mut self, app_id: Uuid, win_id:Uuid, bounds:&Rect) {
+    pub fn add_window(&mut self, app_id: Uuid, win_id:Uuid, bounds:&Rect) -> Uuid {
         let win = Window {
             id: win_id,
             position:bounds.position(),
@@ -122,6 +123,7 @@ impl WindowManagerState {
         if let Some(app) = self.find_app(app_id) {
             app.windows.push(win);
         }
+        return win_id;
     }
     pub fn find_first_window(&self) -> Option<&Window> {
         if !self.apps.is_empty() {
@@ -203,51 +205,93 @@ pub struct CentralConnection {
     recv_thread: JoinHandle<()>,
     send_thread: JoinHandle<()>,
     pub tx_out: Sender<OutgoingMessage>,
-    pub rx_in: Receiver<IncomingMessage>,
-    pub tx_in: Sender<IncomingMessage>,
+    // pub rx_in: Receiver<IncomingMessage>,
+    // pub tx_in: Sender<IncomingMessage>,
 }
 
-impl CentralConnection {
-    pub fn send_hello(&self) {
-        //TODO: move this initial connection work into common-wm
-        //send hello window manager
-        let msg = OutgoingMessage {
-            recipient: Default::default(),
-            command: APICommand::WMConnect(HelloWindowManager {})
-        };
-        self.tx_out.send(msg).unwrap();
+// fn send_hello(sender: Sender<IncomingMessage>, tx_out: Sender<OutgoingMessage>) -> Result<(),String> {
+//     //send hello window manager
+//     let msg = OutgoingMessage {
+//         recipient: Default::default(),
+//         command: APICommand::WMConnect(HelloWindowManager {})
+//     };
+//     tx_out.send(msg).map_err(|e|e.to_string())?;
+//
+//     let resp = rx_in.recv().map_err(|e|e.to_string())?;
+//     let selfid = if let APICommand::WMConnectResponse(res) = resp.command {
+//         info!("got response back from the server {:?}",res);
+//         res.wm_id
+//     } else {
+//         panic!("did not get the window manager connect response. gah!");
+//     };
+//     Ok(())
+// }
 
-        let resp = self.rx_in.recv().unwrap();
-        let selfid = if let APICommand::WMConnectResponse(res) = resp.command {
-            info!("got response back from the server {:?}",res);
-            res.wm_id
-        } else {
-            panic!("did not get the window manager connect response. gah!");
-        };
-    }
-}
-
-pub fn start_wm_network_connection(stop: Arc<AtomicBool>) -> Option<CentralConnection> {
+pub fn start_wm_network_connection(stop: Arc<AtomicBool>, sender: Sender<IncomingMessage>) -> Option<CentralConnection> {
     let conn_string ="localhost:3334";
     match TcpStream::connect(conn_string) {
-        Ok(master_stream) => {
-            let (tx_in, rx_in) = mpsc::channel::<IncomingMessage>();
+        Ok(mut master_stream) => {
             let (tx_out, rx_out) =mpsc::channel::<OutgoingMessage>();
             println!("connected to the linux-wm");
+
+            //do the hello connection
+            // let msg = OutgoingMessage {
+            //     recipient: Default::default(),
+            //     command: APICommand::WMConnect(HelloWindowManager {})
+            // };
+            let im = IncomingMessage { source: Default::default(), command: APICommand::WMConnect(HelloWindowManager {})};
+            println!("sending out message {:?}",im);
+            match serde_json::to_string(&im) {
+                Ok(data) => {
+                    println!("sending data {:?}", data);
+                    if let Err(e) = master_stream.write_all(data.as_ref()) {
+                        error!("error sending data back to server {}",e);
+                        return None
+                    }
+                }
+                Err(e) => {
+                    error!("error serializing incoming messages {}",e);
+                    return None
+                }
+            }
+            //wait for the response
+            let mut de = serde_json::Deserializer::from_reader(&master_stream);
+            match IncomingMessage::deserialize(&mut de) {
+                Ok(cmd) => {
+                    info!("received command {:?}", cmd);
+                    if let APICommand::WMConnectResponse(res) = cmd.command {
+                        info!("got response back from the server {:?}",res);
+                        // res.wm_id
+                    }
+                }
+                Err(e) => {
+                    error!("error deserializing {:?}", e);
+                    stop.store(true,Ordering::Relaxed);
+                    return None
+                }
+            }
+            info!("window manager fully connected to the central server");
+
             //receiving thread
             let receiving_handle = thread::spawn({
                 let stream = master_stream.try_clone().unwrap();
                 let stop = stop.clone();
-                let tx_in = tx_in.clone();
+                // let tx_in = tx_in.clone();
                 move || {
                     info!("receiving thread starting");
                     let mut de = serde_json::Deserializer::from_reader(stream);
                     loop {
-                        if stop.load(Ordering::Relaxed) { break; }
+                        if stop.load(Ordering::Relaxed) == true {
+                            break;
+                        }
                         match IncomingMessage::deserialize(&mut de) {
                             Ok(cmd) => {
                                 // info!("received command {:?}", cmd);
-                                tx_in.send(cmd).unwrap();
+                                if let Err(e) = sender.send(cmd) {
+                                    error!("error sending incoming command {}",e);
+                                    stop.store(true,Ordering::Relaxed);
+                                    break;
+                                }
                             }
                             Err(e) => {
                                 error!("error deserializing {:?}", e);
@@ -266,15 +310,31 @@ pub fn start_wm_network_connection(stop: Arc<AtomicBool>) -> Option<CentralConne
                 move || {
                     info!("sending thread starting");
                     for out in rx_out {
-                        if stop.load(Ordering::Relaxed) { break; }
+                        if stop.load(Ordering::Relaxed) == true {
+                            break;
+                        }
+                        info!("got a message to send back out {:?}",out);
                         let im = IncomingMessage {
                             source: Default::default(),
                             command: out.command
                         };
                         println!("sending out message {:?}",im);
-                        let data = serde_json::to_string(&im).unwrap();
-                        println!("sending data {:?}", data);
-                        stream.write_all(data.as_ref()).expect("failed to send rect");
+                        match serde_json::to_string(&im) {
+                            Ok(data) => {
+                                println!("sending data {:?}", data);
+                                if let Err(e) = stream.write_all(data.as_ref()) {
+                                    error!("error sending data back to server {}",e);
+                                    break;
+                                }
+                            }
+                            Err(e) => {
+                                error!("error serializing incoming messages {}",e);
+                                break;
+                            }
+                        }
+                        // let data = serde_json::to_string(&im)
+                        // println!("sending data {:?}", data);
+                        // stream.write_all(data.as_ref()).expect("failed to send rect");
                     }
                     info!("sending thread ending");
                 }
@@ -283,8 +343,8 @@ pub fn start_wm_network_connection(stop: Arc<AtomicBool>) -> Option<CentralConne
                 stream: master_stream,
                 send_thread:sending_handle,
                 recv_thread:receiving_handle,
-                tx_in:tx_in,
-                rx_in:rx_in,
+                // tx_in:tx_in,
+                // rx_in:rx_in,
                 tx_out:tx_out,
             })
 

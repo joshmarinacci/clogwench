@@ -26,6 +26,7 @@ pub struct Plat {
     pub textures: HashMap<Uuid, Texture>,
     pub creator: TextureCreator<WindowContext>,
     pub sender: Sender<IncomingMessage>,
+    pub stop: Arc<AtomicBool>,
 }
 
 pub fn make_plat<'a>(stop:Arc<AtomicBool>, sender: Sender<IncomingMessage>) -> Result<Plat, String> {
@@ -39,6 +40,7 @@ pub fn make_plat<'a>(stop:Arc<AtomicBool>, sender: Sender<IncomingMessage>) -> R
     let canvas:WindowCanvas = window.into_canvas().software().build().map_err(|e| e.to_string())?;
 
     return Ok(Plat {
+        stop:stop,
         textures: Default::default(),
         creator: canvas.texture_creator(),
         canvas: canvas,
@@ -68,7 +70,8 @@ impl Plat {
                     keycode: Some(Keycode::Escape),
                     ..
                 } => {
-                    println!("quitting");
+                    info!("quitting");
+                    self.stop.store(true, Ordering::Relaxed);
                     break;
                 },
                 // Event::KeyDown {keycode,keymod,..} => self.process_keydown(keycode, keymod, windows,output),
@@ -82,7 +85,9 @@ impl Plat {
                             y
                         })
                     };
-                    self.sender.send(cmd).unwrap();
+                    if let Err(e) = self.sender.send(cmd) {
+                        error!("error sending {}",e);
+                    }
                 },
                 Event::MouseButtonUp {x,y,mouse_btn,..} =>  {
                     let cmd = IncomingMessage {
@@ -94,8 +99,9 @@ impl Plat {
                             y
                         })
                     };
-                    self.sender.send(cmd).unwrap();
-                    //self.process_mouseup(x,y,mouse_btn,windows,output)
+                    if let Err(e) = self.sender.send(cmd) {
+                        error!("error sending {}",e);
+                    }
                 },
                 Event::MouseMotion {
                     timestamp, window_id, which, mousestate, x, y, xrel, yrel
@@ -109,7 +115,10 @@ impl Plat {
                             y: y as i32
                         })
                     };
-                    self.sender.send(cmd).unwrap();
+                    // info!("about to send out {:?}",cmd);
+                    if let Err(e) = self.sender.send(cmd) {
+                        error!("error sending mouse motion out {:?}",e);
+                    }
                 }
                 _ => {}
             }

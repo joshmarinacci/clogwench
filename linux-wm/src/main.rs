@@ -79,7 +79,7 @@ fn main() {
     if !args.disable_network {
         info!("connecting to the central server");
         //open network connection
-        let conn = start_wm_network_connection(stop.clone())
+        let conn = start_wm_network_connection(stop.clone(), )
             .expect("error connecting to the central server");
         conn.send_hello();
         //network_stream = Option::from(conn.stream);

@@ -136,6 +136,7 @@ dependencies = [
  "ctrlc",
  "env_logger",
  "log",
+ "log4rs",
  "serde",
  "serde_json",
  "structopt",

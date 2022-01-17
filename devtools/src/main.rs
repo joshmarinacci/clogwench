@@ -37,25 +37,28 @@ fn main() -> std::io::Result<()>{
     info!("cwd is {}", cwd.display());
     let cursor_image:GFXBuffer = GFXBuffer::from_png_file("../resources/cursor.png");
 
-    let mut network_stream:Option<TcpStream> = None;
+    // let mut network_stream:Option<TcpStream> = None;
     //create empty channel first
     let (mut internal_message_sender,
         mut internal_message_receiver) = mpsc::channel::<IncomingMessage>();
-    let (mut external_message_sender, rcv2) = mpsc::channel::<OutgoingMessage>();
+    let (mut external_message_sender,
+        mut external_message_receiver) = mpsc::channel::<OutgoingMessage>();
 
     //start the central server
-    // start_central_server(stop.clone());
-    sleep(1000);
+    if args.start_server {
+        info!("starting the central server");
+        start_central_server(stop.clone());
+        sleep(1000);
+    }
 
     //connect to the central server
     if !args.disable_network {
         info!("connecting to the central server");
         //open network connection
-        let conn = start_wm_network_connection(stop.clone())
+        let conn = start_wm_network_connection(stop.clone(), internal_message_sender.clone())
             .expect("error connecting to the central server");
-        conn.send_hello();
-        network_stream = Option::from(conn.stream);
-        internal_message_sender = conn.tx_in;
+        // network_stream = Option::from(conn.stream);
+        // internal_message_sender = conn.tx_in;
         external_message_sender = conn.tx_out;
         info!("fully connected to the network now");
     } else {
@@ -67,18 +70,22 @@ fn main() -> std::io::Result<()>{
     //setup the window manager state
     let mut state = WindowManagerState::init();
     {
-        //preload a fake app and window
+        // preload a fake app and window
         let fake_app_1 = Uuid::new_v4();
         state.add_app(fake_app_1);
-        state.add_window(fake_app_1, Uuid::new_v4(), &Rect::from_ints(50, 50, 100, 200));
+        let winid1 = state.add_window(fake_app_1, Uuid::new_v4(), &Rect::from_ints(400, 50, 100, 200));
+        let win1 = state.lookup_window(winid1).unwrap();
+        win1.backbuffer.fill_rect(Rect::from_ints(20,20,20,20), &ARGBColor::new_rgb(0, 255, 0));
 
-        let fake_app_2 = Uuid::new_v4();
-        state.add_app(fake_app_2);
-        state.add_window(fake_app_2, Uuid::new_v4(), &Rect::from_ints(250, 50, 100, 200));
+        // let fake_app_2 = Uuid::new_v4();
+        // state.add_app(fake_app_2);
+        // state.add_window(fake_app_2, Uuid::new_v4(), &Rect::from_ints(250, 50, 100, 200));
     }
 
     //start test app
-    // start_test_app(stop.clone());
+    if args.start_app1 {
+        start_test_app(stop.clone());
+    }
 
 
     let mut test_pattern = GFXBuffer::new(CD32(), 64, 64, PixelLayout::ARGB());
@@ -92,25 +99,31 @@ fn main() -> std::io::Result<()>{
     println!("screen bounds are {:?}",bounds);
     let mut cursor:Point = Point::init(0,0);
 
-    let mut count = 0;
+    // let mut count = 0;
     let mut gesture = Box::new(NoOpGesture::init()) as Box<dyn InputGesture>;
     loop {
-        if stop.load(Ordering::Relaxed)==true { break; }
+        if stop.load(Ordering::Relaxed)==true {
+            break;
+        }
         plat.service_input();
-        //info!("checking for incoming events");
+        // info!("checking for incoming events");
         for cmd in internal_message_receiver.try_iter() {
-            //info!("incoming {:?}",cmd);
+            // info!("incoming {:?}",cmd);
             if stop.load(Ordering::Relaxed) == true { break; }
             match cmd.command {
                 APICommand::AppConnectResponse(res) => {
+                    info!("app connected");
                     state.add_app(res.app_id);
                 }
                 APICommand::OpenWindowResponse(ow) => {
+                    info!("window opened");
                     state.add_window(ow.app_id, ow.window_id, &ow.bounds);
                     state.set_focused_window(ow.window_id);
                 }
                 APICommand::DrawRectCommand(dr) => {
+                    info!("draw rect command");
                     if let Some(mut win) = state.lookup_window(dr.window_id) {
+                        info!("drawing to window {} {:?} {:?}",win.id, dr.rect, dr.color);
                         win.backbuffer.fill_rect(dr.rect, &dr.color);
                     }
                 }
@@ -134,7 +147,9 @@ fn main() -> std::io::Result<()>{
                                             key: kd.key
                                         })
                                     };
-                                    external_message_sender.send(msg).unwrap();
+                                    if let Err(e) = external_message_sender.send(msg) {
+                                        error!("error sending key back to central");
+                                    }
                                 }
                             }
                         }
@@ -173,11 +188,11 @@ fn main() -> std::io::Result<()>{
         }
         redraw_screen(&state, &cursor, &cursor_image, &mut plat, &test_pattern);
         plat.service_loop();
-        count += 1;
+        // count += 1;
         // println!("count {}",count);
-        if count > 500 {
-            break;
-        }
+        // if count > 500 {
+            // break;
+        // }
     }
     info!("shutting down");
     plat.shutdown();
@@ -202,7 +217,9 @@ fn redraw_screen(state: &WindowManagerState, cursor:&Point, cursor_image:&GFXBuf
         plat.draw_rect(win.external_bounds(), &wc, WINDOW_BORDER_WIDTH );
         plat.fill_rect(win.titlebar_bounds(), &tc);
         let bd = win.content_bounds();
-        plat.fill_rect(bd, &WHITE);
+        let MAGENTA = ARGBColor::new_rgb(255,0,255);
+        plat.fill_rect(bd, &MAGENTA);
+        plat.draw_image(win.content_bounds().x, win.content_bounds().y, &win.backbuffer);
         // surf.copy_from(bd.x, bd.y, &win.backbuffer)
     }
     //plat.fill_rect(Rect::from_ints(cursor.x,cursor.y,10,10), &ARGBColor::new_rgb(255, 255, 255));
@@ -218,7 +235,7 @@ fn make_watchdog(stop: Arc<AtomicBool>) -> JoinHandle<()> {
             info!("watchdog thread starting");
             while stop.load(Ordering::Relaxed) == false {
                 thread::sleep(Duration::from_millis(1000));
-                if start.elapsed().gt(&Duration::from_secs(10)) {
+                if start.elapsed().gt(&Duration::from_secs(60)) {
                     info!("timeout of ten seconds. lets bail");
                     stop.store(true, Ordering::Relaxed);
                 }
@@ -289,7 +306,11 @@ struct Cli {
     #[structopt(long)]
     mouse:bool,
     #[structopt(long)]
-    disable_network:bool
+    disable_network:bool,
+    #[structopt(long)]
+    start_server:bool,
+    #[structopt(long)]
+    start_app1:bool,
 }
 
 fn init_setup() -> Cli {
