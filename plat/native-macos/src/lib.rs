@@ -148,6 +148,8 @@ impl Plat {
         if let Some(tex) = self.textures.get(&img.id) {
             let dst: SDLRect = SDLRect::new(x, y, img.width, img.height);
             self.canvas.copy(tex, None, dst);
+        } else {
+            error!("no image found for {}",img.id);
         }
     }
 

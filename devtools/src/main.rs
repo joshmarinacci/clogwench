@@ -35,7 +35,6 @@ fn main() -> std::io::Result<()>{
     //load the cursor image
     let cwd = env::current_dir()?;
     info!("cwd is {}", cwd.display());
-    let cursor_image:GFXBuffer = GFXBuffer::from_png_file("../resources/cursor.png");
 
     // let mut network_stream:Option<TcpStream> = None;
     //create empty channel first
@@ -67,6 +66,22 @@ fn main() -> std::io::Result<()>{
 
 
 
+
+    //start test app
+    // if args.start_app1 {
+    //     start_test_app(stop.clone());
+    // }
+
+
+    let mut test_pattern = GFXBuffer::new(CD32(), 64, 64, PixelLayout::ARGB());
+    common::graphics::draw_test_pattern(&mut test_pattern);
+    //make the platform specific graphics
+    let mut plat = make_plat(stop.clone(), internal_message_sender.clone()).unwrap();
+    info!("Made a plat");
+    plat.register_image2(&test_pattern);
+
+    let cursor_image:GFXBuffer = GFXBuffer::from_png_file("../resources/cursor.png");
+    plat.register_image2(&cursor_image);
     //setup the window manager state
     let mut state = WindowManagerState::init();
     {
@@ -75,25 +90,15 @@ fn main() -> std::io::Result<()>{
         state.add_app(fake_app_1);
         let winid1 = state.add_window(fake_app_1, Uuid::new_v4(), &Rect::from_ints(400, 50, 100, 200));
         let win1 = state.lookup_window(winid1).unwrap();
+        win1.backbuffer.clear(&WHITE);
         win1.backbuffer.fill_rect(Rect::from_ints(20,20,20,20), &ARGBColor::new_rgb(0, 255, 0));
+        plat.register_image2(&win1.backbuffer);
 
         // let fake_app_2 = Uuid::new_v4();
         // state.add_app(fake_app_2);
         // state.add_window(fake_app_2, Uuid::new_v4(), &Rect::from_ints(250, 50, 100, 200));
     }
 
-    //start test app
-    if args.start_app1 {
-        start_test_app(stop.clone());
-    }
-
-
-    let mut test_pattern = GFXBuffer::new(CD32(), 64, 64, PixelLayout::ARGB());
-    common::graphics::draw_test_pattern(&mut test_pattern);
-    //make the platform specific graphics
-    let mut plat = make_plat(stop.clone(), internal_message_sender.clone()).unwrap();
-    println!("Made a plat");
-    plat.register_image2(&test_pattern);
 
     let bounds:Rect = plat.get_screen_bounds();
     println!("screen bounds are {:?}",bounds);
@@ -222,7 +227,7 @@ fn redraw_screen(state: &WindowManagerState, cursor:&Point, cursor_image:&GFXBuf
         plat.draw_image(win.content_bounds().x, win.content_bounds().y, &win.backbuffer);
         // surf.copy_from(bd.x, bd.y, &win.backbuffer)
     }
-    //plat.fill_rect(Rect::from_ints(cursor.x,cursor.y,10,10), &ARGBColor::new_rgb(255, 255, 255));
+    // plat.fill_rect(Rect::from_ints(cursor.x,cursor.y,10,10), &ARGBColor::new_rgb(255, 255, 255));
     plat.draw_image(cursor.x,cursor.y,cursor_image);
     plat.draw_image(50, 300, test_pattern)
     //info!("drawing {}ms",(now.elapsed().as_millis()));
