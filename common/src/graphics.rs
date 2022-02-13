@@ -365,26 +365,26 @@ mod tests {
         //=== RGB565 ===
         let mut buf2 = GFXBuffer::new(CD16(), 1, 1, PixelLayout::RGB565());
         buf2.clear(&RED);
-        assert_eq!(buf2.data,vec![0b11111_000,0b000_00000,]);
+        assert_eq!(buf2.data,vec![0b000_00000,0b11111_000,]);
         buf2.clear(&GREEN);
-        assert_eq!(buf2.data,vec![0b00000_111,0b111_00000,]);
+        assert_eq!(buf2.data,vec![0b111_00000,0b00000_111,]);
         buf2.fill_rect(Rect::from_ints(0,0,1,1), &RED);
-        assert_eq!(buf2.data,vec![0b11111_000,0b000_00000,]);
+        assert_eq!(buf2.data,vec![0b000_00000,0b11111_000,]);
         buf2.fill_rect(Rect::from_ints(0,0,1,1), &GREEN);
-        assert_eq!(buf2.data,vec![0b00000_111,0b111_00000,]);
+        assert_eq!(buf2.data,vec![0b111_00000,0b00000_111,]);
 
         // === copy ARGB to RGB565
         let mut buf1 = GFXBuffer::new(CD32(), 1, 1, PixelLayout::ARGB());
         buf1.clear(&BLUE);
         assert_eq!(buf1.data,vec![255,0,0,255]);
         buf2.copy_from(0,0,&buf1);
-        assert_eq!(buf2.data,vec![0b00000_000, 0b000_11111]);
+        assert_eq!(buf2.data,vec![0b000_11111,0b00000_000, ]);
 
         //copy RGB565 to ARGB
         buf2.clear(&BLUE);
-        assert_eq!(buf2.data,vec![0b00000_000, 0b000_11111]);
+        assert_eq!(buf2.data,vec![ 0b000_11111, 0b00000_000,]);
         buf1.copy_from(0,0,&buf2);
-        assert_eq!(buf1.data,vec![255,0,0,248]);
+        assert_eq!(buf1.data,vec![255,24,224,0]);
     }
 
     /*
