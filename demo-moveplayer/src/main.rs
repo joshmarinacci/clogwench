@@ -1,5 +1,5 @@
 use std::sync::mpsc::RecvError;
-use common::{APICommand, ARGBColor, BLACK, DrawRectCommand, HelloApp, OpenWindowCommand, Rect, WHITE};
+use common::{APICommand, ARGBColor, BLACK, DebugMessage, DrawRectCommand, HelloApp, OpenWindowCommand, Rect, WHITE};
 use common::client::ClientConnection;
 use common::events::KeyCode;
 use uuid::Uuid;
@@ -65,6 +65,9 @@ fn main() {
                     _ => {}
                 }
                 redraw(&client, appid, winid, bounds, px, py);
+            }
+            APICommand::MouseDown(md) => {
+                client.send(APICommand::DebugConnect(DebugMessage::AppLog(String::from("got-mouse-event"))));
             }
             _ => {}
         }

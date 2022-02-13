@@ -10,5 +10,6 @@ members = [
     "tools-input",
     "common",
     "plat",
-    "devtools"
+    "devtools/mainmain",
+    "devtools/runner"
 ]

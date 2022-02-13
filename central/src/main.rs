@@ -13,7 +13,7 @@ use log4rs::Config;
 use log4rs::config::{Appender, Root};
 use serde::Deserialize;
 use uuid::Uuid;
-use common::{APICommand, HelloAppResponse, HelloWindowManagerResponse, IncomingMessage, OpenWindowCommand, OpenWindowResponse, Rect};
+use common::{APICommand, DEBUG_PORT, DebugMessage, HelloAppResponse, HelloWindowManagerResponse, IncomingMessage, OpenWindowCommand, OpenWindowResponse, Rect};
 use structopt::StructOpt;
 
 struct Window {
@@ -21,6 +21,10 @@ struct Window {
     bounds:Rect,
 }
 struct WM {
+    id:Uuid,
+    stream:TcpStream,
+}
+struct Debugger {
     id:Uuid,
     stream:TcpStream,
 }
@@ -32,13 +36,15 @@ struct App {
 struct CentralState {
     wms:Vec<WM>,
     apps:Vec<App>,
+    debuggers:Vec<Debugger>,
 }
 
 impl CentralState {
     fn init() -> CentralState {
         CentralState {
             wms: vec![],
-            apps: vec![]
+            apps: vec![],
+            debuggers: vec![]
         }
     }
     fn add_app_from_stream(&mut self, stream:TcpStream, sender: Sender<IncomingMessage>, stop: Arc<AtomicBool>) {
@@ -65,6 +71,14 @@ impl CentralState {
             self.spawn_wm_handler(id.clone(), wm.stream.try_clone().unwrap(), sender, stop);
         }
     }
+    fn add_debugger_from_stream(&mut self, stream: TcpStream, sender: Sender<IncomingMessage>, stop: Arc<AtomicBool>) {
+        let id = Uuid::new_v4();
+        self.debuggers.push(Debugger{id,stream});
+        if let Some(c) = self.debuggers.iter().find(|w|w.id == id) {
+            self.spawn_debugger_handler(id.clone(), c.stream.try_clone().unwrap(), sender, stop);
+        }
+    }
+
     fn spawn_app_handler(&self, appid: Uuid, stream: TcpStream, sender: Sender<IncomingMessage>, stop: Arc<AtomicBool>) -> JoinHandle<()> {
         thread::spawn(move || {
             info!("app thread starting: {}",appid);
@@ -118,14 +132,41 @@ impl CentralState {
             }
         })
     }
+    fn spawn_debugger_handler(&self, id:Uuid, stream: TcpStream, sender: Sender<IncomingMessage>, stop: Arc<AtomicBool>) -> JoinHandle<()>{
+        thread::spawn(move ||{
+            println!("CENTRAL: debugger thread starting: {}",id);
+            let stream2 = stream.try_clone().unwrap();
+            let mut de = serde_json::Deserializer::from_reader(stream);
+            loop {
+                if stop.load(Ordering::Relaxed) == true {
+                    println!("CENTRAL: debugger thread stopping");
+                    stream2.shutdown(Shutdown::Both);
+                    break;
+                }
+                match DebugMessage::deserialize(&mut de) {
+                    Ok(cmd) => {
+                        println!("CENTRAL: received debugger command {:?}",cmd);
+                        sender.send(IncomingMessage{source:id, command:APICommand::DebugConnect(cmd)}).unwrap();
+                    }
+                    Err(e) => {
+                        println!("CENTRAL: deserializing from debugger {:?}",e);
+                        stream2.shutdown(Shutdown::Both);
+                        break;
+                    }
+                }
+            }
+        })
+    }
+
     fn send_to_app(&mut self, id:Uuid, resp: APICommand) {
+        println!("CENTRAL: sending to app {:?}",resp);
         let data = serde_json::to_string(&resp).unwrap();
         if let Some(app) = self.apps.iter_mut().find(|a|a.id == id){
             app.stream.write_all(data.as_ref()).expect("failed to send rect");
         }
     }
     fn send_to_wm(&mut self, id:Uuid, resp: APICommand) {
-        info!("sending to wm {:?}",resp);
+        println!("CENTRAL: sending to wm {:?}",resp);
         let im = IncomingMessage {
             source: Default::default(),
             command: resp,
@@ -135,7 +176,7 @@ impl CentralState {
         wm.stream.write_all(data.as_ref()).expect("failed to send rect");
     }
     fn send_to_all_wm(&mut self, resp: APICommand) {
-        info!("sending to wm {:?}",resp);
+        println!("CENTRAL: sending to all wm {:?}",resp);
         let im = IncomingMessage {
             source: Default::default(),
             command: resp,
@@ -145,19 +186,31 @@ impl CentralState {
             wm.stream.write_all(data.as_ref()).expect("failed to send to all wm")
         }
     }
+    fn send_to_debugger(&mut self, resp: DebugMessage) {
+        println!("CENTRAL: sending to debugger {:?}",resp);
+        let data = serde_json::to_string(&resp).unwrap();
+        for dbg in self.debuggers.iter_mut() {
+            dbg.stream.write_all(data.as_ref()).expect("CENTRAL: error sending to debugger");
+        }
+
+    }
 }
 
 fn main() {
     let args:Cli = init_setup();
     info!("central server starting");
+    println!("central server starting");
     let state = Arc::new(Mutex::new(CentralState::init()));
     let stop:Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
-    setup_c_handler(stop.clone());
+    // setup_c_handler(stop.clone());
     let (tx, rx) = mpsc::channel::<IncomingMessage>();
     let app_network_thread = start_app_interface(stop.clone(), tx.clone(), state.clone());
     let wm_network_thread = start_wm_interface(stop.clone(), tx.clone(), state.clone());
     // wm_network_thread.join();
+    let debug_thread = start_debug_interface(stop.clone(), tx.clone(), state.clone());
     let router_thread = start_router(stop.clone(),rx,state.clone());
+    info!("waiting for the app network thread to end");
+    println!("CENTRAL: waiting for the app thread to end");
     app_network_thread.join();
     info!("central server stopping");
 }
@@ -165,8 +218,25 @@ fn main() {
 fn start_router(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, state: Arc<Mutex<CentralState>>) -> JoinHandle<()> {
     thread::spawn(move||{
         for msg in rx {
-            info!("incoming message {:?}",msg);
+            println!("CENTRAL: incoming message {:?}",msg);
             match msg.command {
+                APICommand::DebugConnect(DebugMessage::HelloDebugger) => {
+                    println!("got hello debugger. sending proper response");
+                    let resp = DebugMessage::HelloDebuggerResponse;
+                    state.lock().unwrap().send_to_debugger(resp);
+                }
+                APICommand::DebugConnect(DebugMessage::FakeMouseEvent(evt)) => {
+                    state.lock().unwrap().send_to_all_wm(APICommand::MouseDown(evt));
+                }
+                APICommand::DebugConnect(DebugMessage::BackgroundReceivedMouseEvent) => {
+                    state.lock().unwrap().send_to_debugger(DebugMessage::BackgroundReceivedMouseEvent);
+                }
+                APICommand::DebugConnect(DebugMessage::WindowFocusChanged(str)) => {
+                    state.lock().unwrap().send_to_debugger(DebugMessage::WindowFocusChanged(str));
+                }
+                APICommand::DebugConnect(DebugMessage::AppLog(str)) => {
+                    state.lock().unwrap().send_to_debugger(DebugMessage::AppLog(str));
+                }
                 APICommand::AppConnect(ap) => {
                     info!("app connected {}",msg.source);
                     let resp = APICommand::AppConnectResponse(HelloAppResponse{
@@ -174,6 +244,7 @@ fn start_router(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, state: Arc
                     });
                     state.lock().unwrap().send_to_app(msg.source, resp.clone());
                     state.lock().unwrap().send_to_all_wm(resp.clone());
+                    state.lock().unwrap().send_to_debugger(DebugMessage::AppConnected(String::from("foo")))
                 },
                 APICommand::OpenWindowCommand(ow) => {
                     info!("opening window");
@@ -186,22 +257,27 @@ fn start_router(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, state: Arc
                     });
                     state.lock().unwrap().send_to_app(msg.source, resp.clone());
                     state.lock().unwrap().send_to_all_wm(resp.clone());
+                    state.lock().unwrap().send_to_debugger(DebugMessage::WindowOpened(String::from("foo")));
                 },
                 APICommand::WMConnect(cmd) => {
                     info!("Window manager connected {}",msg.source);
                     let resp = APICommand::WMConnectResponse(HelloWindowManagerResponse{
                         wm_id:msg.source
                     });
-                    state.lock().unwrap().send_to_wm(msg.source, resp.clone())
+                    state.lock().unwrap().send_to_wm(msg.source, resp.clone());
+                    state.lock().unwrap().send_to_debugger(DebugMessage::WindowManagerConnected);
                 }
                 APICommand::DrawRectCommand(cmd) => {
                     state.lock().unwrap().send_to_all_wm(APICommand::DrawRectCommand(cmd));
                 },
-                APICommand::KeyDown(kde) => {
-                    state.lock().unwrap().send_to_app(kde.app_id,APICommand::KeyDown(kde))
-                },
+                APICommand::KeyDown(e) => {
+                    state.lock().unwrap().send_to_app(e.app_id, APICommand::KeyDown(e))
+                }
+                APICommand::MouseDown(e) => {
+                    state.lock().unwrap().send_to_app(e.app_id, APICommand::MouseDown(e))
+                }
                 _ => {
-                    warn!("message not handled {:?}",msg);
+                    println!("CENTRAL: message not handled {:?}",msg);
                 }
             }
         }
@@ -217,7 +293,8 @@ struct Cli {
 
 fn init_setup() -> Cli {
     let args:Cli = Cli::from_args();
-    let loglevel = if args.debug { LevelFilter::Debug } else { LevelFilter::Error };
+    // let loglevel = if args.debug { LevelFilter::Debug } else { LevelFilter::Error };
+    let loglevel = LevelFilter::Debug;
     // create file appender with target file path
     let logfile = FileAppender::builder()
         .build("log/output.log").expect("error setting up file appender");
@@ -234,13 +311,14 @@ fn init_setup() -> Cli {
     log4rs::init_config(config).expect("error initing config");
 
     thread::sleep(Duration::from_millis(100));
-    println!("logging to log/output.log");
+    println!("CENTRAL is logging to log/output.log");
     for i in 0..5 {
         info!("        ");
     }
     info!("==============");
     info!("starting new run");
     info!("running with args {:?}",args);
+    println!("debug level is {:?}", loglevel);
     return args;
 }
 
@@ -300,4 +378,25 @@ fn start_wm_interface(stop:Arc<AtomicBool>,
         }
         drop(listener);
     })
+}
+
+fn start_debug_interface(stop: Arc<AtomicBool>, tx: Sender<IncomingMessage>, state: Arc<Mutex<CentralState>>) -> JoinHandle<()> {
+    return thread::spawn(move || {
+        println!("CENTRAL: starting debug connection");
+        let listener = TcpListener::bind(format!("0.0.0.0:{}",DEBUG_PORT)).unwrap();
+        println!("CENTRAL listening on port {}",DEBUG_PORT);
+        for stream in listener.incoming() {
+            if stop.load(Ordering::Relaxed) == true { break; }
+            match stream {
+                Ok(stream) => {
+                    println!("CENTRAL: got a new debug connection");
+                    state.lock().unwrap().add_debugger_from_stream(stream.try_clone().unwrap(), tx.clone(), stop.clone());
+                }
+                Err(e) => {
+                    error!("error: {}",e);
+                }
+            }
+        }
+        drop(listener);
+    });
 }

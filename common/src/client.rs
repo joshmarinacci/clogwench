@@ -39,11 +39,11 @@ impl ClientConnection {
                         loop {
                             match APICommand::deserialize(&mut de) {
                                 Ok(cmd) => {
-                                    println!("demo-clickgrid received command {:?}", cmd);
+                                    println!("client received command {:?}", cmd);
                                     in_tx.send(cmd).unwrap();
                                 }
                                 Err(e) => {
-                                    println!("error deserializing from demo-clickgrid {:?}", e);
+                                    println!("error deserializing from client {:?}", e);
                                     break;
                                 }
                             }

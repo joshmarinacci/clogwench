@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use crate::events::{KeyDownEvent, KeyUpEvent};
+use crate::events::{KeyDownEvent, KeyUpEvent, MouseDownEvent};
 
 pub mod client;
 pub mod events;
@@ -129,6 +129,8 @@ pub struct OpenWindowResponse {
 pub enum APICommand {
     AppConnect(HelloApp),
     AppConnectResponse(HelloAppResponse),
+    DebugConnect(DebugMessage),
+    DebugResponse(DebugMessage),
 
     WMConnect(HelloWindowManager),
     WMConnectResponse(HelloWindowManagerResponse),
@@ -246,3 +248,30 @@ impl Rect {
         return Point::init(x,y);
     }
 }
+
+
+pub const DEBUG_PORT:i32 = 3335;
+pub const WINDOW_MANAGER_PORT:i32 = 3334;
+pub const APP_MANAGER_PORT:i32 = 3333;
+
+
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub enum DebugMessage {
+    HelloDebugger,
+    HelloDebuggerResponse,
+    ServerStarted,
+    ServerStopped,
+    WindowManagerConnected,
+    WindowManagerDisconnected,
+    AppConnected(String),
+    AppDisconnected(String),
+    WindowOpened(String),
+    WindowClosed(String),
+    BackgroundReceivedMouseEvent,
+    WindowFocusChanged(String),
+    RequestServerShutdown,
+    AppLog(String),
+    FakeMouseEvent(MouseDownEvent)
+}
+

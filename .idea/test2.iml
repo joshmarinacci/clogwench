@@ -11,12 +11,13 @@
       <sourceFolder url="file://$MODULE_DIR$/tools-input/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/common-wm/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/graphics_tests/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/devtools/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/plat/native-linux/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/plat/native-macos/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/plat/native/linux/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/plat/native/macos/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/plat/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/devtools/mainmain/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/devtools/runner/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/temp" />
       <excludeFolder url="file://$MODULE_DIR$/.tmp" />
       <excludeFolder url="file://$MODULE_DIR$/tmp" />
