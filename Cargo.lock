@@ -250,6 +250,8 @@ name = "demo-moveplayer"
 version = "0.1.0"
 dependencies = [
  "common",
+ "cool-logger",
+ "log",
  "serde",
  "serde_json",
  "uuid",

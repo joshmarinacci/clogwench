@@ -47,6 +47,8 @@ impl FromStr for WMType {
 struct Cli {
     #[structopt(long)]
     wmtype: WMType,
+    #[structopt(short, long)]
+    test:bool,
 }
 
 fn init_setup() -> Cli {
@@ -70,54 +72,54 @@ fn main() -> Result<(),String> {
 
     wait(1000);
 
-    let test_handler = spawn({
-        move || {
-            // wait for Debug::window_manager_connected
-            info!("test: test thread waiting for window manager connected");
-            debug_channel.wait_for(DebugMessage::WindowManagerConnected);
+    if args.test {
+        let test_handler = spawn({
+            move || {
+                // wait for Debug::window_manager_connected
+                info!("test: test thread waiting for window manager connected");
+                debug_channel.wait_for(DebugMessage::WindowManagerConnected);
 
-            // wait(4000);
-            info!("test: starting the app");
+                // wait(4000);
+                info!("test: starting the app");
 
-            // start demo click grid. opens window at 50,50 to 250,250
-            let mut app_thread = start_app("demo-click-grid");
-            // wait for the app to start
-            debug_channel.wait_for(DebugMessage::AppConnected(String::from("demo-click-grid")));
-            info!("test: app connected");
+                // start demo click grid. opens window at 50,50 to 250,250
+                let mut app_thread = start_app("demo-click-grid");
+                // wait for the app to start
+                debug_channel.wait_for(DebugMessage::AppConnected(String::from("demo-click-grid")));
+                info!("test: app connected");
 
-            // send wait for the window to open
-            debug_channel.wait_for(DebugMessage::WindowOpened(String::from("demo-click-grid")));
-            info!("test: app window open");
-            // send fake click to the background
-            // debug_channel.send_mouse_event(MouseDownEvent::init_primary(600,500));
-            // wait for debug::background received click
-            // debug_channel.wait_for(DebugMessage::BackgroundReceivedMouseEvent);
-            // send fake click to window
-            // debug_channel.send_mouse_event(MouseDownEvent::init_primary(200,200));
-            // wait for debug::focused window changed, appname == name passed to demo click grid)
-            // debug_channel.wait_for(DebugMessage::WindowFocusChanged(String::from("demo-click-grid")));
-            // app receives click. sends out a debug log event saying it got a click
-            // wait for debug log event from that appname.
-            // debug_channel.wait_for(DebugMessage::AppLog(String::from("input-received")));
+                // send wait for the window to open
+                debug_channel.wait_for(DebugMessage::WindowOpened(String::from("demo-click-grid")));
+                info!("test: app window open");
+                // send fake click to the background
+                // debug_channel.send_mouse_event(MouseDownEvent::init_primary(600,500));
+                // wait for debug::background received click
+                // debug_channel.wait_for(DebugMessage::BackgroundReceivedMouseEvent);
+                // send fake click to window
+                // debug_channel.send_mouse_event(MouseDownEvent::init_primary(200,200));
+                // wait for debug::focused window changed, appname == name passed to demo click grid)
+                // debug_channel.wait_for(DebugMessage::WindowFocusChanged(String::from("demo-click-grid")));
+                // app receives click. sends out a debug log event saying it got a click
+                // wait for debug log event from that appname.
+                // debug_channel.wait_for(DebugMessage::AppLog(String::from("input-received")));
 
-            //request a screen capture
-            debug_channel.send(DebugMessage::ScreenCapture(Rect::from_ints(0,0,500,500),String::from("path.png")));
-            debug_channel.wait_for(DebugMessage::ScreenCaptureResponse());
-            info!("waiting 5 seconds");
-            wait(5000);
-            info!("RUNNER: killing the central server");
-            debug_channel.send(DebugMessage::RequestServerShutdown);
-            wait(5000);
-            info!("sending a process kill in case its still running");
-            debug_channel.child.kill().unwrap();
+                //request a screen capture
+                debug_channel.send(DebugMessage::ScreenCapture(Rect::from_ints(0, 0, 500, 500), String::from("path.png")));
+                debug_channel.wait_for(DebugMessage::ScreenCaptureResponse());
+                info!("waiting 5 seconds");
+                wait(5000);
+                info!("RUNNER: killing the central server");
+                debug_channel.send(DebugMessage::RequestServerShutdown);
+                wait(5000);
+                info!("sending a process kill in case its still running");
+                debug_channel.child.kill().unwrap();
 
-            app_thread.child.kill().unwrap();
-        }
-    });
-
-
-    // start window manager
-    info!("the test thread is going. now lets start the window manager on the main thread");
+                app_thread.child.kill().unwrap();
+            }
+        });
+    } else {
+        info!("Lets just dump debug messages instead of running a test");
+    }
 
     match args.wmtype {
         WMType::Native => {
@@ -137,7 +139,6 @@ fn main() -> Result<(),String> {
                 info!("WM Native shutting down");
                 wm.plat.shutdown();
             }
-            info!("WM Native shut down");
             // pt("window manager fully connected to the central server");
 
         }
@@ -171,7 +172,7 @@ fn main() -> Result<(),String> {
     // exit
 
     info!("waiting for the test handler to finish");
-    test_handler.join();
+    // test_handler.join();
     info!("runner fully done");
 
     Ok(())

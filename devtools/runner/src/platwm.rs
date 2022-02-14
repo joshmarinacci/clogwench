@@ -4,10 +4,13 @@ use std::path::PathBuf;
 use std::sync::{Arc, mpsc};
 use std::sync::atomic::AtomicBool;
 use std::sync::mpsc::{Receiver, Sender};
+use std::thread;
 use std::thread::{JoinHandle, spawn};
+use std::time::Duration;
+use log::info;
 use serde::Deserialize;
 use common::{APICommand, ARGBColor, DebugMessage, HelloWindowManager, IncomingMessage, Point, Rect, WINDOW_MANAGER_PORT};
-use common::events::{MouseButton, MouseDownEvent};
+use common::events::{KeyCode, MouseButton, MouseDownEvent};
 use common::graphics::export_to_png;
 use common_wm::{OutgoingMessage, WindowManagerState};
 use plat::{make_plat, Plat};
@@ -22,10 +25,6 @@ pub struct PlatformWindowManager {
     pub rx_in: Receiver<IncomingMessage>,
 }
 
-fn pt(text:&str) {
-    println!("Native WM: {}",text);
-}
-
 impl PlatformWindowManager {
     pub(crate) fn init(w: i32, h: i32) -> Option<PlatformWindowManager> {
         let conn_string = format!("localhost:{}",WINDOW_MANAGER_PORT);
@@ -33,7 +32,7 @@ impl PlatformWindowManager {
 
         match TcpStream::connect(conn_string) {
             Ok(stream) => {
-                pt("HWM: connected to the central server");
+                info!("connected to the central server");
 
                 let (tx_out, rx_out) =mpsc::channel::<OutgoingMessage>();
                 let (tx_in, mut rx_in) = mpsc::channel::<IncomingMessage>();
@@ -44,25 +43,25 @@ impl PlatformWindowManager {
                     move || {
                         loop {
                             for out in &rx_out {
-                                pt(&format!("got a message to send back out {:?}", out));
+                                info!("got a message to send back out {:?}", out);
                                 let im = IncomingMessage {
                                     source: Default::default(),
                                     command: out.command
                                 };
-                                pt(&format!("sending out message {:?}", im));
+                                info!("sending out message {:?}", im);
                                 let data = serde_json::to_string(&im).unwrap();
-                                pt(&format!("sending data {:?}", data));
+                                info!("sending data {:?}", data);
                                 stream.write_all(data.as_ref()).unwrap();
                             }
                         }
-                        pt("sending thread is done");
+                        info!("sending thread is done");
                     }
                 });
                 let receiving_handle = spawn({
                     let stream = stream.try_clone().unwrap();
                     let tx_in = tx_in.clone();
                     move || {
-                        pt("receiving thread starting");
+                        info!("receiving thread starting");
                         let mut de = serde_json::Deserializer::from_reader(stream);
                         loop {
                             match IncomingMessage::deserialize(&mut de) {
@@ -73,19 +72,19 @@ impl PlatformWindowManager {
                                             // pt("sent just fine");
                                         }
                                         Err(e) => {
-                                            pt("had an error!!");
+                                            info!("had an error!!");
                                             println!("err {}",e);
                                             break;
                                         }
                                     }
                                 }
                                 Err(e) => {
-                                    pt(&format!("error deserializing {:?}", e));
+                                    info!("error deserializing {:?}", e);
                                     break;
                                 }
                             }
                         }
-                        pt("receiving thread is done");
+                        info!("receiving thread is done");
                     }
                 });
 
@@ -104,7 +103,7 @@ impl PlatformWindowManager {
                 })
             }
             _ => {
-                pt(&format!("could not connect to server at"));
+                info!("could not connect to server at");
                 None
             }
         }
@@ -119,7 +118,7 @@ pub fn main_service_loop(state: &mut WindowManagerState, plat: &mut Plat, rx_in:
         // pt(&format!("received {:?}", cmd));
         match cmd.command {
             APICommand::SystemShutdown => {
-                pt("the core is shutting down. bye");
+                info!("the core is shutting down. bye");
                 return false;
             }
             APICommand::AppConnectResponse(res) => {
@@ -145,10 +144,10 @@ pub fn main_service_loop(state: &mut WindowManagerState, plat: &mut Plat, rx_in:
                 //ignore mouse move
             }
             APICommand::MouseDown(evt) => {
-                pt("pretending to process a mouse down. lets see what becomes focused?");
+                info!("pretending to process a mouse down. lets see what becomes focused?");
                 let point = Point::init(evt.x, evt.y);
                 if let Some(win) = state.pick_window_at(point) {
-                    pt("picked a window");
+                    info!("picked a window");
                     let wid = win.id.clone();
                     let aid = win.owner.clone();
                     state.set_focused_window(wid);
@@ -168,16 +167,32 @@ pub fn main_service_loop(state: &mut WindowManagerState, plat: &mut Plat, rx_in:
                         })
                     }).unwrap();
                 } else {
-                    pt("clicked on nothing. sending background debug event");
+                    info!("clicked on nothing. sending background debug event");
                     tx_out.send(OutgoingMessage {
                         recipient: Default::default(),
                         command: APICommand::Debug(DebugMessage::BackgroundReceivedMouseEvent)
                     }).unwrap();
                 }
             }
+            APICommand::KeyDown(e) => {
+                match e.key {
+                    KeyCode::LETTER_Q => {
+                        info!("received q. shutting down");
+                        tx_out.send(OutgoingMessage{
+                            recipient:Default::default(),
+                            command: APICommand::Debug(DebugMessage::RequestServerShutdown)
+                        }).unwrap();
+                        thread::sleep(Duration::from_millis(500));
+                        return false;
+                    }
+                    _ => {
+                        info!("got a key down event");
+                    }
+                }
+            }
             APICommand::Debug(DebugMessage::ScreenCapture(rect, str)) => {
                 let pth = PathBuf::from("./screencapture.png");
-                println!("rect for screen capture {:?}",pth);
+                info!("rect for screen capture {:?}",pth);
                 // export_to_png(&buf, &pth);
                 tx_out.send(OutgoingMessage {
                     recipient: Default::default(),
@@ -188,7 +203,7 @@ pub fn main_service_loop(state: &mut WindowManagerState, plat: &mut Plat, rx_in:
                 // pt("the central said hi back");
             }
             _ => {
-                pt(&format!("unhandled message {:?}", cmd));
+                info!("unhandled message {:?}", cmd);
             }
         };
     }

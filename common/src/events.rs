@@ -14,6 +14,7 @@ pub enum KeyCode {
     SPACE,
     ENTER,
     LETTER_P,
+    LETTER_Q,
 
     MOUSE_PRIMARY,
 }

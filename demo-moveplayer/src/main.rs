@@ -1,8 +1,12 @@
+use cool_logger::CoolLogger;
+use log::{info, LevelFilter, set_logger};
 use std::sync::mpsc::RecvError;
 use common::{APICommand, ARGBColor, BLACK, DebugMessage, DrawRectCommand, HelloApp, OpenWindowCommand, Rect, WHITE};
 use common::client::ClientConnection;
 use common::events::KeyCode;
 use uuid::Uuid;
+
+static COOL_LOGGER:CoolLogger = CoolLogger;
 
 fn redraw(client: &ClientConnection, appid: Uuid, winid: Uuid, bounds: Rect, px: i32, py:i32) {
     //draw background and wait
@@ -21,6 +25,9 @@ fn redraw(client: &ClientConnection, appid: Uuid, winid: Uuid, bounds: Rect, px:
     }));
 }
 fn main() {
+    set_logger(&COOL_LOGGER).map(|()|log::set_max_level(LevelFilter::Info));
+
+    info!("test app starting and connecting");
     let bounds = Rect::from_ints(50,50,300,300);
     let mut px = 50;
     let mut py = 50;
