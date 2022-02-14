@@ -83,11 +83,12 @@ impl CentralState {
         thread::spawn(move || {
             info!("app thread starting: {}",appid);
             println!("CENTRAL: app {} thread starting",appid);
+            stream.set_nonblocking(false).unwrap();
             let stream2 = stream.try_clone().unwrap();
             let mut de = serde_json::Deserializer::from_reader(stream);
             loop {
                 if stop.load(Ordering::Relaxed) == true {
-                    info!("demo-clickgrid thread stopping");
+                    println!("CENTRAL: app thread stopping");
                     break;
                 }
                 match APICommand::deserialize(&mut de) {
@@ -112,12 +113,13 @@ impl CentralState {
     fn spawn_wm_handler(&self, wm_id: Uuid, stream: TcpStream, sender: Sender<IncomingMessage>, stop: Arc<AtomicBool>) -> JoinHandle<()> {
         thread::spawn(move ||{
             println!("CENTRAL: WM thread starting: {}",wm_id);
+            stream.set_nonblocking(false).unwrap();
             // info!("wm thread starting: {}",wm_id);
             let stream2 = stream.try_clone().unwrap();
             let mut de = serde_json::Deserializer::from_reader(stream);
             loop {
                 if stop.load(Ordering::Relaxed) == true {
-                    info!("wm thread stopping");
+                    println!("CENTRAL: wm thread stopping");
                     stream2.shutdown(Shutdown::Both);
                     break;
                 }
@@ -139,6 +141,7 @@ impl CentralState {
     fn spawn_debugger_handler(&self, id:Uuid, stream: TcpStream, sender: Sender<IncomingMessage>, stop: Arc<AtomicBool>) -> JoinHandle<()>{
         thread::spawn(move ||{
             println!("CENTRAL: debugger thread starting: {}",id);
+            stream.set_nonblocking(false).unwrap();
             let stream2 = stream.try_clone().unwrap();
             let mut de = serde_json::Deserializer::from_reader(stream);
             loop {
@@ -150,10 +153,13 @@ impl CentralState {
                 match DebugMessage::deserialize(&mut de) {
                     Ok(cmd) => {
                         println!("CENTRAL: received debugger command {:?}",cmd);
-                        sender.send(IncomingMessage{source:id, command:APICommand::DebugConnect(cmd)}).unwrap();
+                        sender.send(IncomingMessage{source:id, command:APICommand::Debug(cmd)}).unwrap();
                     }
                     Err(e) => {
-                        println!("CENTRAL: deserializing from debugger {:?}",e);
+                        // if e.kind() == io::ErrorKind::WouldBlock {
+                            // println!("need to loop again, {}",name);
+                        // } else {
+                        println!("CENTRAL: error deserializing from debugger {:?}",e);
                         stream2.shutdown(Shutdown::Both);
                         break;
                     }
@@ -189,7 +195,7 @@ impl CentralState {
         };
         let data = serde_json::to_string(&im).unwrap();
         let mut wm = self.wms.iter_mut().find(|a|a.id == id).unwrap();
-        wm.stream.write_all(data.as_ref()).expect("failed to send rect");
+        wm.stream.write_all(data.as_ref()).expect("failed to send data to wm");
     }
     fn send_to_all_wm(&mut self, resp: APICommand) {
         println!("CENTRAL: sending to all wm {:?}",resp);
@@ -252,31 +258,31 @@ fn start_router(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, state: Arc
     thread::spawn(move||{
         println!("CENTRAL: router thread starting");
         for msg in rx {
-            // println!("CENTRAL: incoming message {:?}",msg);
+            println!("CENTRAL: incoming message {:?}",msg);
             match msg.command {
-                APICommand::DebugConnect(DebugMessage::HelloDebugger) => {
+                APICommand::Debug(DebugMessage::HelloDebugger) => {
                     let resp = DebugMessage::HelloDebuggerResponse;
                     state.lock().unwrap().send_to_debugger(resp);
                 }
-                APICommand::DebugConnect(DebugMessage::FakeMouseEvent(evt)) => {
+                APICommand::Debug(DebugMessage::FakeMouseEvent(evt)) => {
                     state.lock().unwrap().send_to_all_wm(APICommand::MouseDown(evt));
                 }
-                APICommand::DebugConnect(DebugMessage::BackgroundReceivedMouseEvent) => {
+                APICommand::Debug(DebugMessage::BackgroundReceivedMouseEvent) => {
                     state.lock().unwrap().send_to_debugger(DebugMessage::BackgroundReceivedMouseEvent);
                 }
-                APICommand::DebugConnect(DebugMessage::WindowFocusChanged(str)) => {
+                APICommand::Debug(DebugMessage::WindowFocusChanged(str)) => {
                     state.lock().unwrap().send_to_debugger(DebugMessage::WindowFocusChanged(str));
                 }
-                APICommand::DebugConnect(DebugMessage::AppLog(str)) => {
+                APICommand::Debug(DebugMessage::AppLog(str)) => {
                     state.lock().unwrap().send_to_debugger(DebugMessage::AppLog(str));
                 }
-                APICommand::DebugConnect(DebugMessage::ScreenCapture(rect,str)) => {
-                    state.lock().unwrap().send_to_all_wm(APICommand::DebugConnect(DebugMessage::ScreenCapture(rect,str)));
+                APICommand::Debug(DebugMessage::ScreenCapture(rect, str)) => {
+                    state.lock().unwrap().send_to_all_wm(APICommand::Debug(DebugMessage::ScreenCapture(rect, str)));
                 }
-                APICommand::DebugConnect(DebugMessage::ScreenCaptureResponse()) => {
+                APICommand::Debug(DebugMessage::ScreenCaptureResponse()) => {
                     state.lock().unwrap().send_to_debugger(DebugMessage::ScreenCaptureResponse());
                 }
-                APICommand::DebugConnect(DebugMessage::RequestServerShutdown) => {
+                APICommand::Debug(DebugMessage::RequestServerShutdown) => {
                     {
                         let mut st = state.lock().unwrap();
                         println!("CENTRAL sending out shutdown messages and waiting a second");
@@ -313,7 +319,6 @@ fn start_router(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, state: Arc
                     state.lock().unwrap().send_to_debugger(DebugMessage::WindowOpened(String::from("foo")));
                 },
                 APICommand::WMConnect(cmd) => {
-                    // info!("Window manager connected {}",msg.source);
                     let resp = APICommand::WMConnectResponse(HelloWindowManagerResponse{
                         wm_id:msg.source
                     });
@@ -409,7 +414,7 @@ fn start_network_interface<F>(stop: Arc<AtomicBool>,
             }
             match listener.accept() {
                 Ok((stream,add)) => {
-                    println!("accepting {} client from {}",name,add);
+                    println!("CENTRAL: {} thread, accepting client from {}",name,add);
                     cb(stream,tx.clone(),stop.clone(), state.clone());
                     // state.lock().unwrap().add_app_from_stream(stream.try_clone().unwrap(), tx.clone(), stop.clone());
                 }

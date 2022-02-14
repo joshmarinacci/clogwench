@@ -21,20 +21,24 @@ impl CentralConnection {
     pub(crate) fn send_mouse_event(&mut self, evt: MouseDownEvent) {
         self.send(DebugMessage::FakeMouseEvent(evt));
     }
-    pub(crate) fn wait_for(&self, msg: DebugMessage) {
+    pub(crate) fn wait_for(&self, msg: DebugMessage) -> Result<DebugMessage,String> {
         println!("RUNNER: waiting for {:?}",msg);
         let mut de = serde_json::Deserializer::from_reader(&self.master_stream);
         match DebugMessage::deserialize(&mut de) {
             Ok(cmd) => {
+                let cmd2 = cmd.clone();
                 println!("RUNNER: received command {:?}", cmd);
-                if matches!(cmd,msg) {
+                if matches!(cmd2,msg) {
                     println!("they match!");
+                    return Ok(cmd.clone())
                 } else {
                     println!("incorrect message!");
+                    return Ok(cmd.clone())
                 }
             }
             Err(e) => {
                 println!("error deserializing {:?}", e);
+                return Err(e.to_string());
             }
         }
     }
@@ -43,7 +47,7 @@ impl CentralConnection {
         println!("RUNNER: sending out message {:?}", im);
         match serde_json::to_string(&im) {
             Ok(data) => {
-                println!("sending data {:?}", data);
+                // println!("sending data {:?}", data);
                 if let Err(e) = self.master_stream.write_all(data.as_ref()) {
                     println!("error sending data back to server {}",e);
                     // return None
@@ -59,7 +63,7 @@ impl CentralConnection {
     }
 }
 
-pub fn start_central_server() -> Option<CentralConnection> {
+pub fn start_central_server() -> Result<CentralConnection,String> {
     let (sender,receiver):(Sender<DebugMessage>,Receiver<DebugMessage>) = mpsc::channel();
     let mut child = Command::new("../../target/debug/central")
         // .stdin(Stdio::null())
@@ -71,25 +75,25 @@ pub fn start_central_server() -> Option<CentralConnection> {
         .spawn()
         .expect("child process failed to start")
         ;
-    println!("child started");
+    println!("RUNNER: started CENTRAL process");
 
-    crate::wait(1000);
+    crate::wait(5000);
+    println!("waited 5000 ms.");
 
-    println!("connecting to the debug port");
+    // println!("connecting to the debug port");
     let conn_string = format!("localhost:{}",DEBUG_PORT);
     match TcpStream::connect(conn_string) {
         Ok(mut master_stream) => {
             let (tx_out, rx_out) = mpsc::channel::<DebugMessage>();
             // self.master_stream = master_stream;
-            return Some(CentralConnection {
+            return Ok(CentralConnection {
                 receiver,
                 child,
                 master_stream,
             })
         }
         Err(e) => {
-            println!("error connecting to the central server {:?}",e);
-            return None
+            return Err(e.to_string());
         }
     }
 

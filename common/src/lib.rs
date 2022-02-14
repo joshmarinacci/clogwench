@@ -130,8 +130,7 @@ pub struct OpenWindowResponse {
 pub enum APICommand {
     AppConnect(HelloApp),
     AppConnectResponse(HelloAppResponse),
-    DebugConnect(DebugMessage),
-    DebugResponse(DebugMessage),
+    Debug(DebugMessage),
 
     WMConnect(HelloWindowManager),
     WMConnectResponse(HelloWindowManagerResponse),

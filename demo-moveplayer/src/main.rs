@@ -67,10 +67,15 @@ fn main() {
                 redraw(&client, appid, winid, bounds, px, py);
             }
             APICommand::MouseDown(md) => {
-                client.send(APICommand::DebugConnect(DebugMessage::AppLog(String::from("got-mouse-event"))));
+                client.send(APICommand::Debug(DebugMessage::AppLog(String::from("got-mouse-event"))));
+            }
+            APICommand::SystemShutdown => {
+                println!("CLIENT app:  system is shutting down. bye!");
+                break;
             }
             _ => {}
         }
     }
+    println!("CLIENT APP ending");
 
 }
