@@ -10,7 +10,7 @@ use std::time::Duration;
 use log::info;
 use serde::Deserialize;
 use common::{APICommand, ARGBColor, DebugMessage, HelloWindowManager, IncomingMessage, Point, Rect, WINDOW_MANAGER_PORT};
-use common::events::{KeyCode, MouseButton, MouseDownEvent};
+use common::events::{KeyCode, KeyDownEvent, MouseButton, MouseDownEvent};
 use common::graphics::export_to_png;
 use common_wm::{OutgoingMessage, WindowManagerState};
 use plat::{make_plat, Plat};
@@ -43,14 +43,14 @@ impl PlatformWindowManager {
                     move || {
                         loop {
                             for out in &rx_out {
-                                info!("got a message to send back out {:?}", out);
+                                // info!("got a message to send back out {:?}", out);
                                 let im = IncomingMessage {
                                     source: Default::default(),
                                     command: out.command
                                 };
-                                info!("sending out message {:?}", im);
+                                // info!("sending out message {:?}", im);
                                 let data = serde_json::to_string(&im).unwrap();
-                                info!("sending data {:?}", data);
+                                // info!("sending data {:?}", data);
                                 stream.write_all(data.as_ref()).unwrap();
                             }
                         }
@@ -144,7 +144,6 @@ pub fn main_service_loop(state: &mut WindowManagerState, plat: &mut Plat, rx_in:
                 //ignore mouse move
             }
             APICommand::MouseDown(evt) => {
-                info!("pretending to process a mouse down. lets see what becomes focused?");
                 let point = Point::init(evt.x, evt.y);
                 if let Some(win) = state.pick_window_at(point) {
                     info!("picked a window");
@@ -174,10 +173,9 @@ pub fn main_service_loop(state: &mut WindowManagerState, plat: &mut Plat, rx_in:
                     }).unwrap();
                 }
             }
-            APICommand::KeyDown(e) => {
-                match e.key {
-                    KeyCode::LETTER_Q => {
-                        info!("received q. shutting down");
+            APICommand::KeyDown(evt) => {
+                match evt.key {
+                    KeyCode::ESC => {
                         tx_out.send(OutgoingMessage{
                             recipient:Default::default(),
                             command: APICommand::Debug(DebugMessage::RequestServerShutdown)
@@ -187,6 +185,21 @@ pub fn main_service_loop(state: &mut WindowManagerState, plat: &mut Plat, rx_in:
                     }
                     _ => {
                         info!("got a key down event");
+                        if let Some(id) = state.get_focused_window() {
+                            if let Some(win) = state.lookup_window(*id) {
+                                let wid = win.id.clone();
+                                let aid = win.owner.clone();
+                                tx_out.send(OutgoingMessage {
+                                    recipient: aid,
+                                    command: APICommand::KeyDown(KeyDownEvent {
+                                        app_id: aid,
+                                        window_id: wid,
+                                        original_timestamp: evt.original_timestamp,
+                                        key: evt.key
+                                    })
+                                }).unwrap();
+                            }
+                        }
                     }
                 }
             }

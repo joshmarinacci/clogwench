@@ -60,10 +60,10 @@ fn main() {
     redraw(&client, appid, winid, bounds, px, py);
 
     for cmd in &client.rx {
-        println!("got an event {:?}",cmd);
+        info!("got an event {:?}",cmd);
         match cmd {
             APICommand::KeyDown(kd) => {
-                println!("got a keydown event");
+                info!("got a keydown event");
                 match kd.key {
                     KeyCode::ARROW_RIGHT => px += 1,
                     KeyCode::ARROW_LEFT => px -= 1,
@@ -78,7 +78,7 @@ fn main() {
                 client.send(APICommand::Debug(DebugMessage::AppLog(String::from("got-mouse-event"))));
             }
             APICommand::SystemShutdown => {
-                println!("CLIENT app:  system is shutting down. bye!");
+                info!("CLIENT app:  system is shutting down. bye!");
                 client.send(APICommand::Debug(DebugMessage::AppLog(String::from("got-shutdown"))));
                 break;
             }

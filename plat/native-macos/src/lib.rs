@@ -65,15 +65,15 @@ impl Plat {
         // info!("mac doing events");
         for event in self.event_pump.poll_iter() {
             match event {
-                Event::Quit { .. }
-                | Event::KeyDown {
-                    keycode: Some(Keycode::Escape),
-                    ..
-                } => {
-                    info!("quitting");
-                    self.stop.store(true, Ordering::Relaxed);
-                    break;
-                },
+                // Event::Quit { .. }
+                // | Event::KeyDown {
+                //     keycode: Some(Keycode::Escape),
+                //     ..
+                // } => {
+                //     info!("quitting");
+                //     self.stop.store(true, Ordering::Relaxed);
+                //     break;
+                // },
                 Event::KeyDown {keycode,keymod,..} => {
                     if let Some(kk) = keycode {
                         let cmd = IncomingMessage {
@@ -195,6 +195,7 @@ impl Plat {
 
 fn sdl_to_common(kc: Keycode) -> KeyCode {
     match kc {
+        Keycode::Escape => KeyCode::ESC,
         Keycode::Left => KeyCode::ARROW_LEFT,
         Keycode::Right => KeyCode::ARROW_RIGHT,
         Keycode::Up => KeyCode::ARROW_UP,

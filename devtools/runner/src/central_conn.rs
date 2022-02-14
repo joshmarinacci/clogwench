@@ -6,6 +6,8 @@ use std::sync::mpsc;
 use common::events::MouseDownEvent;
 use serde::Deserialize;
 use std::io::Write;
+use std::thread;
+use std::time::Duration;
 use log::{error, info};
 
 pub struct CentralConnection {
@@ -90,23 +92,22 @@ pub fn start_central_server() -> Result<CentralConnection,String> {
         ;
     info!("started CENTRAL process");
 
-    crate::wait(5000);
-    info!("waited 5000 ms.");
-
-    // println!("connecting to the debug port");
-    let conn_string = format!("localhost:{}",DEBUG_PORT);
-    match TcpStream::connect(conn_string) {
-        Ok(mut master_stream) => {
-            let (tx_out, rx_out) = mpsc::channel::<DebugMessage>();
-            // self.master_stream = master_stream;
-            return Ok(CentralConnection {
-                receiver,
-                child,
-                master_stream,
-            })
-        }
-        Err(e) => {
-            return Err(e.to_string());
+    loop {
+        let conn_string = format!("localhost:{}", DEBUG_PORT);
+        match TcpStream::connect(conn_string) {
+            Ok(mut master_stream) => {
+                let (tx_out, rx_out) = mpsc::channel::<DebugMessage>();
+                return Ok(CentralConnection {
+                    receiver,
+                    child,
+                    master_stream,
+                })
+            }
+            Err(e) => {
+                info!("cant connect yet. wait 10 ms");
+                thread::sleep(Duration::from_millis(10));
+                // return Err(e.to_string());
+            }
         }
     }
 

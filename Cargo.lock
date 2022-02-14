@@ -182,6 +182,7 @@ dependencies = [
 name = "common"
 version = "0.1.0"
 dependencies = [
+ "log",
  "png",
  "serde",
  "serde_json",

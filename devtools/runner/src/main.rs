@@ -70,7 +70,7 @@ fn main() -> Result<(),String> {
     debug_channel.wait_for(DebugMessage::HelloDebuggerResponse);
     info!("runner: got back the response!");
 
-    wait(1000);
+    // wait(1000);
 
     if args.test {
         let test_handler = spawn({

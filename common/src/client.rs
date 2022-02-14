@@ -4,6 +4,7 @@ use std::thread;
 use std::sync::mpsc::{Receiver, RecvError, Sender};
 use serde::Deserialize;
 use std::io::Write;
+use log::info;
 use crate::APICommand;
 
 pub struct ClientConnection {
@@ -14,6 +15,7 @@ pub struct ClientConnection {
 
 impl ClientConnection {
     pub fn send(&self, cmd: APICommand) {
+        info!("sending: {:?}",cmd);;
         self.tx.send(cmd).unwrap();
     }
     pub fn send_and_wait(&self, cmd:APICommand) -> Result<APICommand, RecvError> {
