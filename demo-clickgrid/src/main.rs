@@ -22,7 +22,7 @@ fn main()  {
                         bounds: Rect::from_ints(0,0,20,30),
                     });
                     let data = serde_json::to_string(&cmd).unwrap();
-                    l(&format!("sending data {:?}",data));
+                    // l(&format!("sending data {:?}",data));
                     stream1.write_all(data.as_ref()).expect("failed to send rect");
                     thread::sleep(Duration::from_millis(1000));
                 }

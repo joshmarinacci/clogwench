@@ -57,7 +57,7 @@ impl ClientConnection {
                         println!("sending thread starting");
                         for cmd in out_rx {
                             let data = serde_json::to_string(&cmd).unwrap();
-                            println!("sending data {:?}", data);
+                            // println!("sending data {:?}", data);
                             stream.write_all(data.as_ref()).expect("failed to send rect");
                         }
                     }

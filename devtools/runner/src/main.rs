@@ -73,13 +73,13 @@ fn main() -> Result<(),String> {
             debug_channel.wait_for(DebugMessage::WindowManagerConnected);
 
             // wait(4000);
-            // println!("runner: starting the app");
+            println!("runner: starting the app");
 
             // start demo click grid. opens window at 50,50 to 250,250
-            // let app_thread = start_app("demo-click-grid");
+            let app_thread = start_app("demo-click-grid");
             // wait for debug::app_started(name === name passed to demo click grid)
-            // debug_channel.wait_for(DebugMessage::AppConnected(String::from("demo-click-grid")));
-            // println!("got the message app connected?");
+            debug_channel.wait_for(DebugMessage::AppConnected(String::from("demo-click-grid")));
+            println!("RUNNER: got the message app connected?");
             // send for debug::window_opened(app name == name passed to demo click grid)
             // debug_channel.wait_for(DebugMessage::WindowOpened(String::from("demo-click-grid")));
             // wait(1000);
@@ -99,10 +99,10 @@ fn main() -> Result<(),String> {
             /*
             debug_channel.send(DebugMessage::ScreenCapture(Rect::from_ints(0,0,500,500),String::from("path.png")));
             debug_channel.wait_for(DebugMessage::ScreenCaptureResponse());
+             */
             println!("waiting 5 seconds");
             wait(5000);
             println!("killing the central server");
-             */
             debug_channel.send(DebugMessage::RequestServerShutdown);
             wait(5000);
             println!("sending a kill in case its still running");
@@ -129,8 +129,10 @@ fn main() -> Result<(),String> {
                     let keep_going = main_service_loop(&mut wm.state, &mut wm.plat, &mut wm.rx_in, &mut wm.tx_out);
                     if !keep_going { break; }
                 }
+                println!("RUNNER: WM Native shutting down");
                 wm.plat.shutdown();
             }
+            println!("RUNNER: WM Native shut down");
             // pt("window manager fully connected to the central server");
 
         }

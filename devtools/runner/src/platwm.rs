@@ -67,15 +67,15 @@ impl PlatformWindowManager {
                         loop {
                             match IncomingMessage::deserialize(&mut de) {
                                 Ok(cmd) => {
-                                    pt(&format!("received command {:?}", cmd));
+                                    // pt(&format!("received command {:?}", cmd));
                                     match tx_in.send(cmd) {
                                         Ok(_) => {
                                             pt("sent just fine");
                                         }
                                         Err(e) => {
                                             pt("had an error!!");
-                                            println!("e {}",e);
-                                            // break;
+                                            println!("err {}",e);
+                                            break;
                                         }
                                     }
                                 }
@@ -113,10 +113,15 @@ impl PlatformWindowManager {
 }
 
 pub fn main_service_loop(state: &mut WindowManagerState, plat: &mut Plat, rx_in: &mut Receiver<IncomingMessage>, tx_out: &mut Sender<OutgoingMessage>) -> bool {
+    // println!("Native WM service loop");
     plat.service_input();
     for cmd in rx_in.try_iter() {
-        pt(&format!("received message {:?}", cmd));
+        pt(&format!("received {:?}", cmd));
         match cmd.command {
+            APICommand::SystemShutdown => {
+                pt("the core is shutting down. bye");
+                return false;
+            }
             APICommand::AppConnectResponse(res) => {
                 state.add_app(res.app_id);
             },
@@ -170,11 +175,14 @@ pub fn main_service_loop(state: &mut WindowManagerState, plat: &mut Plat, rx_in:
                     command: APICommand::Debug(DebugMessage::ScreenCaptureResponse()),
                 }).unwrap();
             }
+            APICommand::WMConnectResponse(res) => {
+                pt("the central said hi back");
+            }
             _ => {
                 pt(&format!("unhandled message {:?}", cmd));
             }
         };
     }
     plat.service_loop();
-    false
+    true
 }

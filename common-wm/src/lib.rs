@@ -243,7 +243,7 @@ pub fn start_wm_network_connection(stop: Arc<AtomicBool>, sender: Sender<Incomin
             println!("sending out message {:?}",im);
             match serde_json::to_string(&im) {
                 Ok(data) => {
-                    println!("sending data {:?}", data);
+                    // println!("sending data {:?}", data);
                     if let Err(e) = master_stream.write_all(data.as_ref()) {
                         error!("error sending data back to server {}",e);
                         return None
