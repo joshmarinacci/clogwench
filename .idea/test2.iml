@@ -18,6 +18,7 @@
       <sourceFolder url="file://$MODULE_DIR$/plat/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/devtools/mainmain/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/devtools/runner/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/test-log/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/temp" />
       <excludeFolder url="file://$MODULE_DIR$/.tmp" />
       <excludeFolder url="file://$MODULE_DIR$/tmp" />

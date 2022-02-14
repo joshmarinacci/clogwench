@@ -1202,6 +1202,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "test-log"
+version = "0.1.0"
+dependencies = [
+ "log",
+]
+
+[[package]]
 name = "test-wm"
 version = "0.1.0"
 dependencies = [

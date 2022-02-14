@@ -11,5 +11,6 @@ members = [
     "common",
     "plat",
     "devtools/mainmain",
-    "devtools/runner"
+    "devtools/runner",
+    "test-log",
 ]
