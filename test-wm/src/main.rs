@@ -98,7 +98,7 @@ fn sleep(dur: u64) {
 }
 
 fn start_test_app(stop: Arc<AtomicBool>) {
-    let mut child = Command::new("../target/debug/demo-moveplayer")
+    let mut child = Command::new("../target/debug/echo-app")
         .arg("--debug=true")
         .spawn()
         .expect("child process failed to start")

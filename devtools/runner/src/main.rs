@@ -119,6 +119,11 @@ fn main() -> Result<(),String> {
         });
     } else {
         info!("Lets just dump debug messages instead of running a test");
+        let test_handler = spawn(||{
+            info!("monitoring the debug log");
+            debug_channel.loop_until_done();
+        });
+
     }
 
     match args.wmtype {
@@ -197,7 +202,7 @@ impl ChildProxy {
 
 fn start_app(path: &str) -> ChildProxy {
     let (sender,receiver):(Sender<DebugMessage>,Receiver<DebugMessage>) = mpsc::channel();
-    let mut child = Command::new("../../target/debug/demo-moveplayer")
+    let mut child = Command::new("../../target/debug/echo-app")
         // .stdin(Stdio::null())
         // .stdout(Stdio::null())
         // .stdout(Stdio::inherit())

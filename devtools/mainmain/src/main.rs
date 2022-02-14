@@ -321,7 +321,7 @@ fn start_central_server(stop: Arc<AtomicBool>)  {
 fn start_test_app(stop: Arc<AtomicBool>) {
     info!("starting test app");
     thread::spawn(move||{
-        let mut child = Command::new("../target/debug/demo-moveplayer")
+        let mut child = Command::new("../target/debug/echo-app")
             .arg("--debug=true")
             .spawn()
             .expect("child process failed to start")

@@ -4,7 +4,7 @@ members = [
     "demo-clickgrid",
     "linux-wm",
     "test-wm",
-    "demo-moveplayer",
+    "echo-app",
     "central",
     "graphics_tests",
     "tools-input",

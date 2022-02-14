@@ -27,7 +27,7 @@ fn redraw(client: &ClientConnection, appid: Uuid, winid: Uuid, bounds: Rect, px:
 fn main() {
     set_logger(&COOL_LOGGER).map(|()|log::set_max_level(LevelFilter::Info));
 
-    info!("test app starting and connecting");
+    info!("echo app starting and connecting");
     let bounds = Rect::from_ints(50,50,300,300);
     let mut px = 50;
     let mut py = 50;
@@ -72,12 +72,14 @@ fn main() {
                     _ => {}
                 }
                 redraw(&client, appid, winid, bounds, px, py);
+                client.send(APICommand::Debug(DebugMessage::AppLog(String::from("got-keyboard-event"))));
             }
             APICommand::MouseDown(md) => {
                 client.send(APICommand::Debug(DebugMessage::AppLog(String::from("got-mouse-event"))));
             }
             APICommand::SystemShutdown => {
                 println!("CLIENT app:  system is shutting down. bye!");
+                client.send(APICommand::Debug(DebugMessage::AppLog(String::from("got-shutdown"))));
                 break;
             }
             _ => {}

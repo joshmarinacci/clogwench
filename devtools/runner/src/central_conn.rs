@@ -16,9 +16,9 @@ pub struct CentralConnection {
 
 
 impl CentralConnection {
-    pub(crate) fn wait_join(&self) {
-        crate::wait(1000);
-    }
+    // pub(crate) fn wait_join(&self) {
+    //     crate::wait(1000);
+    // }
     pub(crate) fn send_mouse_event(&mut self, evt: MouseDownEvent) {
         self.send(DebugMessage::FakeMouseEvent(evt));
     }
@@ -42,6 +42,21 @@ impl CentralConnection {
             }
         }
     }
+    pub(crate) fn loop_until_done(self) {
+        let mut de = serde_json::Deserializer::from_reader(&self.master_stream);
+        loop {
+            match DebugMessage::deserialize(&mut de) {
+                Ok(cmd) => {
+                    let cmd2 = cmd.clone();
+                    info!("received command {:?}", cmd);
+                }
+                Err(e) => {
+                    error!("error deserializing {:?}", e);
+                    break;
+                }
+            }
+        }
+    }
     pub(crate) fn send(&mut self, im:DebugMessage) {
         // let im = IncomingMessage { source: Default::default(), command: APICommand::WMConnect(HelloWindowManager {})};
         info!("sending out message {:?}", im);
@@ -58,8 +73,6 @@ impl CentralConnection {
                 // return None
             }
         }
-
-
     }
 }
 

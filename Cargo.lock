@@ -246,18 +246,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "demo-moveplayer"
-version = "0.1.0"
-dependencies = [
- "common",
- "cool-logger",
- "log",
- "serde",
- "serde_json",
- "uuid",
-]
-
-[[package]]
 name = "derivative"
 version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -281,6 +269,18 @@ dependencies = [
  "plat",
  "png",
  "structopt",
+ "uuid",
+]
+
+[[package]]
+name = "echo-app"
+version = "0.1.0"
+dependencies = [
+ "common",
+ "cool-logger",
+ "log",
+ "serde",
+ "serde_json",
  "uuid",
 ]
 
