@@ -6,7 +6,7 @@ use std::sync::atomic::AtomicBool;
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread::{JoinHandle, spawn};
 use serde::Deserialize;
-use common::{APICommand, DebugMessage, HelloWindowManager, IncomingMessage, Point, Rect, WINDOW_MANAGER_PORT};
+use common::{APICommand, ARGBColor, DebugMessage, HelloWindowManager, IncomingMessage, Point, Rect, WINDOW_MANAGER_PORT};
 use common::events::{MouseButton, MouseDownEvent};
 use common::graphics::export_to_png;
 use common_wm::{OutgoingMessage, WindowManagerState};
@@ -70,7 +70,7 @@ impl PlatformWindowManager {
                                     // pt(&format!("received command {:?}", cmd));
                                     match tx_in.send(cmd) {
                                         Ok(_) => {
-                                            pt("sent just fine");
+                                            // pt("sent just fine");
                                         }
                                         Err(e) => {
                                             pt("had an error!!");
@@ -116,7 +116,7 @@ pub fn main_service_loop(state: &mut WindowManagerState, plat: &mut Plat, rx_in:
     // println!("Native WM service loop");
     plat.service_input();
     for cmd in rx_in.try_iter() {
-        pt(&format!("received {:?}", cmd));
+        // pt(&format!("received {:?}", cmd));
         match cmd.command {
             APICommand::SystemShutdown => {
                 pt("the core is shutting down. bye");
@@ -126,15 +126,24 @@ pub fn main_service_loop(state: &mut WindowManagerState, plat: &mut Plat, rx_in:
                 state.add_app(res.app_id);
             },
             APICommand::OpenWindowResponse(ow) => {
-                state.add_window(ow.app_id, ow.window_id, &ow.bounds);
+                let win_id = state.add_window(ow.app_id, ow.window_id, &ow.bounds);
+                if let Some(win) = state.lookup_window(win_id) {
+                    plat.register_image2(&win.backbuffer);
+                }
             },
             APICommand::DrawRectCommand(dr) => {
                 if let Some(mut win) = state.lookup_window(dr.window_id) {
-                    println!("draw rect to window {:?} {:?}",&dr.rect, &dr.color);
+                    println!("NativeWM: draw rect to window {:?} {:?}",&dr.rect, &dr.color);
                     win.backbuffer.fill_rect(dr.rect, &dr.color);
                     // buf.copy_from(win.position.x, win.position.y, &win.backbuffer);
                 }
             },
+            APICommand::MouseUp(evt) => {
+
+            },
+            APICommand::MouseMove(evt) => {
+                //ignore mouse move
+            }
             APICommand::MouseDown(evt) => {
                 pt("pretending to process a mouse down. lets see what becomes focused?");
                 let point = Point::init(evt.x, evt.y);
@@ -176,13 +185,36 @@ pub fn main_service_loop(state: &mut WindowManagerState, plat: &mut Plat, rx_in:
                 }).unwrap();
             }
             APICommand::WMConnectResponse(res) => {
-                pt("the central said hi back");
+                // pt("the central said hi back");
             }
             _ => {
                 pt(&format!("unhandled message {:?}", cmd));
             }
         };
     }
+
+
+    {
+        //redraw all the windows
+        plat.clear();
+        // surf.buf.clear(&BLACK);
+        for win in state.window_list() {
+            // let (wc, tc) = if state.is_focused_window(win) {
+            //     (FOCUSED_WINDOW_COLOR, FOCUSED_TITLEBAR_COLOR)
+            // } else {
+            //     (WINDOW_COLOR, TITLEBAR_COLOR)
+            // };
+            // surf.buf.draw_rect(win.external_bounds(), wc,WINDOW_BORDER_WIDTH);
+            // plat.draw_rect(win.external_bounds(), &wc, WINDOW_BORDER_WIDTH);
+            // plat.fill_rect(win.titlebar_bounds(), &tc);
+            let bd = win.content_bounds();
+            let MAGENTA = ARGBColor::new_rgb(255, 0, 255);
+            plat.fill_rect(bd, &MAGENTA);
+            plat.draw_image(win.content_bounds().x, win.content_bounds().y, &win.backbuffer);
+            // surf.copy_from(bd.x, bd.y, &win.backbuffer)
+        }
+    }
+
     plat.service_loop();
     true
 }
