@@ -14,10 +14,12 @@ use std::sync::mpsc::{Receiver, Sender};
 use std::thread;
 use std::thread::spawn;
 use std::time::Duration;
+use log::{info, LevelFilter, set_logger};
 use serde::Deserialize;
 use common::{APICommand, DEBUG_PORT, DebugMessage, HelloWindowManager, IncomingMessage, Point, Rect, WINDOW_MANAGER_PORT};
 use common::events::MouseDownEvent;
 use common_wm::{OutgoingMessage, WindowManagerState};
+use cool_logger::CoolLogger;
 use crate::headlesswm::HeadlessWindowManager;
 use crate::platwm::{main_service_loop, PlatformWindowManager};
 
@@ -52,38 +54,40 @@ fn init_setup() -> Cli {
     return args;
 }
 
+
+static COOL_LOGGER:CoolLogger = CoolLogger;
 fn main() -> Result<(),String> {
     let args:Cli = init_setup();
-    println!("Hello, world!");
+    set_logger(&COOL_LOGGER).map(|()|log::set_max_level(LevelFilter::Info));
 
     // start central server
     let mut debug_channel = central_conn::start_central_server()?;
-    println!("runner: connected to the central server");
+    info!("runner: connected to the central server");
     debug_channel.send(DebugMessage::HelloDebugger);
-    println!("runner: sent the hello debugger message");
+    info!("runner: sent the hello debugger message");
     debug_channel.wait_for(DebugMessage::HelloDebuggerResponse);
-    println!("runner: got back the response!");
+    info!("runner: got back the response!");
 
     wait(1000);
 
     let test_handler = spawn({
         move || {
             // wait for Debug::window_manager_connected
-            println!("test thread waiting for window manager connected");
+            info!("test: test thread waiting for window manager connected");
             debug_channel.wait_for(DebugMessage::WindowManagerConnected);
 
             // wait(4000);
-            println!("runner: starting the app");
+            info!("test: starting the app");
 
             // start demo click grid. opens window at 50,50 to 250,250
             let mut app_thread = start_app("demo-click-grid");
             // wait for the app to start
             debug_channel.wait_for(DebugMessage::AppConnected(String::from("demo-click-grid")));
-            println!("RUNNER: app connected");
+            info!("test: app connected");
 
             // send wait for the window to open
             debug_channel.wait_for(DebugMessage::WindowOpened(String::from("demo-click-grid")));
-            println!("RUNNER: app window open");
+            info!("test: app window open");
             // send fake click to the background
             // debug_channel.send_mouse_event(MouseDownEvent::init_primary(600,500));
             // wait for debug::background received click
@@ -99,12 +103,12 @@ fn main() -> Result<(),String> {
             //request a screen capture
             debug_channel.send(DebugMessage::ScreenCapture(Rect::from_ints(0,0,500,500),String::from("path.png")));
             debug_channel.wait_for(DebugMessage::ScreenCaptureResponse());
-            println!("waiting 5 seconds");
+            info!("waiting 5 seconds");
             wait(5000);
-            println!("RUNNER: killing the central server");
+            info!("RUNNER: killing the central server");
             debug_channel.send(DebugMessage::RequestServerShutdown);
             wait(5000);
-            println!("sending a process kill in case its still running");
+            info!("sending a process kill in case its still running");
             debug_channel.child.kill().unwrap();
 
             app_thread.child.kill().unwrap();
@@ -113,11 +117,11 @@ fn main() -> Result<(),String> {
 
 
     // start window manager
-    println!("the test thread is going. now lets start the window manager on the main thread");
+    info!("the test thread is going. now lets start the window manager on the main thread");
 
     match args.wmtype {
         WMType::Native => {
-            println!("creating a native window manager");
+            info!("creating a native window manager");
             let mut wm = PlatformWindowManager::init(800, 800).unwrap();
             //send the initial hello message
             let im = OutgoingMessage {
@@ -130,15 +134,15 @@ fn main() -> Result<(),String> {
                     let keep_going = main_service_loop(&mut wm.state, &mut wm.plat, &mut wm.rx_in, &mut wm.tx_out);
                     if !keep_going { break; }
                 }
-                println!("RUNNER: WM Native shutting down");
+                info!("WM Native shutting down");
                 wm.plat.shutdown();
             }
-            println!("RUNNER: WM Native shut down");
+            info!("WM Native shut down");
             // pt("window manager fully connected to the central server");
 
         }
         WMType::Headless => {
-            println!("creating a headless window manager");
+            info!("creating a headless window manager");
             let wm = HeadlessWindowManager::init(800,800).unwrap();
             wm.handle.join();
         }
@@ -166,8 +170,9 @@ fn main() -> Result<(),String> {
     // print success
     // exit
 
+    info!("waiting for the test handler to finish");
     test_handler.join();
-    println!("runner fully done");
+    info!("runner fully done");
 
     Ok(())
 }

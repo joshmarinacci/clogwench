@@ -12,6 +12,7 @@ use std::sync::mpsc::{Receiver, Sender, SendError};
 use std::thread;
 use std::thread::JoinHandle;
 use thread::spawn;
+use log::{error, info, warn};
 use serde::Deserialize;
 use common::events::{MouseButton, MouseDownEvent};
 use common::graphics::{ColorDepth, export_to_png, GFXBuffer, PixelLayout};
@@ -19,10 +20,6 @@ use common::graphics::{ColorDepth, export_to_png, GFXBuffer, PixelLayout};
 pub struct HeadlessWindowManager {
     stream: TcpStream,
     pub(crate) handle:JoinHandle<()>,
-}
-
-fn pt(text:&str) {
-    println!("HWM: {}",text);
 }
 
 impl HeadlessWindowManager {
@@ -35,7 +32,7 @@ impl HeadlessWindowManager {
             Ok(stream) => {
                 let (tx_out, rx_out) =mpsc::channel::<OutgoingMessage>();
                 let (tx_in, rx_in) = mpsc::channel::<IncomingMessage>();
-                pt("HWM: connected to the central server");
+                info!("connected to the central server");
 
                 let mut state = WindowManagerState::init();
                 let sending_handle = spawn({
@@ -48,19 +45,19 @@ impl HeadlessWindowManager {
                                     source: Default::default(),
                                     command: out.command
                                 };
-                                pt(&format!("sending {:?}", im));
+                                info!("sending {:?}", im);
                                 let data = serde_json::to_string(&im).unwrap();
                                 // pt(&format!("sending data {:?}", data));
                                 stream.write_all(data.as_ref()).unwrap();
                             }
                         }
-                        pt("sending thread is done");
+                        info!("sending thread is done");
                     }
                 });
                 let receiving_handle = spawn({
                     let stream = stream.try_clone().unwrap();
                     move || {
-                        pt("receiving thread starting");
+                        info!("receiving thread starting");
                         let mut de = serde_json::Deserializer::from_reader(stream);
                         loop {
                             match IncomingMessage::deserialize(&mut de) {
@@ -71,31 +68,30 @@ impl HeadlessWindowManager {
                                             // pt("sent just fine");
                                         }
                                         Err(e) => {
-                                            pt("had an error!!");
-                                            println!("e {}",e);
+                                            error!("had an error!! {}",e);
                                             // break;
                                         }
                                     }
                                 }
                                 Err(e) => {
-                                    pt(&format!("error deserializing {:?}", e));
+                                    error!("error deserializing {:?}", e);
                                     break;
                                 }
                             }
                         }
-                        pt("receiving thread is done");
+                        info!("receiving thread is done");
                     }
                 });
                 let handle = spawn({
                     let tx_out = tx_out.clone();
                     move || {
-                        println!("HWM: reading from rx_in");
+                        info!("reading from rx_in");
                         loop {
                             for cmd in rx_in.try_iter() {
-                                pt(&format!("received message {:?}", cmd));
+                                info!("received message {:?}", cmd);
                                 match cmd.command {
                                     APICommand::WMConnectResponse(res) => {
-                                        println!("HWM: got response for connecting");
+                                        // info!("got response for connecting");
                                     },
                                     APICommand::AppConnectResponse(res) => {
                                         state.add_app(res.app_id);
@@ -105,16 +101,16 @@ impl HeadlessWindowManager {
                                     },
                                     APICommand::DrawRectCommand(dr) => {
                                         if let Some(mut win) = state.lookup_window(dr.window_id) {
-                                            println!("draw rect to window {:?} {:?}",&dr.rect, &dr.color);
+                                            // info!("draw rect to window {:?} {:?}",&dr.rect, &dr.color);
                                             win.backbuffer.fill_rect(dr.rect, &dr.color);
                                             buf.copy_from(win.position.x, win.position.y, &win.backbuffer);
                                         }
                                     },
                                     APICommand::MouseDown(evt) => {
-                                        pt("pretending to process a mouse down. lets see what becomes focused?");
+                                        // info!("pretending to process a mouse down. lets see what becomes focused?");
                                         let point = Point::init(evt.x, evt.y);
                                         if let Some(win) = state.pick_window_at(point) {
-                                            pt("picked a window");
+                                            // info!("picked a window");
                                             let wid = win.id.clone();
                                             let aid = win.owner.clone();
                                             state.set_focused_window(wid);
@@ -134,7 +130,7 @@ impl HeadlessWindowManager {
                                                 })
                                             }).unwrap();
                                         } else {
-                                            pt("clicked on nothing. sending background debug event");
+                                            // info!("clicked on nothing. sending background debug event");
                                             tx_out.send(OutgoingMessage {
                                                 recipient: Default::default(),
                                                 command: APICommand::Debug(DebugMessage::BackgroundReceivedMouseEvent)
@@ -143,7 +139,7 @@ impl HeadlessWindowManager {
                                     }
                                     APICommand::Debug(DebugMessage::ScreenCapture(rect, str)) => {
                                         let pth = PathBuf::from("./screencapture.png");
-                                        println!("rect for screen capture {:?}",pth);
+                                        // info!("rect for screen capture {:?}",pth);
                                         export_to_png(&buf, &pth);
                                         tx_out.send(OutgoingMessage {
                                             recipient: Default::default(),
@@ -151,16 +147,16 @@ impl HeadlessWindowManager {
                                         }).unwrap();
                                     }
                                     APICommand::SystemShutdown => {
-                                        pt("the core is shutting down. bye");
+                                        info!("the core is shutting down. bye");
                                         return;
                                     }
                                     _ => {
-                                        pt(&format!("unhandled message {:?}", cmd));
+                                        warn!("unhandled message {:?}", cmd);
                                     }
                                 };
                             }
                         }
-                        pt("processing thread ending");
+                        info!("processing thread ending");
                     }
                 });
 
@@ -169,14 +165,14 @@ impl HeadlessWindowManager {
                     command: APICommand::WMConnect(HelloWindowManager {})
                 };
                 tx_out.send(im).unwrap();
-                pt("window manager fully connected to the central server");
+                info!("window manager fully connected to the central server");
                 Some(HeadlessWindowManager {
                     stream,
                     handle,
                 })
             }
             _ => {
-                pt(&format!("could not connect to server at"));
+                info!("could not connect to server at");
                 None
             }
         }

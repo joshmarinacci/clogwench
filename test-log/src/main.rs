@@ -21,7 +21,7 @@ impl log::Log for SimpleLogger {
     }
 
     fn log(&self, record: &Record) {
-        println!("Logging {:?}",record);
+        // println!("Logging {:?}",record);
         let prefix = if let Some(modname) = record.module_path() {
             modname
         } else {

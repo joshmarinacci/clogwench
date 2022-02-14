@@ -6,6 +6,7 @@ use std::sync::mpsc;
 use common::events::MouseDownEvent;
 use serde::Deserialize;
 use std::io::Write;
+use log::{error, info};
 
 pub struct CentralConnection {
     pub receiver: Receiver<DebugMessage>,
@@ -22,39 +23,38 @@ impl CentralConnection {
         self.send(DebugMessage::FakeMouseEvent(evt));
     }
     pub(crate) fn wait_for(&self, msg: DebugMessage) -> Result<DebugMessage,String> {
-        println!("RUNNER: waiting for {:?}",msg);
+        info!("waiting for {:?}",msg);
         let mut de = serde_json::Deserializer::from_reader(&self.master_stream);
         match DebugMessage::deserialize(&mut de) {
             Ok(cmd) => {
                 let cmd2 = cmd.clone();
-                println!("RUNNER: received command {:?}", cmd);
+                info!("received command {:?}", cmd);
                 if matches!(cmd2,msg) {
-                    println!("they match!");
                     return Ok(cmd.clone())
                 } else {
-                    println!("incorrect message!");
+                    info!("incorrect message!");
                     return Ok(cmd.clone())
                 }
             }
             Err(e) => {
-                println!("error deserializing {:?}", e);
+                info!("error deserializing {:?}", e);
                 return Err(e.to_string());
             }
         }
     }
     pub(crate) fn send(&mut self, im:DebugMessage) {
         // let im = IncomingMessage { source: Default::default(), command: APICommand::WMConnect(HelloWindowManager {})};
-        println!("RUNNER: sending out message {:?}", im);
+        info!("sending out message {:?}", im);
         match serde_json::to_string(&im) {
             Ok(data) => {
                 // println!("sending data {:?}", data);
                 if let Err(e) = self.master_stream.write_all(data.as_ref()) {
-                    println!("error sending data back to server {}",e);
+                    error!("error sending data back to server {}",e);
                     // return None
                 }
             }
             Err(e) => {
-                println!("error serializing incoming messages {}",e);
+                error!("error serializing incoming messages {}",e);
                 // return None
             }
         }
@@ -75,10 +75,10 @@ pub fn start_central_server() -> Result<CentralConnection,String> {
         .spawn()
         .expect("child process failed to start")
         ;
-    println!("RUNNER: started CENTRAL process");
+    info!("started CENTRAL process");
 
     crate::wait(5000);
-    println!("waited 5000 ms.");
+    info!("waited 5000 ms.");
 
     // println!("connecting to the debug port");
     let conn_string = format!("localhost:{}",DEBUG_PORT);

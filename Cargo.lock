@@ -133,6 +133,7 @@ name = "central"
 version = "0.1.0"
 dependencies = [
  "common",
+ "cool-logger",
  "ctrlc",
  "env_logger",
  "log",
@@ -207,6 +208,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "30ed07550be01594c6026cff2a1d7fe9c8f683caa798e12b68694ac9e88286a3"
 dependencies = [
  "cache-padded",
+]
+
+[[package]]
+name = "cool-logger"
+version = "0.1.0"
+dependencies = [
+ "log",
 ]
 
 [[package]]
@@ -1018,6 +1026,8 @@ version = "0.1.0"
 dependencies = [
  "common",
  "common-wm",
+ "cool-logger",
+ "log",
  "plat",
  "serde",
  "serde_json",
