@@ -9,6 +9,8 @@
  */
 
 use std::fs::File;
+use std::io::BufWriter;
+use std::path::{Path, PathBuf};
 use png;
 use uuid::Uuid;
 use crate::{ARGBColor, Rect};
@@ -192,12 +194,10 @@ impl GFXBuffer {
 
 impl GFXBuffer {
     pub fn clear(&mut self, color: &ARGBColor) {
-        //self.fill_rect(Rect::from_ints(0, 0, self.width as i32, self.height as i32),color);
         match self.bitdepth {
             ColorDepth::CD16() => {
                 match self.layout {
                     PixelLayout::RGB565() => {
-                        //let n = (x + y * (self.width as u32)) as usize;
                         let v = color.to_argb_vec();
                         let r = v[1];
                         let g = v[2];
@@ -218,40 +218,9 @@ impl GFXBuffer {
             }
             CD24() => {
                 self.fill_rect(Rect::from_ints(0, 0, self.width as i32, self.height as i32),color);
-                // let v = color.as_vec();
-                // let r = v[1];
-                // let g = v[2];
-                // let b = v[3];
-                // let mut row:Vec<u8> = vec![];
-                // for i in 0..self.width {
-                //     row.push(r);
-                //     row.push(g);
-                //     row.push(b);
-                // }
-                // for chunk in self.data.chunks_exact_mut((self.width*3) as usize) {
-                //     chunk.copy_from_slice(&*row);
-                // }
             }
             CD32() => {
                 self.fill_rect(Rect::from_ints(0, 0, self.width as i32, self.height as i32),color);
-                // //impl1
-                // let v = color.as_vec();
-                // let a = v[0];
-                // let r = v[1];
-                // let g = v[2];
-                // let b = v[3];
-
-                // let vv = &v;
-                // let mut row:Vec<u8> = vec![];
-                // for i in 0..self.width {
-                //     row.push(r);
-                //     row.push(g);
-                //     row.push(b);
-                //     row.push(a);
-                // }
-                // for chunk in self.data.chunks_exact_mut((self.width*4) as usize) {
-                //     chunk.copy_from_slice(&*row);
-                // }
             }
         }
     }
@@ -308,11 +277,13 @@ pub fn draw_test_pattern(buf:&mut GFXBuffer) {
 mod tests {
     use std::fs::File;
     use std::io::BufWriter;
-    use std::path::Path;
+    use std::path::{Path, PathBuf};
     use std::time::Instant;
     use crate::{ARGBColor, BLACK, Rect, WHITE};
+    use crate::font::load_font_from_json;
     use crate::graphics::ColorDepth::{CD16, CD24, CD32};
-    use crate::graphics::{draw_test_pattern, GFXBuffer, PixelLayout};
+    use crate::graphics::{draw_test_pattern, export_to_png, GFXBuffer, PixelLayout};
+    use crate::graphics::PixelLayout::ARGB;
 
     // check ARGB memory buffer copied to RGBA() framebuffer
     // check color drawn to RGBA() framebuffer
@@ -469,29 +440,6 @@ mod tests {
         export_to_png(&buf);
     }
 
-    fn export_to_png(buf: &GFXBuffer) {
-        let path = Path::new(r"test.png");
-        let file = File::create(path).unwrap();
-        let ref mut w = BufWriter::new(file);
-        let mut encoder = png::Encoder::new(w, buf.width, buf.height); // Width is 2 pixels and height is 1.
-        encoder.set_color(png::ColorType::Rgba);
-        encoder.set_depth(png::BitDepth::Eight);
-        let mut writer = encoder.write_header().unwrap();
-
-        let mut data:Vec<u8> = vec![];
-        for j in 0..buf.height {
-            for i in 0..buf.width {
-                let px = buf.get_pixel_vec_argb(i,j);
-                // println!("{},{}  {:x}",i,j, buf.get_pixel_32argb(i,j));
-                data.push(px[1]); //R
-                data.push(px[2]); //G
-                data.push(px[3]); //B
-                data.push(255); //A
-            }
-        }
-        writer.write_image_data(&data).unwrap(); // Save
-
-    }
 
     #[test]
     fn drawing_speed() {
@@ -518,4 +466,41 @@ mod tests {
     }
     */
 
+    #[test]
+    fn test_font_load() {
+        println!("current dir = {:?}",std::env::current_dir());
+        let font = load_font_from_json("../resources/default-font.json").unwrap();
+    }
+
+    #[test]
+    fn draw_bitmap() {
+        let mut bitmap = GFXBuffer::new(CD32(), 200, 100, PixelLayout::RGBA());
+        bitmap.clear(&WHITE);
+        let font = load_font_from_json("../resources/default-font.json").unwrap();
+        font.draw_text_at(&mut bitmap, "Greetings, Earthling!", 20, 20, &ARGBColor::new_argb(255,0, 255, 0));
+        export_to_png(&bitmap, &PathBuf::from("earthling.png"));
+    }
+}
+
+fn export_to_png(buf: &GFXBuffer, pth:&PathBuf) {
+    // let path = Path::new(r"test.png");
+    let file = File::create(pth).unwrap();
+    let ref mut w = BufWriter::new(file);
+    let mut encoder = png::Encoder::new(w, buf.width, buf.height); // Width is 2 pixels and height is 1.
+    encoder.set_color(png::ColorType::Rgba);
+    encoder.set_depth(png::BitDepth::Eight);
+    let mut writer = encoder.write_header().unwrap();
+
+    let mut data:Vec<u8> = vec![];
+    for j in 0..buf.height {
+        for i in 0..buf.width {
+            let px = buf.get_pixel_vec_argb(i,j);
+            // println!("{},{}  {:x}",i,j, buf.get_pixel_32argb(i,j));
+            data.push(px[1]); //R
+            data.push(px[2]); //G
+            data.push(px[3]); //B
+            data.push(255); //A
+        }
+    }
+    writer.write_image_data(&data).unwrap(); // Save
 }
