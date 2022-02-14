@@ -39,11 +39,11 @@ impl ClientConnection {
                         loop {
                             match APICommand::deserialize(&mut de) {
                                 Ok(cmd) => {
-                                    println!("client received command {:?}", cmd);
+                                    println!("CLIENT: client received command {:?}", cmd);
                                     in_tx.send(cmd).unwrap();
                                 }
                                 Err(e) => {
-                                    println!("error deserializing from client {:?}", e);
+                                    println!("CLIENT: error deserializing from client {:?}", e);
                                     break;
                                 }
                             }

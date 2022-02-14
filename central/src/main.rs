@@ -3,8 +3,8 @@ use std::net::{Shutdown, TcpListener, TcpStream};
 use std::sync::{Arc, mpsc, Mutex};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, Sender};
-use std::thread;
-use std::thread::JoinHandle;
+use std::{io, thread};
+use std::thread::{JoinHandle, sleep};
 use std::time::Duration;
 use env_logger::Env;
 use log::{error, info, LevelFilter, warn};
@@ -13,7 +13,7 @@ use log4rs::Config;
 use log4rs::config::{Appender, Root};
 use serde::Deserialize;
 use uuid::Uuid;
-use common::{APICommand, DEBUG_PORT, DebugMessage, HelloAppResponse, HelloWindowManagerResponse, IncomingMessage, OpenWindowCommand, OpenWindowResponse, Rect};
+use common::{APICommand, APP_MANAGER_PORT, DEBUG_PORT, DebugMessage, HelloAppResponse, HelloWindowManagerResponse, IncomingMessage, OpenWindowCommand, OpenWindowResponse, Rect, WINDOW_MANAGER_PORT};
 use structopt::StructOpt;
 
 struct Window {
@@ -82,6 +82,7 @@ impl CentralState {
     fn spawn_app_handler(&self, appid: Uuid, stream: TcpStream, sender: Sender<IncomingMessage>, stop: Arc<AtomicBool>) -> JoinHandle<()> {
         thread::spawn(move || {
             info!("app thread starting: {}",appid);
+            println!("CENTRAL: app {} thread starting",appid);
             let stream2 = stream.try_clone().unwrap();
             let mut de = serde_json::Deserializer::from_reader(stream);
             loop {
@@ -104,12 +105,14 @@ impl CentralState {
                     }
                 }
             }
-            info!("app thread ending {}",appid);
+            // info!("app thread ending {}",appid);
+            println!("CENTRAL: app {} thread ending",appid);
         })
     }
     fn spawn_wm_handler(&self, wm_id: Uuid, stream: TcpStream, sender: Sender<IncomingMessage>, stop: Arc<AtomicBool>) -> JoinHandle<()> {
         thread::spawn(move ||{
-            info!("wm thread starting: {}",wm_id);
+            println!("CENTRAL: WM thread starting: {}",wm_id);
+            // info!("wm thread starting: {}",wm_id);
             let stream2 = stream.try_clone().unwrap();
             let mut de = serde_json::Deserializer::from_reader(stream);
             loop {
@@ -130,6 +133,7 @@ impl CentralState {
                     }
                 }
             }
+            println!("CENTRAL: WM {} thread ending", wm_id);
         })
     }
     fn spawn_debugger_handler(&self, id:Uuid, stream: TcpStream, sender: Sender<IncomingMessage>, stop: Arc<AtomicBool>) -> JoinHandle<()>{
@@ -155,6 +159,7 @@ impl CentralState {
                     }
                 }
             }
+            println!("CENTRAL: debugger thread ending: {}",id);
         })
     }
 
@@ -163,6 +168,17 @@ impl CentralState {
         let data = serde_json::to_string(&resp).unwrap();
         if let Some(app) = self.apps.iter_mut().find(|a|a.id == id){
             app.stream.write_all(data.as_ref()).expect("failed to send rect");
+        }
+    }
+    fn send_to_all_apps(&mut self, resp: APICommand) {
+        println!("CENTRAL: sending to all apps {:?}",resp);
+        let im = IncomingMessage {
+            source: Default::default(),
+            command: resp,
+        };
+        let data = serde_json::to_string(&im).unwrap();
+        for app in self.apps.iter_mut() {
+            app.stream.write_all(data.as_ref()).expect("failed to send to all wm")
         }
     }
     fn send_to_wm(&mut self, id:Uuid, resp: APICommand) {
@@ -202,26 +218,43 @@ fn main() {
     println!("central server starting");
     let state = Arc::new(Mutex::new(CentralState::init()));
     let stop:Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
-    // setup_c_handler(stop.clone());
+    setup_c_handler(stop.clone());
     let (tx, rx) = mpsc::channel::<IncomingMessage>();
-    let app_network_thread = start_app_interface(stop.clone(), tx.clone(), state.clone());
-    let wm_network_thread = start_wm_interface(stop.clone(), tx.clone(), state.clone());
-    // wm_network_thread.join();
-    let debug_thread = start_debug_interface(stop.clone(), tx.clone(), state.clone());
+    // let cls = move |stream:TcpStream, tx:Sender<IncomingMessage>, stop:Arc<AtomicBool>, state:Arc<Mutex<CentralState>>| {
+    // };
+    let app_network_thread = start_network_interface(stop.clone(),tx.clone(), state.clone(),
+                                                     String::from("app"),APP_MANAGER_PORT,
+                                                     |stream,tx,stop,state|{
+                                                         state.lock().unwrap().add_app_from_stream(stream,tx,stop.clone());
+                                                     });
+    let wm_network_thread = start_network_interface(stop.clone(),tx.clone(), state.clone(),
+                                                    String::from("winman"),
+                                                    WINDOW_MANAGER_PORT,
+                                                    |stream,tx,stop,state|{
+                                                        state.lock().unwrap().add_wm_from_stream(stream.try_clone().unwrap(),tx.clone(),stop.clone());
+                                                    });
+    let debug_network_thread = start_network_interface(stop.clone(),tx.clone(), state.clone(),
+                                                    String::from("debug"),
+                                                    DEBUG_PORT,
+                                                    |stream,tx,stop,state|{
+                                                        state.lock().unwrap().add_debugger_from_stream(stream.try_clone().unwrap(), tx.clone(), stop.clone());
+                                                    });
     let router_thread = start_router(stop.clone(),rx,state.clone());
     info!("waiting for the app network thread to end");
     println!("CENTRAL: waiting for the app thread to end");
     app_network_thread.join();
+    wm_network_thread.join();
+    debug_network_thread.join();
     info!("central server stopping");
 }
 
 fn start_router(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, state: Arc<Mutex<CentralState>>) -> JoinHandle<()> {
     thread::spawn(move||{
+        println!("CENTRAL: router thread starting");
         for msg in rx {
-            println!("CENTRAL: incoming message {:?}",msg);
+            // println!("CENTRAL: incoming message {:?}",msg);
             match msg.command {
                 APICommand::DebugConnect(DebugMessage::HelloDebugger) => {
-                    println!("got hello debugger. sending proper response");
                     let resp = DebugMessage::HelloDebuggerResponse;
                     state.lock().unwrap().send_to_debugger(resp);
                 }
@@ -243,6 +276,20 @@ fn start_router(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, state: Arc
                 APICommand::DebugConnect(DebugMessage::ScreenCaptureResponse()) => {
                     state.lock().unwrap().send_to_debugger(DebugMessage::ScreenCaptureResponse());
                 }
+                APICommand::DebugConnect(DebugMessage::RequestServerShutdown) => {
+                    {
+                        let mut st = state.lock().unwrap();
+                        println!("CENTRAL sending out shutdown messages and waiting a second");
+                        st.send_to_all_wm(APICommand::SystemShutdown);
+                        st.send_to_all_apps(APICommand::SystemShutdown);
+                    }
+                    thread::sleep(Duration::from_millis(1000));
+                    println!("CENTRAL sending stop command to all threads");
+                    stop.store(true, Ordering::Relaxed);
+                    thread::sleep(Duration::from_millis(1000));
+                    println!("CENTRAL the server is really ending");
+                    break;
+                }
                 APICommand::AppConnect(ap) => {
                     info!("app connected {}",msg.source);
                     let resp = APICommand::AppConnectResponse(HelloAppResponse{
@@ -253,7 +300,7 @@ fn start_router(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, state: Arc
                     state.lock().unwrap().send_to_debugger(DebugMessage::AppConnected(String::from("foo")))
                 },
                 APICommand::OpenWindowCommand(ow) => {
-                    info!("opening window");
+                    // info!("opening window");
                     let winid = state.lock().unwrap().add_window_to_app(msg.source, &ow);
                     let resp = APICommand::OpenWindowResponse(OpenWindowResponse{
                         app_id: msg.source,
@@ -266,7 +313,7 @@ fn start_router(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, state: Arc
                     state.lock().unwrap().send_to_debugger(DebugMessage::WindowOpened(String::from("foo")));
                 },
                 APICommand::WMConnect(cmd) => {
-                    info!("Window manager connected {}",msg.source);
+                    // info!("Window manager connected {}",msg.source);
                     let resp = APICommand::WMConnectResponse(HelloWindowManagerResponse{
                         wm_id:msg.source
                     });
@@ -287,6 +334,7 @@ fn start_router(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, state: Arc
                 }
             }
         }
+        println!("CENTRAL: router thread quitting");
     })
 }
 
@@ -329,79 +377,53 @@ fn init_setup() -> Cli {
 }
 
 fn setup_c_handler(stop: Arc<AtomicBool>) {
-    // ctrlc::set_handler(move || {
-    //     error!("control C pressed. stopping everything");
-    //     stop.store(true, Ordering::Relaxed)
-    // }).expect("error setting control C handler");
+    ctrlc::set_handler(move || {
+        println!("control C pressed. stopping everything");
+        stop.store(true, Ordering::Relaxed)
+    }).expect("error setting control C handler");
 }
 
-fn start_app_interface(stop: Arc<AtomicBool>,
-                       tx: Sender<IncomingMessage>,
-                       state: Arc<Mutex<CentralState>>
-) -> JoinHandle<()> {
+fn start_network_interface<F>(stop: Arc<AtomicBool>,
+                           tx: Sender<IncomingMessage>,
+                           state: Arc<Mutex<CentralState>>,
+                           name: String,
+                           port: i32,
+                           cb: F
+) -> JoinHandle<()>
+    where
+        F: Fn(TcpStream, Sender<IncomingMessage>, Arc<AtomicBool>, Arc<Mutex<CentralState>>),
+        F: Send + 'static,
+{
 
     return thread::spawn(move || {
-        info!("starting network connection");
-        let port = 3333;
+        println!("CENTRAL: starting {} network connection",name);
         let listener = TcpListener::bind(format!("0.0.0.0:{}",port)).unwrap();
-        info!("central listening on port {}",port);
-        for stream in listener.incoming() {
-            if stop.load(Ordering::Relaxed) == true { break; }
-            match stream {
-                Ok(stream) => {
-                    info!("got a new app connection");
-                    state.lock().unwrap().add_app_from_stream(stream.try_clone().unwrap(),tx.clone(),stop.clone());
+        info!("central {} listening on port {}",name, port);
+        listener.set_nonblocking(true).unwrap();
+        loop {
+            // println!("inside the {} loop",name);
+            sleep(Duration::from_millis(10));
+            if stop.load(Ordering::Relaxed) == true {
+                println!("CENTRAL: {} interface told to quit",name);
+                break;
+            }
+            match listener.accept() {
+                Ok((stream,add)) => {
+                    println!("accepting {} client from {}",name,add);
+                    cb(stream,tx.clone(),stop.clone(), state.clone());
+                    // state.lock().unwrap().add_app_from_stream(stream.try_clone().unwrap(), tx.clone(), stop.clone());
                 }
                 Err(e) => {
-                    error!("error: {}",e);
+                    if e.kind() == io::ErrorKind::WouldBlock {
+                        // println!("need to loop again, {}",name);
+                    } else {
+                        println!("CENTRAL: real error {} interface quitting.  {}", name,e);
+                        break;
+                    }
                 }
             }
         }
         drop(listener);
+        println!("CENTRAL: {} thread quitting",name);
     })
-}
-
-fn start_wm_interface(stop:Arc<AtomicBool>,
-                      tx: Sender<IncomingMessage>,
-                      state: Arc<Mutex<CentralState>>) -> JoinHandle<()> {
-    return thread::spawn(move || {
-        info!("starting wm connection connection");
-        let port = 3334;
-        let listener = TcpListener::bind(format!("0.0.0.0:{}",port)).unwrap();
-        info!("central listening on port {}",port);
-        for stream in listener.incoming() {
-            if stop.load(Ordering::Relaxed) == true { break; }
-            match stream {
-                Ok(stream) => {
-                    info!("got a new wm connection");
-                    state.lock().unwrap().add_wm_from_stream(stream.try_clone().unwrap(),tx.clone(),stop.clone());
-                }
-                Err(e) => {
-                    error!("error: {}",e);
-                }
-            }
-        }
-        drop(listener);
-    })
-}
-
-fn start_debug_interface(stop: Arc<AtomicBool>, tx: Sender<IncomingMessage>, state: Arc<Mutex<CentralState>>) -> JoinHandle<()> {
-    return thread::spawn(move || {
-        println!("CENTRAL: starting debug connection");
-        let listener = TcpListener::bind(format!("0.0.0.0:{}",DEBUG_PORT)).unwrap();
-        println!("CENTRAL listening on port {}",DEBUG_PORT);
-        for stream in listener.incoming() {
-            if stop.load(Ordering::Relaxed) == true { break; }
-            match stream {
-                Ok(stream) => {
-                    println!("CENTRAL: got a new debug connection");
-                    state.lock().unwrap().add_debugger_from_stream(stream.try_clone().unwrap(), tx.clone(), stop.clone());
-                }
-                Err(e) => {
-                    error!("error: {}",e);
-                }
-            }
-        }
-        drop(listener);
-    });
 }

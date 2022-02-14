@@ -1018,8 +1018,10 @@ version = "0.1.0"
 dependencies = [
  "common",
  "common-wm",
+ "plat",
  "serde",
  "serde_json",
+ "structopt",
 ]
 
 [[package]]

@@ -94,6 +94,8 @@ impl Plat {
                     let cmd = IncomingMessage {
                         source: Default::default(),
                         command: APICommand::MouseDown(MouseDownEvent{
+                            app_id: Default::default(),
+                            window_id: Default::default(),
                             original_timestamp: 0,
                             button: MouseButton::Primary,
                             x,

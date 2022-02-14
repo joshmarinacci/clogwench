@@ -146,6 +146,8 @@ pub enum APICommand {
     MouseDown(crate::events::MouseDownEvent),
     MouseMove(crate::events::MouseMoveEvent),
     MouseUp(crate::events::MouseUpEvent),
+
+    SystemShutdown,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
