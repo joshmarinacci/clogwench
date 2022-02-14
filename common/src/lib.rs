@@ -273,6 +273,8 @@ pub enum DebugMessage {
     WindowFocusChanged(String),
     RequestServerShutdown,
     AppLog(String),
-    FakeMouseEvent(MouseDownEvent)
+    FakeMouseEvent(MouseDownEvent),
+    ScreenCapture(Rect,String),
+    ScreenCaptureResponse(),
 }
 

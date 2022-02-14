@@ -1,4 +1,4 @@
-use common::{APICommand, DebugMessage, HelloWindowManager, IncomingMessage, Point, WINDOW_MANAGER_PORT};
+use common::{APICommand, DebugMessage, DrawRectCommand, HelloWindowManager, IncomingMessage, Point, WHITE, WINDOW_MANAGER_PORT};
 use common_wm::{OutgoingMessage, WindowManagerState};
 use core::default::Default;
 use core::option::Option;
@@ -6,6 +6,7 @@ use core::option::Option::{None, Some};
 use core::result::Result::{Err, Ok};
 use std::io::Write;
 use std::net::TcpStream;
+use std::path::PathBuf;
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender, SendError};
 use std::thread;
@@ -13,6 +14,7 @@ use std::thread::JoinHandle;
 use thread::spawn;
 use serde::Deserialize;
 use common::events::{MouseButton, MouseDownEvent};
+use common::graphics::{ColorDepth, export_to_png, GFXBuffer, PixelLayout};
 
 pub struct HeadlessWindowManager {
     stream: TcpStream,
@@ -23,7 +25,9 @@ fn pt(text:&str) {
 }
 
 impl HeadlessWindowManager {
-    pub fn init() -> Option<HeadlessWindowManager> {
+    pub fn init(w: u32, h: u32) -> Option<HeadlessWindowManager> {
+        let mut buf = GFXBuffer::new(ColorDepth::CD24(), w, h, PixelLayout::RGBA());
+        buf.clear(&WHITE);
         let conn_string = format!("localhost:{}",WINDOW_MANAGER_PORT);
 
         match TcpStream::connect(conn_string) {
@@ -96,7 +100,13 @@ impl HeadlessWindowManager {
                                     APICommand::OpenWindowResponse(ow) => {
                                         state.add_window(ow.app_id, ow.window_id, &ow.bounds);
                                     },
-                                    APICommand::DrawRectCommand(_) => {},//ignore draw commands
+                                    APICommand::DrawRectCommand(dr) => {
+                                        if let Some(mut win) = state.lookup_window(dr.window_id) {
+                                            println!("draw rect to window {:?} {:?}",&dr.rect, &dr.color);
+                                            win.backbuffer.fill_rect(dr.rect, &dr.color);
+                                            buf.copy_from(win.position.x, win.position.y, &win.backbuffer);
+                                        }
+                                    },
                                     APICommand::MouseDown(evt) => {
                                         pt("pretending to process a mouse down. lets see what becomes focused?");
                                         let point = Point::init(evt.x, evt.y);
@@ -127,6 +137,15 @@ impl HeadlessWindowManager {
                                                 command: APICommand::DebugConnect(DebugMessage::BackgroundReceivedMouseEvent)
                                             }).unwrap();
                                         }
+                                    }
+                                    APICommand::DebugConnect(DebugMessage::ScreenCapture(rect,str)) => {
+                                        let pth = PathBuf::from("./screencapture.png");
+                                        println!("rect for screen capture {:?}",pth);
+                                        export_to_png(&buf, &pth);
+                                        tx_out.send(OutgoingMessage {
+                                            recipient: Default::default(),
+                                            command: APICommand::DebugConnect(DebugMessage::ScreenCaptureResponse()),
+                                        }).unwrap();
                                     }
                                     _ => {
                                         pt(&format!("unhandled message {:?}", cmd));

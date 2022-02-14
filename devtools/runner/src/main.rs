@@ -10,7 +10,7 @@ use std::sync::mpsc::{Receiver, Sender};
 use std::thread;
 use std::time::Duration;
 use serde::Deserialize;
-use common::{APICommand, DEBUG_PORT, DebugMessage, HelloWindowManager, IncomingMessage, Point, WINDOW_MANAGER_PORT};
+use common::{APICommand, DEBUG_PORT, DebugMessage, HelloWindowManager, IncomingMessage, Point, Rect, WINDOW_MANAGER_PORT};
 use common::events::MouseDownEvent;
 use common_wm::{OutgoingMessage, WindowManagerState};
 use crate::headlesswm::HeadlessWindowManager;
@@ -30,7 +30,7 @@ fn main() {
 
     wait(1000);
     // start window manager
-    let wm = HeadlessWindowManager::init().unwrap();
+    let wm = HeadlessWindowManager::init(800,800).unwrap();
     // wait for Debug::window_manager_connected
     debug_channel.wait_for(DebugMessage::WindowManagerConnected);
 
@@ -57,6 +57,10 @@ fn main() {
     // wait for debug log event from that appname.
     debug_channel.wait_for(DebugMessage::AppLog(String::from("input-received")));
 
+    wait(1000);
+
+    debug_channel.send(DebugMessage::ScreenCapture(Rect::from_ints(0,0,500,500),String::from("path.png")));
+    debug_channel.wait_for(DebugMessage::ScreenCaptureResponse());
     wait(1000);
 
     println!("killing the central server");

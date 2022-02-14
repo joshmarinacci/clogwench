@@ -8,6 +8,8 @@
 	    common screen and surface impls.
  */
 
+use fs::canonicalize;
+use std::fs;
 use std::fs::File;
 use std::io::BufWriter;
 use std::path::{Path, PathBuf};
@@ -482,8 +484,7 @@ mod tests {
     }
 }
 
-fn export_to_png(buf: &GFXBuffer, pth:&PathBuf) {
-    // let path = Path::new(r"test.png");
+pub fn export_to_png(buf: &GFXBuffer, pth:&PathBuf) {
     let file = File::create(pth).unwrap();
     let ref mut w = BufWriter::new(file);
     let mut encoder = png::Encoder::new(w, buf.width, buf.height); // Width is 2 pixels and height is 1.
@@ -503,4 +504,5 @@ fn export_to_png(buf: &GFXBuffer, pth:&PathBuf) {
         }
     }
     writer.write_image_data(&data).unwrap(); // Save
+    println!("exported to {:?}", fs::canonicalize(&pth).unwrap());
 }

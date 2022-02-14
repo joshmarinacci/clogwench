@@ -237,6 +237,12 @@ fn start_router(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, state: Arc
                 APICommand::DebugConnect(DebugMessage::AppLog(str)) => {
                     state.lock().unwrap().send_to_debugger(DebugMessage::AppLog(str));
                 }
+                APICommand::DebugConnect(DebugMessage::ScreenCapture(rect,str)) => {
+                    state.lock().unwrap().send_to_all_wm(APICommand::DebugConnect(DebugMessage::ScreenCapture(rect,str)));
+                }
+                APICommand::DebugConnect(DebugMessage::ScreenCaptureResponse()) => {
+                    state.lock().unwrap().send_to_debugger(DebugMessage::ScreenCaptureResponse());
+                }
                 APICommand::AppConnect(ap) => {
                     info!("app connected {}",msg.source);
                     let resp = APICommand::AppConnectResponse(HelloAppResponse{
@@ -328,7 +334,6 @@ fn setup_c_handler(stop: Arc<AtomicBool>) {
     //     stop.store(true, Ordering::Relaxed)
     // }).expect("error setting control C handler");
 }
-
 
 fn start_app_interface(stop: Arc<AtomicBool>,
                        tx: Sender<IncomingMessage>,
