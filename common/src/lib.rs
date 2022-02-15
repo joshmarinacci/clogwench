@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use crate::events::{KeyDownEvent, KeyUpEvent, MouseDownEvent};
+use crate::graphics::GFXBuffer;
 
 pub mod client;
 pub mod events;
@@ -112,6 +113,13 @@ pub struct DrawRectCommand {
     pub color:ARGBColor,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct DrawImageCommand {
+    pub app_id:Uuid,
+    pub window_id:Uuid,
+    pub rect:Rect,
+    pub buffer:GFXBuffer,
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct OpenWindowCommand {
@@ -139,6 +147,7 @@ pub enum APICommand {
     OpenWindowResponse(OpenWindowResponse),
 
     DrawRectCommand(DrawRectCommand),
+    DrawImageCommand(DrawImageCommand),
 
     KeyDown(KeyDownEvent),
     KeyUp(KeyUpEvent),

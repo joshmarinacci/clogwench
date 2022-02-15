@@ -15,7 +15,7 @@ pub struct ClientConnection {
 
 impl ClientConnection {
     pub fn send(&self, cmd: APICommand) {
-        info!("sending: {:?}",cmd);;
+        // info!("sending: {:?}",cmd);;
         self.tx.send(cmd).unwrap();
     }
     pub fn send_and_wait(&self, cmd:APICommand) -> Result<APICommand, RecvError> {

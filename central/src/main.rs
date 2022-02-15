@@ -330,6 +330,9 @@ fn start_router(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, state: Arc
                 APICommand::DrawRectCommand(cmd) => {
                     state.lock().unwrap().send_to_all_wm(APICommand::DrawRectCommand(cmd));
                 },
+                APICommand::DrawImageCommand(cmd) => {
+                    state.lock().unwrap().send_to_all_wm(APICommand::DrawImageCommand(cmd));
+                },
                 APICommand::KeyDown(e) => {
                     state.lock().unwrap().send_to_app(e.app_id, APICommand::KeyDown(e))
                 }

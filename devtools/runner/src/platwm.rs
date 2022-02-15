@@ -146,6 +146,12 @@ impl PlatformWindowManager {
                         // buf.copy_from(win.position.x, win.position.y, &win.backbuffer);
                     }
                 },
+                APICommand::DrawImageCommand(dr) => {
+                    if let Some(mut win) = self.state.lookup_window(dr.window_id) {
+                        println!("NativeWM: draw image to window {:?}", &dr.rect);
+                        win.backbuffer.fill_rect_with_image(&dr.rect,&dr.buffer);
+                    }
+                },
                 APICommand::MouseUp(evt) => {},
                 APICommand::MouseMove(evt) => {
                     //ignore mouse move

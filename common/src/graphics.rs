@@ -13,19 +13,21 @@ use std::fs;
 use std::fs::File;
 use std::io::BufWriter;
 use std::path::{Path, PathBuf};
+use log::info;
 use png;
 use uuid::Uuid;
 use crate::{ARGBColor, Rect};
 use crate::graphics::ColorDepth::{CD24, CD32};
 use crate::graphics::PixelLayout::RGBA;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub enum ColorDepth {
     CD16(),
     CD24(),
     CD32(),
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub enum PixelLayout {
     RGB565(),
     RGB(),
@@ -33,6 +35,7 @@ pub enum PixelLayout {
     ARGB(),
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct GFXBuffer {
     pub bitdepth:ColorDepth,
     pub layout:PixelLayout,
@@ -40,6 +43,18 @@ pub struct GFXBuffer {
     pub width:u32,
     pub height:u32,
     pub data: Vec<u8>,
+}
+
+impl GFXBuffer {
+    pub fn fill_rect_with_image(&mut self, rect: &Rect, buf: &GFXBuffer) {
+        info!("filling rect with image {:?}",rect);
+        for j in rect.y .. rect.y + rect.h {
+            for i in rect.x .. rect.x + rect.w {
+                let v = buf.get_pixel_vec_argb((i as u32 % buf.width) as u32, (j as u32 % buf.height) as u32);
+                self.set_pixel_vec_argb(i as u32,j as u32,&v);
+            }
+        }
+    }
 }
 
 impl GFXBuffer {
