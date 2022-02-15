@@ -8,7 +8,7 @@ use std::thread;
 use std::thread::JoinHandle;
 use log::{error, info};
 use uuid::Uuid;
-use common::{APICommand, ARGBColor, BLACK, HelloWindowManager, IncomingMessage, Point, Rect, Size};
+use common::{APICommand, ARGBColor, BLACK, HelloWindowManager, IncomingMessage, Padding, Point, Rect, Size};
 use serde::{Deserialize, Serialize};
 use common::events::{MouseDownEvent, MouseMoveEvent, MouseUpEvent};
 use common::graphics::ColorDepth::{CD24, CD32};
@@ -112,7 +112,7 @@ impl WindowManagerState {
         self.apps.iter_mut().find(|a|a.id == app_id)
     }
     pub fn add_window(&mut self, app_id: Uuid, win_id:Uuid, bounds:&Rect) -> Uuid {
-        let win = Window {
+        let mut win = Window {
             id: win_id,
             position:bounds.position(),
             content_size:bounds.size(),
@@ -120,6 +120,8 @@ impl WindowManagerState {
             backbuffer: GFXBuffer::new(CD32(), bounds.w as u32, bounds.h as u32, ARGB()),
             window_type: WindowType::Plain()
         };
+        let BG_COLOR:ARGBColor = ARGBColor::new_rgb(255,128,0);
+        win.backbuffer.clear(&BG_COLOR);
         if let Some(app) = self.find_app(app_id) {
             app.windows.push(win);
         }

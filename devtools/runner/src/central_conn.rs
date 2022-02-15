@@ -104,7 +104,7 @@ pub fn start_central_server() -> Result<CentralConnection,String> {
                 })
             }
             Err(e) => {
-                info!("cant connect yet. wait 10 ms");
+                // info!("cant connect yet. wait 10 ms");
                 thread::sleep(Duration::from_millis(10));
                 // return Err(e.to_string());
             }

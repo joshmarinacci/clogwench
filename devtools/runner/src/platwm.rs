@@ -13,7 +13,7 @@ use common::{APICommand, ARGBColor, BLACK, DebugMessage, HelloWindowManager, Inc
 use common::events::{KeyCode, KeyDownEvent, MouseButton, MouseDownEvent};
 use common::font::{FontInfo2, load_font_from_json};
 use common::graphics::{ColorDepth, export_to_png, GFXBuffer, PixelLayout};
-use common_wm::{OutgoingMessage, WindowManagerState};
+use common_wm::{FOCUSED_TITLEBAR_COLOR, FOCUSED_WINDOW_COLOR, OutgoingMessage, TITLEBAR_COLOR, WINDOW_BORDER_WIDTH, WINDOW_COLOR, WindowManagerState};
 use plat::{make_plat, Plat};
 
 pub struct PlatformWindowManager {
@@ -97,7 +97,8 @@ impl PlatformWindowManager {
                 });
 
                 let mut plat = make_plat(stop.clone(), tx_in.clone()).unwrap();
-                let background = GFXBuffer::new(ColorDepth::CD32(), 320, 240, PixelLayout::RGBA());
+                let bds = plat.get_screen_bounds();
+                let background = GFXBuffer::new(ColorDepth::CD32(), bds.w as u32, bds.h as u32, PixelLayout::RGBA());
                 plat.register_image2(&background);
                 let font = load_font_from_json("../../resources/default-font.json").unwrap();
                 Some(PlatformWindowManager {
@@ -240,19 +241,19 @@ impl PlatformWindowManager {
             self.plat.clear();
             // surf.buf.clear(&BLACK);
 
-            self.background.clear(&WHITE);
-            self.background.fill_rect(Rect::from_ints(0,0,25,25), &BLACK);
+            self.background.clear(&ARGBColor::new_rgb(100,100,100));
+            // self.background.fill_rect(Rect::from_ints(0,0,25,25), &BLACK);
             self.font.draw_text_at(&mut self.background,"Greetings Earthling",40,40,&ARGBColor::new_rgb(0,255,0));
             self.plat.draw_image(0, 0, &self.background);
             for win in self.state.window_list() {
-                // let (wc, tc) = if state.is_focused_window(win) {
-                //     (FOCUSED_WINDOW_COLOR, FOCUSED_TITLEBAR_COLOR)
-                // } else {
-                //     (WINDOW_COLOR, TITLEBAR_COLOR)
-                // };
+                let (wc, tc) = if self.state.is_focused_window(win) {
+                    (FOCUSED_WINDOW_COLOR, FOCUSED_TITLEBAR_COLOR)
+                } else {
+                    (WINDOW_COLOR, TITLEBAR_COLOR)
+                };
                 // surf.buf.draw_rect(win.external_bounds(), wc,WINDOW_BORDER_WIDTH);
-                // plat.draw_rect(win.external_bounds(), &wc, WINDOW_BORDER_WIDTH);
-                // plat.fill_rect(win.titlebar_bounds(), &tc);
+                self.plat.draw_rect(win.external_bounds(), &wc, WINDOW_BORDER_WIDTH);
+                self.plat.fill_rect(win.titlebar_bounds(), &tc);
                 let bd = win.content_bounds();
                 let MAGENTA = ARGBColor::new_rgb(255, 0, 255);
                 self.plat.fill_rect(bd, &MAGENTA);

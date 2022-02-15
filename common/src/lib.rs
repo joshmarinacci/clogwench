@@ -177,10 +177,6 @@ impl Point {
             y:self.y - pt.y,
         }
     }
-}
-
-
-impl Point {
     pub fn add(&self, pt:Point) -> Point {
         Point::init(self.x + pt.x, self.y + pt.y)
     }
@@ -188,9 +184,6 @@ impl Point {
         self.x = pt.x;
         self.y = pt.y;
     }
-}
-
-impl Point {
     pub fn init(x:i32,y:i32) -> Point {
         Point {
             x,
@@ -205,10 +198,28 @@ pub struct Size {
     pub w:i32,
     pub h:i32,
 }
-
 impl Size {
     fn init(w: i32, h: i32) -> Size {
         Size { w, h }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Copy, Clone)]
+pub struct Padding {
+    pub left:i32,
+    pub right:i32,
+    pub top: i32,
+    pub bottom: i32,
+}
+
+impl Padding {
+    pub fn init(top: i32, right: i32, bottom: i32, left: i32) -> Padding {
+        Padding {
+            left,
+            right,
+            top,
+            bottom
+        }
     }
 }
 
@@ -221,6 +232,19 @@ pub struct Rect {
 }
 
 impl Rect {
+    pub fn grow(&self, pad: &Padding) -> Rect {
+        Rect {
+            x: self.x - pad.left,
+            y: self.y - pad.top,
+            w: self.w + pad.left + pad.right,
+            h: self.h + pad.top + pad.bottom,
+        }
+    }
+    pub fn from_ints(x:i32, y:i32, w: i32, h:i32) -> Rect {
+        Rect {
+            x,y,w,h
+        }
+    }
     pub fn contains(&self, pt: Point) -> bool {
         if pt.x < self.x { return false }
         if pt.y < self.y { return false }
@@ -234,20 +258,9 @@ impl Rect {
     pub fn size(&self) -> Size {
         return Size::init(self.w,self.h);
     }
-}
-
-impl Rect {
     pub fn set_position(&mut self, pos: &Point) {
         self.x = pos.x;
         self.y = pos.y;
-    }
-}
-
-impl Rect {
-    pub fn from_ints(x:i32, y:i32, w: i32, h:i32) -> Rect {
-        Rect {
-            x,y,w,h
-        }
     }
     pub fn clamp(&self, pt:&Point) -> Point {
         let mut x = pt.x;
