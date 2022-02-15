@@ -5,7 +5,7 @@ use crate::events::{KeyDownEvent, KeyUpEvent, MouseDownEvent};
 pub mod client;
 pub mod events;
 pub mod graphics;
-mod font;
+pub mod font;
 
 
 #[cfg(test)]

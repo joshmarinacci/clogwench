@@ -21,7 +21,7 @@ use common::events::MouseDownEvent;
 use common_wm::{OutgoingMessage, WindowManagerState};
 use cool_logger::CoolLogger;
 use crate::headlesswm::HeadlessWindowManager;
-use crate::platwm::{main_service_loop, PlatformWindowManager};
+use crate::platwm::{PlatformWindowManager};
 
 #[derive(Debug, Copy, Clone, Deserialize)]
 enum WMType {
@@ -138,11 +138,11 @@ fn main() -> Result<(),String> {
             wm.tx_out.send(im).unwrap();
             {
                 loop {
-                    let keep_going = main_service_loop(&mut wm.state, &mut wm.plat, &mut wm.rx_in, &mut wm.tx_out);
+                    let keep_going = wm.main_service_loop();
                     if !keep_going { break; }
                 }
                 info!("WM Native shutting down");
-                wm.plat.shutdown();
+                wm.shutdown();
             }
             // pt("window manager fully connected to the central server");
 

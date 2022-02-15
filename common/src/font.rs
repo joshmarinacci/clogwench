@@ -25,7 +25,7 @@ pub struct FontInfo2 {
 }
 
 impl FontInfo2 {
-    pub(crate) fn draw_text_at(&self, buf: &mut GFXBuffer, text: &str, x: i32, y: i32, color: &ARGBColor) {
+    pub fn draw_text_at(&self, buf: &mut GFXBuffer, text: &str, x: i32, y: i32, color: &ARGBColor) {
         let mut dx:u32 = x as u32;
         let mut dy:u32 = y as u32;
         for ch in text.chars() {

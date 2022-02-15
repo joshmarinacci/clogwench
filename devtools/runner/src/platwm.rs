@@ -9,9 +9,10 @@ use std::thread::{JoinHandle, spawn};
 use std::time::Duration;
 use log::info;
 use serde::Deserialize;
-use common::{APICommand, ARGBColor, DebugMessage, HelloWindowManager, IncomingMessage, Point, Rect, WINDOW_MANAGER_PORT};
+use common::{APICommand, ARGBColor, BLACK, DebugMessage, HelloWindowManager, IncomingMessage, Point, Rect, WHITE, WINDOW_MANAGER_PORT};
 use common::events::{KeyCode, KeyDownEvent, MouseButton, MouseDownEvent};
-use common::graphics::export_to_png;
+use common::font::{FontInfo2, load_font_from_json};
+use common::graphics::{ColorDepth, export_to_png, GFXBuffer, PixelLayout};
 use common_wm::{OutgoingMessage, WindowManagerState};
 use plat::{make_plat, Plat};
 
@@ -23,20 +24,27 @@ pub struct PlatformWindowManager {
     pub sending_handle: JoinHandle<()>,
     pub tx_out: Sender<OutgoingMessage>,
     pub rx_in: Receiver<IncomingMessage>,
+    pub background: GFXBuffer,
+    pub font: FontInfo2,
+}
+
+impl PlatformWindowManager {
+    pub(crate) fn shutdown(&mut self) {
+        self.plat.shutdown()
+    }
 }
 
 impl PlatformWindowManager {
     pub(crate) fn init(w: i32, h: i32) -> Option<PlatformWindowManager> {
-        let conn_string = format!("localhost:{}",WINDOW_MANAGER_PORT);
-
+        let conn_string = format!("localhost:{}", WINDOW_MANAGER_PORT);
 
         match TcpStream::connect(conn_string) {
             Ok(stream) => {
                 info!("connected to the central server");
 
-                let (tx_out, rx_out) =mpsc::channel::<OutgoingMessage>();
+                let (tx_out, rx_out) = mpsc::channel::<OutgoingMessage>();
                 let (tx_in, mut rx_in) = mpsc::channel::<IncomingMessage>();
-                let stop:Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
+                let stop: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
 
                 let sending_handle = spawn({
                     let mut stream = stream.try_clone().unwrap();
@@ -73,7 +81,7 @@ impl PlatformWindowManager {
                                         }
                                         Err(e) => {
                                             info!("had an error!!");
-                                            println!("err {}",e);
+                                            println!("err {}", e);
                                             break;
                                         }
                                     }
@@ -88,18 +96,20 @@ impl PlatformWindowManager {
                     }
                 });
 
-                // let mut tx_out = tx_out.clone();
-                // let tx_in = tx_in.clone();
-                // let mut plat = make_plat(stop.clone(), tx_in).unwrap();
-
-                Some(PlatformWindowManager{
+                let mut plat = make_plat(stop.clone(), tx_in.clone()).unwrap();
+                let background = GFXBuffer::new(ColorDepth::CD32(), 320, 240, PixelLayout::RGBA());
+                plat.register_image2(&background);
+                let font = load_font_from_json("../../resources/default-font.json").unwrap();
+                Some(PlatformWindowManager {
                     stream,
-                    state:WindowManagerState::init(),
-                    plat: make_plat(stop.clone(), tx_in.clone()).unwrap(),
+                    state: WindowManagerState::init(),
+                    plat,
                     sending_handle,
                     receiving_handle,
                     tx_out,
                     rx_in,
+                    background,
+                    font,
                 })
             }
             _ => {
@@ -107,142 +117,145 @@ impl PlatformWindowManager {
                 None
             }
         }
-
     }
-}
 
-pub fn main_service_loop(state: &mut WindowManagerState, plat: &mut Plat, rx_in: &mut Receiver<IncomingMessage>, tx_out: &mut Sender<OutgoingMessage>) -> bool {
-    // println!("Native WM service loop");
-    plat.service_input();
-    for cmd in rx_in.try_iter() {
-        // pt(&format!("received {:?}", cmd));
-        match cmd.command {
-            APICommand::SystemShutdown => {
-                info!("the core is shutting down. bye");
-                return false;
-            }
-            APICommand::AppConnectResponse(res) => {
-                state.add_app(res.app_id);
-            },
-            APICommand::OpenWindowResponse(ow) => {
-                let win_id = state.add_window(ow.app_id, ow.window_id, &ow.bounds);
-                if let Some(win) = state.lookup_window(win_id) {
-                    plat.register_image2(&win.backbuffer);
-                }
-            },
-            APICommand::DrawRectCommand(dr) => {
-                if let Some(mut win) = state.lookup_window(dr.window_id) {
-                    println!("NativeWM: draw rect to window {:?} {:?}",&dr.rect, &dr.color);
-                    win.backbuffer.fill_rect(dr.rect, &dr.color);
-                    // buf.copy_from(win.position.x, win.position.y, &win.backbuffer);
-                }
-            },
-            APICommand::MouseUp(evt) => {
 
-            },
-            APICommand::MouseMove(evt) => {
-                //ignore mouse move
-            }
-            APICommand::MouseDown(evt) => {
-                let point = Point::init(evt.x, evt.y);
-                if let Some(win) = state.pick_window_at(point) {
-                    info!("picked a window");
-                    let wid = win.id.clone();
-                    let aid = win.owner.clone();
-                    state.set_focused_window(wid);
-                    tx_out.send(OutgoingMessage {
-                        recipient: Default::default(),
-                        command: APICommand::Debug(DebugMessage::WindowFocusChanged(String::from("foo")))
-                    }).unwrap();
-                    tx_out.send(OutgoingMessage {
-                        recipient: aid,
-                        command: APICommand::MouseDown(MouseDownEvent{
-                            app_id: aid,
-                            window_id: wid,
-                            original_timestamp: evt.original_timestamp,
-                            button: MouseButton::Primary,
-                            x: evt.x,
-                            y: evt.y
-                        })
-                    }).unwrap();
-                } else {
-                    info!("clicked on nothing. sending background debug event");
-                    tx_out.send(OutgoingMessage {
-                        recipient: Default::default(),
-                        command: APICommand::Debug(DebugMessage::BackgroundReceivedMouseEvent)
-                    }).unwrap();
+    pub fn main_service_loop(&mut self) -> bool {
+        // println!("Native WM service loop");
+        self.plat.service_input();
+        for cmd in self.rx_in.try_iter() {
+            // pt(&format!("received {:?}", cmd));
+            match cmd.command {
+                APICommand::SystemShutdown => {
+                    info!("the core is shutting down. bye");
+                    return false;
                 }
-            }
-            APICommand::KeyDown(evt) => {
-                match evt.key {
-                    KeyCode::ESC => {
-                        tx_out.send(OutgoingMessage{
-                            recipient:Default::default(),
-                            command: APICommand::Debug(DebugMessage::RequestServerShutdown)
-                        }).unwrap();
-                        thread::sleep(Duration::from_millis(500));
-                        return false;
+                APICommand::AppConnectResponse(res) => {
+                    self.state.add_app(res.app_id);
+                },
+                APICommand::OpenWindowResponse(ow) => {
+                    let win_id = self.state.add_window(ow.app_id, ow.window_id, &ow.bounds);
+                    if let Some(win) = self.state.lookup_window(win_id) {
+                        self.plat.register_image2(&win.backbuffer);
                     }
-                    _ => {
-                        info!("got a key down event");
-                        if let Some(id) = state.get_focused_window() {
-                            if let Some(win) = state.lookup_window(*id) {
-                                let wid = win.id.clone();
-                                let aid = win.owner.clone();
-                                tx_out.send(OutgoingMessage {
-                                    recipient: aid,
-                                    command: APICommand::KeyDown(KeyDownEvent {
-                                        app_id: aid,
-                                        window_id: wid,
-                                        original_timestamp: evt.original_timestamp,
-                                        key: evt.key
-                                    })
-                                }).unwrap();
+                },
+                APICommand::DrawRectCommand(dr) => {
+                    if let Some(mut win) = self.state.lookup_window(dr.window_id) {
+                        println!("NativeWM: draw rect to window {:?} {:?}", &dr.rect, &dr.color);
+                        win.backbuffer.fill_rect(dr.rect, &dr.color);
+                        // buf.copy_from(win.position.x, win.position.y, &win.backbuffer);
+                    }
+                },
+                APICommand::MouseUp(evt) => {},
+                APICommand::MouseMove(evt) => {
+                    //ignore mouse move
+                }
+                APICommand::MouseDown(evt) => {
+                    let point = Point::init(evt.x, evt.y);
+                    if let Some(win) = self.state.pick_window_at(point) {
+                        info!("picked a window");
+                        let wid = win.id.clone();
+                        let aid = win.owner.clone();
+                        self.state.set_focused_window(wid);
+                        self.tx_out.send(OutgoingMessage {
+                            recipient: Default::default(),
+                            command: APICommand::Debug(DebugMessage::WindowFocusChanged(String::from("foo")))
+                        }).unwrap();
+                        self.tx_out.send(OutgoingMessage {
+                            recipient: aid,
+                            command: APICommand::MouseDown(MouseDownEvent {
+                                app_id: aid,
+                                window_id: wid,
+                                original_timestamp: evt.original_timestamp,
+                                button: MouseButton::Primary,
+                                x: evt.x,
+                                y: evt.y
+                            })
+                        }).unwrap();
+                    } else {
+                        info!("clicked on nothing. sending background debug event");
+                        self.tx_out.send(OutgoingMessage {
+                            recipient: Default::default(),
+                            command: APICommand::Debug(DebugMessage::BackgroundReceivedMouseEvent)
+                        }).unwrap();
+                    }
+                }
+                APICommand::KeyDown(evt) => {
+                    match evt.key {
+                        KeyCode::ESC => {
+                            self.tx_out.send(OutgoingMessage {
+                                recipient: Default::default(),
+                                command: APICommand::Debug(DebugMessage::RequestServerShutdown)
+                            }).unwrap();
+                            thread::sleep(Duration::from_millis(500));
+                            return false;
+                        }
+                        _ => {
+                            info!("got a key down event");
+                            if let Some(id) = self.state.get_focused_window() {
+                                if let Some(win) = self.state.lookup_window(*id) {
+                                    let wid = win.id.clone();
+                                    let aid = win.owner.clone();
+                                    self.tx_out.send(OutgoingMessage {
+                                        recipient: aid,
+                                        command: APICommand::KeyDown(KeyDownEvent {
+                                            app_id: aid,
+                                            window_id: wid,
+                                            original_timestamp: evt.original_timestamp,
+                                            key: evt.key
+                                        })
+                                    }).unwrap();
+                                }
                             }
                         }
                     }
                 }
-            }
-            APICommand::Debug(DebugMessage::ScreenCapture(rect, str)) => {
-                let pth = PathBuf::from("./screencapture.png");
-                info!("rect for screen capture {:?}",pth);
-                // export_to_png(&buf, &pth);
-                tx_out.send(OutgoingMessage {
-                    recipient: Default::default(),
-                    command: APICommand::Debug(DebugMessage::ScreenCaptureResponse()),
-                }).unwrap();
-            }
-            APICommand::WMConnectResponse(res) => {
-                // pt("the central said hi back");
-            }
-            _ => {
-                info!("unhandled message {:?}", cmd);
-            }
-        };
-    }
-
-
-    {
-        //redraw all the windows
-        plat.clear();
-        // surf.buf.clear(&BLACK);
-        for win in state.window_list() {
-            // let (wc, tc) = if state.is_focused_window(win) {
-            //     (FOCUSED_WINDOW_COLOR, FOCUSED_TITLEBAR_COLOR)
-            // } else {
-            //     (WINDOW_COLOR, TITLEBAR_COLOR)
-            // };
-            // surf.buf.draw_rect(win.external_bounds(), wc,WINDOW_BORDER_WIDTH);
-            // plat.draw_rect(win.external_bounds(), &wc, WINDOW_BORDER_WIDTH);
-            // plat.fill_rect(win.titlebar_bounds(), &tc);
-            let bd = win.content_bounds();
-            let MAGENTA = ARGBColor::new_rgb(255, 0, 255);
-            plat.fill_rect(bd, &MAGENTA);
-            plat.draw_image(win.content_bounds().x, win.content_bounds().y, &win.backbuffer);
-            // surf.copy_from(bd.x, bd.y, &win.backbuffer)
+                APICommand::Debug(DebugMessage::ScreenCapture(rect, str)) => {
+                    let pth = PathBuf::from("./screencapture.png");
+                    info!("rect for screen capture {:?}",pth);
+                    // export_to_png(&buf, &pth);
+                    self.tx_out.send(OutgoingMessage {
+                        recipient: Default::default(),
+                        command: APICommand::Debug(DebugMessage::ScreenCaptureResponse()),
+                    }).unwrap();
+                }
+                APICommand::WMConnectResponse(res) => {
+                    // pt("the central said hi back");
+                }
+                _ => {
+                    info!("unhandled message {:?}", cmd);
+                }
+            };
         }
-    }
 
-    plat.service_loop();
-    true
+
+        {
+            //redraw all the windows
+            self.plat.clear();
+            // surf.buf.clear(&BLACK);
+
+            self.background.clear(&WHITE);
+            self.background.fill_rect(Rect::from_ints(0,0,25,25), &BLACK);
+            self.font.draw_text_at(&mut self.background,"Greetings Earthling",40,40,&ARGBColor::new_rgb(0,255,0));
+            self.plat.draw_image(0, 0, &self.background);
+            for win in self.state.window_list() {
+                // let (wc, tc) = if state.is_focused_window(win) {
+                //     (FOCUSED_WINDOW_COLOR, FOCUSED_TITLEBAR_COLOR)
+                // } else {
+                //     (WINDOW_COLOR, TITLEBAR_COLOR)
+                // };
+                // surf.buf.draw_rect(win.external_bounds(), wc,WINDOW_BORDER_WIDTH);
+                // plat.draw_rect(win.external_bounds(), &wc, WINDOW_BORDER_WIDTH);
+                // plat.fill_rect(win.titlebar_bounds(), &tc);
+                let bd = win.content_bounds();
+                let MAGENTA = ARGBColor::new_rgb(255, 0, 255);
+                self.plat.fill_rect(bd, &MAGENTA);
+                self.plat.draw_image(win.content_bounds().x, win.content_bounds().y, &win.backbuffer);
+                // surf.copy_from(bd.x, bd.y, &win.backbuffer)
+            }
+        }
+
+        self.plat.service_loop();
+        true
+    }
 }
