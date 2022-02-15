@@ -13,7 +13,7 @@ use common::{APICommand, ARGBColor, BLACK, DebugMessage, HelloWindowManager, Inc
 use common::events::{KeyCode, KeyDownEvent, MouseButton, MouseDownEvent};
 use common::font::{FontInfo2, load_font_from_json};
 use common::graphics::{ColorDepth, export_to_png, GFXBuffer, PixelLayout};
-use common_wm::{FOCUSED_TITLEBAR_COLOR, FOCUSED_WINDOW_COLOR, OutgoingMessage, TITLEBAR_COLOR, WINDOW_BORDER_WIDTH, WINDOW_COLOR, WindowManagerState};
+use common_wm::{FOCUSED_TITLEBAR_COLOR, FOCUSED_WINDOW_COLOR, InputGesture, NoOpGesture, OutgoingMessage, TITLEBAR_COLOR, WINDOW_BORDER_WIDTH, WINDOW_COLOR, WindowDragGesture, WindowManagerState};
 use plat::{make_plat, Plat};
 
 pub struct PlatformWindowManager {
@@ -26,6 +26,7 @@ pub struct PlatformWindowManager {
     pub rx_in: Receiver<IncomingMessage>,
     pub background: GFXBuffer,
     pub font: FontInfo2,
+    pub gesture: Box<dyn InputGesture>,
 }
 
 impl PlatformWindowManager {
@@ -111,6 +112,7 @@ impl PlatformWindowManager {
                     rx_in,
                     background,
                     font,
+                    gesture: Box::new(NoOpGesture::init()) as Box<dyn InputGesture>,
                 })
             }
             _ => {
@@ -153,9 +155,11 @@ impl PlatformWindowManager {
                         win.backbuffer.fill_rect_with_image(&dr.rect,&dr.buffer);
                     }
                 },
-                APICommand::MouseUp(evt) => {},
+                APICommand::MouseUp(evt) => {
+                    self.gesture = Box::new(NoOpGesture::init()) as Box<dyn InputGesture>;
+                },
                 APICommand::MouseMove(evt) => {
-                    //ignore mouse move
+                    self.gesture.mouse_move(evt, &mut self.state);
                 }
                 APICommand::MouseDown(evt) => {
                     let point = Point::init(evt.x, evt.y);
@@ -163,21 +167,27 @@ impl PlatformWindowManager {
                         info!("picked a window");
                         let wid = win.id.clone();
                         let aid = win.owner.clone();
+
+                        if win.titlebar_bounds().contains(point) {
+                            info!("inside the titlebar");
+                            self.gesture = Box::new(WindowDragGesture::init(point,win.id))
+                        } else {
+                            self.tx_out.send(OutgoingMessage {
+                                recipient: aid,
+                                command: APICommand::MouseDown(MouseDownEvent {
+                                    app_id: aid,
+                                    window_id: wid,
+                                    original_timestamp: evt.original_timestamp,
+                                    button: MouseButton::Primary,
+                                    x: evt.x,
+                                    y: evt.y
+                                })
+                            }).unwrap();
+                        }
                         self.state.set_focused_window(wid);
                         self.tx_out.send(OutgoingMessage {
                             recipient: Default::default(),
                             command: APICommand::Debug(DebugMessage::WindowFocusChanged(String::from("foo")))
-                        }).unwrap();
-                        self.tx_out.send(OutgoingMessage {
-                            recipient: aid,
-                            command: APICommand::MouseDown(MouseDownEvent {
-                                app_id: aid,
-                                window_id: wid,
-                                original_timestamp: evt.original_timestamp,
-                                button: MouseButton::Primary,
-                                x: evt.x,
-                                y: evt.y
-                            })
                         }).unwrap();
                     } else {
                         info!("clicked on nothing. sending background debug event");
