@@ -247,28 +247,24 @@ impl PlatformWindowManager {
 
 
         {
-            //redraw all the windows
             self.plat.clear();
-            // surf.buf.clear(&BLACK);
 
-            self.background.clear(&ARGBColor::new_rgb(100,100,100));
+            // self.background.clear(&ARGBColor::new_rgb(100,100,100));
             // self.background.fill_rect(Rect::from_ints(0,0,25,25), &BLACK);
-            self.font.draw_text_at(&mut self.background,"Greetings Earthling",40,40,&ARGBColor::new_rgb(0,255,0));
-            self.plat.draw_image(0, 0, &self.background);
+            // self.font.draw_text_at(&mut self.background,"Greetings Earthling",40,40,&ARGBColor::new_rgb(0,255,0));
+            // self.plat.draw_image(0, 0, &self.background);
             for win in self.state.window_list() {
                 let (wc, tc) = if self.state.is_focused_window(win) {
                     (FOCUSED_WINDOW_COLOR, FOCUSED_TITLEBAR_COLOR)
                 } else {
                     (WINDOW_COLOR, TITLEBAR_COLOR)
                 };
-                // surf.buf.draw_rect(win.external_bounds(), wc,WINDOW_BORDER_WIDTH);
                 self.plat.draw_rect(win.external_bounds(), &wc, WINDOW_BORDER_WIDTH);
                 self.plat.fill_rect(win.titlebar_bounds(), &tc);
                 let bd = win.content_bounds();
                 let MAGENTA = ARGBColor::new_rgb(255, 0, 255);
                 self.plat.fill_rect(bd, &MAGENTA);
                 self.plat.draw_image(win.content_bounds().x, win.content_bounds().y, &win.backbuffer);
-                // surf.copy_from(bd.x, bd.y, &win.backbuffer)
             }
         }
 
