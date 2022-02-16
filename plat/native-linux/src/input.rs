@@ -85,6 +85,8 @@ pub fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender
                             KeyCode::MOUSE_PRIMARY => {
                                 if ev.value() == 1 {
                                     APICommand::MouseDown(MouseDownEvent {
+                                        app_id: Default::default(),
+                                        window_id: Default::default(),
                                         original_timestamp: 0,
                                         button: MouseButton::Primary,
                                         x: cx as i32,
