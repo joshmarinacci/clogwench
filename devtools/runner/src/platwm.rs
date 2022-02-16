@@ -27,6 +27,8 @@ pub struct PlatformWindowManager {
     pub background: GFXBuffer,
     pub font: FontInfo2,
     pub gesture: Box<dyn InputGesture>,
+    pub cursor: Point,
+    pub cursor_image: GFXBuffer,
 }
 
 impl PlatformWindowManager {
@@ -101,6 +103,8 @@ impl PlatformWindowManager {
                 let bds = plat.get_screen_bounds();
                 let background = GFXBuffer::new(ColorDepth::CD32(), bds.w as u32, bds.h as u32, PixelLayout::RGBA());
                 plat.register_image2(&background);
+                let cursor_image:GFXBuffer = GFXBuffer::from_png_file("../../resources/cursor.png");
+                plat.register_image2(&cursor_image);
                 let font = load_font_from_json("../../resources/default-font.json").unwrap();
                 Some(PlatformWindowManager {
                     stream,
@@ -113,6 +117,8 @@ impl PlatformWindowManager {
                     background,
                     font,
                     gesture: Box::new(NoOpGesture::init()) as Box<dyn InputGesture>,
+                    cursor:Point::init(0,0),
+                    cursor_image,
                 })
             }
             _ => {
@@ -159,6 +165,7 @@ impl PlatformWindowManager {
                     self.gesture = Box::new(NoOpGesture::init()) as Box<dyn InputGesture>;
                 },
                 APICommand::MouseMove(evt) => {
+                    self.cursor = Point::init(evt.x, evt.y);
                     self.gesture.mouse_move(evt, &mut self.state);
                 }
                 APICommand::MouseDown(evt) => {
@@ -266,6 +273,7 @@ impl PlatformWindowManager {
                 self.plat.fill_rect(bd, &MAGENTA);
                 self.plat.draw_image(win.content_bounds().x, win.content_bounds().y, &win.backbuffer);
             }
+            self.plat.draw_image(self.cursor.x,self.cursor.y,&self.cursor_image);
         }
 
         self.plat.service_loop();
