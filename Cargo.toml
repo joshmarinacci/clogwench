@@ -1,7 +1,7 @@
 [workspace]
 
 members = [
-    "demo-clickgrid",
+    "digital-clock",
     "linux-wm",
     "test-wm",
     "echo-app",

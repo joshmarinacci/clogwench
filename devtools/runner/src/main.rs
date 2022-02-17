@@ -49,6 +49,10 @@ struct Cli {
     wmtype: WMType,
     #[structopt(short, long)]
     test:bool,
+    #[structopt(long)]
+    start_clock:bool,
+    #[structopt(long)]
+    start_echo:bool,
 }
 
 fn init_setup() -> Cli {
@@ -126,6 +130,13 @@ fn main() -> Result<(),String> {
 
     }
 
+
+    if args.start_clock {
+        start_app_with_delay(5000, String::from("../../digital-clock"));
+    }
+    if args.start_echo {
+        start_app_with_delay(5000, String::from("../../echo-app"));
+    }
     match args.wmtype {
         WMType::Native => {
             info!("creating a native window manager");
@@ -183,6 +194,27 @@ fn main() -> Result<(),String> {
     Ok(())
 }
 
+fn start_app_with_delay(delay: u64, path: String) {
+    thread::spawn(move||{
+        thread::sleep(Duration::from_millis(delay));
+        info!("launching {}",path);
+        let mut child = Command::new("cargo")
+            .current_dir(&path)
+            // .stdin(Stdio::null())
+            // .stdout(Stdio::null())
+            // .stdout(Stdio::inherit())
+            .arg("run")
+            // .arg("--debug=true")
+            // .env_clear()
+            // .env("PATH", "/bin")
+            .spawn()
+            .expect("child process failed to start")
+            ;
+        info!("child at {} is launched",path);
+    });
+}
+
+
 struct ChildProxy {
     child: Child,
 }
@@ -202,7 +234,7 @@ impl ChildProxy {
 
 fn start_app(path: &str) -> ChildProxy {
     let (sender,receiver):(Sender<DebugMessage>,Receiver<DebugMessage>) = mpsc::channel();
-    let mut child = Command::new("../../target/debug/echo-app")
+    let mut child = Command::new(path)
         // .stdin(Stdio::null())
         // .stdout(Stdio::null())
         // .stdout(Stdio::inherit())
