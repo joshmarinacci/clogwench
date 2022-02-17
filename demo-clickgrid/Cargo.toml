@@ -1,5 +1,5 @@
 [package]
-name = "simple-client"
+name = "digital-clock"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 
 common = { path="../common"}
-interprocess = "1.1.1"
-serde = { version = "1.0.133", features = ["derive"] }
-serde_json = "1.0.74"
-rand = "0.8.4"
+uuid = { version="0.8.2", features=["v4","serde"]}
+log = "0.4.14"
+cool-logger = { path="../cool-logger"}
+chrono = "0.4.19"

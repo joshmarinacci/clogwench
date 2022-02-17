@@ -46,11 +46,34 @@ pub struct GFXBuffer {
 }
 
 impl GFXBuffer {
+    pub fn subrect(&self, rect: Rect) -> GFXBuffer {
+        let mut sub = GFXBuffer::new(self.bitdepth.clone(),
+                                 rect.w as u32,
+                                 rect.h as u32,
+                                 self.layout.clone());
+
+        for j in 0 .. sub.height {
+            for i in 0 .. sub.width {
+                let x = rect.x + i as i32;
+                if x >= (self.width as i32) { continue; }
+                let y = rect.y + j as i32;
+                if y >= (self.height as i32) { continue; }
+                let val = self.get_pixel_vec_argb(x as u32,y as u32);
+                sub.set_pixel_vec_argb(i,j, &val);
+            }
+        }
+        sub
+    }
+}
+
+impl GFXBuffer {
     pub fn fill_rect_with_image(&mut self, rect: &Rect, buf: &GFXBuffer) {
-        info!("filling rect with image {:?}",rect);
+        // info!("filling rect with image {:?}",rect);
         for j in rect.y .. rect.y + rect.h {
             for i in rect.x .. rect.x + rect.w {
-                let v = buf.get_pixel_vec_argb((i as u32 % buf.width) as u32, (j as u32 % buf.height) as u32);
+                let v = buf.get_pixel_vec_argb(
+                    ( (i - rect.x) as u32 % buf.width) as u32,
+                    ( (j - rect.y) as u32 % buf.height) as u32);
                 self.set_pixel_vec_argb(i as u32,j as u32,&v);
             }
         }
@@ -114,7 +137,7 @@ impl GFXBuffer {
     pub fn get_pixel_vec_argb(&self, x:u32, y:u32) -> Vec<u8>{
         let mut v:Vec<u8> = vec![0,0,0,0];
         if x >= self.width || y >= self.height {
-            println!("error. pixel {},{} out of bounds {}x{}",x,y,self.width,self.height);
+            println!("get error. pixel {},{} out of bounds {}x{}",x,y,self.width,self.height);
             return v;
         }
         match self.bitdepth {
@@ -159,7 +182,7 @@ impl GFXBuffer {
     }
     pub fn set_pixel_vec_argb(&mut self, x:u32, y:u32, v:&Vec<u8>) {
         if x >= self.width || y >= self.height {
-            println!("error. pixel {},{} out of bounds {}x{}",x,y,self.width,self.height);
+            println!("set error. pixel {},{} out of bounds {}x{}",x,y,self.width,self.height);
             return;
         }
         match self.bitdepth {

@@ -274,6 +274,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "digital-clock"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "common",
+ "cool-logger",
+ "log",
+ "uuid",
+]
+
+[[package]]
 name = "echo-app"
 version = "0.1.0"
 dependencies = [
@@ -1124,17 +1135,6 @@ dependencies = [
  "ryu",
  "serde",
  "yaml-rust",
-]
-
-[[package]]
-name = "simple-client"
-version = "0.1.0"
-dependencies = [
- "common",
- "interprocess",
- "rand",
- "serde",
- "serde_json",
 ]
 
 [[package]]

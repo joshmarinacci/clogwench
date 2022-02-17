@@ -62,7 +62,7 @@ fn main() {
     let mut py = 50;
     let mut appid = Uuid::new_v4();
 
-    let client = ClientConnection::init().expect("Can't connect to the linux-wm");
+    let client = ClientConnection::init().expect("Can't connect to the central");
     //open window and wait
     let resp: Result<APICommand, RecvError> = client.send_and_wait(APICommand::AppConnect(HelloApp{}));
     match resp {
