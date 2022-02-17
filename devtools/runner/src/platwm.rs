@@ -186,7 +186,8 @@ impl PlatformWindowManager {
 
                         if win.titlebar_bounds().contains(point) {
                             info!("inside the titlebar");
-                            self.gesture = Box::new(WindowDragGesture::init(point,win.id))
+                            self.gesture = Box::new(WindowDragGesture::init(point,win.id));
+                            self.gesture.mouse_down(evt,&mut self.state);
                         } else {
                             self.tx_out.send(OutgoingMessage {
                                 recipient: aid,

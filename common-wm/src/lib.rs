@@ -395,14 +395,16 @@ impl InputGesture for NoOpGesture {
 }
 
 pub struct WindowDragGesture {
-    start:Point,
+    mouse_start:Point,
     winid:Uuid,
+    pub win_start: Point,
 }
 
 impl WindowDragGesture {
     pub fn init(start: Point, win: Uuid) -> WindowDragGesture {
         WindowDragGesture {
-            start:Point::init(0,0),
+            mouse_start:Point::init(0, 0),
+            win_start:Point::init(0,0),
             winid:win
         }
     }
@@ -410,25 +412,30 @@ impl WindowDragGesture {
 
 impl InputGesture for WindowDragGesture {
     fn mouse_down(&mut self, evt: MouseDownEvent, state:&mut WindowManagerState) {
-        info!("WDG: mouse down {:?}",evt);
-        self.start = Point::init(evt.x,evt.y);
+        // info!("WDG: mouse down {:?}",evt);
+        self.win_start = if let Some(win) = state.lookup_window(self.winid) {
+            win.position.clone()
+        } else {
+            panic!("we can't find the window! {}",self.winid);
+        };
+        self.mouse_start = Point::init(evt.x, evt.y);
     }
 
     fn mouse_move(&mut self, evt: MouseMoveEvent, state:&mut WindowManagerState) {
-        info!("WDG: mouse move {:?}",evt);
+        // info!("WDG: mouse move {:?}",evt);
         let curr = Point::init(evt.x,evt.y);
-        let diff = curr.subtract(self.start);
-        info!("dragging window {} by {:?}",self.winid,diff);
+        let diff = self.mouse_start.subtract(self.win_start);
+        let new_pos = curr.subtract(diff);
+        // info!("dragging window {} by {:?}",self.winid,diff);
         if let Some(win) = state.lookup_window(self.winid) {
-            win.position.x = curr.x;
-            win.position.y = curr.y;
+            win.position.copy_from(new_pos);
         }
     }
 
     fn mouse_up(&mut self, evt: MouseUpEvent, state:&mut WindowManagerState) {
-        info!("WDG completed");
+        // info!("WDG completed");
         let curr = Point::init(evt.x,evt.y);
-        info!("new window position is {} to {:?}",self.winid,curr);
+        // info!("new window position is {} to {:?}",self.winid,curr);
         if let Some(win) = state.lookup_window(self.winid) {
             win.position.x = curr.x;
             win.position.y = curr.y;
