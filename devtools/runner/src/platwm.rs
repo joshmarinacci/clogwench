@@ -189,6 +189,7 @@ impl PlatformWindowManager {
                             self.gesture = Box::new(WindowDragGesture::init(point,win.id));
                             self.gesture.mouse_down(evt,&mut self.state);
                         } else {
+                            let app_point = point.subtract(win.content_bounds().position());
                             self.tx_out.send(OutgoingMessage {
                                 recipient: aid,
                                 command: APICommand::MouseDown(MouseDownEvent {
@@ -196,8 +197,8 @@ impl PlatformWindowManager {
                                     window_id: wid,
                                     original_timestamp: evt.original_timestamp,
                                     button: MouseButton::Primary,
-                                    x: evt.x,
-                                    y: evt.y
+                                    x: app_point.x,
+                                    y: app_point.y
                                 })
                             }).unwrap();
                         }
