@@ -142,6 +142,15 @@ impl PlatformWindowManager {
                 APICommand::AppConnectResponse(res) => {
                     self.state.add_app(res.app_id);
                 },
+                APICommand::AppDisconnected(dis) => {
+                    info!("app disconnected. removing windows");
+                    if let Some(app) = &self.state.find_app(dis.app_id) {
+                        for win in &app.windows {
+                            self.plat.unregister_image2(&win.backbuffer);
+                        }
+                    }
+                    self.state.remove_app(dis.app_id);
+                }
                 APICommand::OpenWindowResponse(ow) => {
                     let win_id = self.state.add_window(ow.app_id, ow.window_id, &ow.bounds);
                     if let Some(win) = self.state.lookup_window(win_id) {

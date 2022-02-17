@@ -191,6 +191,9 @@ impl Plat {
             sync_texture(&mut self.canvas, tx, img);
         }
     }
+    pub fn unregister_image2(&mut self, img:&GFXBuffer) {
+        self.textures.remove(&img.id);
+    }
 }
 
 fn sdl_to_common(kc: Keycode) -> KeyCode {

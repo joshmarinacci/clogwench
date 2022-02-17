@@ -13,7 +13,7 @@ use log4rs::Config;
 use log4rs::config::{Appender, Root};
 use serde::Deserialize;
 use uuid::Uuid;
-use common::{APICommand, APP_MANAGER_PORT, DEBUG_PORT, DebugMessage, HelloAppResponse, HelloWindowManagerResponse, IncomingMessage, OpenWindowCommand, OpenWindowResponse, Rect, WINDOW_MANAGER_PORT};
+use common::{APICommand, APP_MANAGER_PORT, AppDisconnected, DEBUG_PORT, DebugMessage, HelloAppResponse, HelloWindowManagerResponse, IncomingMessage, OpenWindowCommand, OpenWindowResponse, Rect, WINDOW_MANAGER_PORT};
 use structopt::StructOpt;
 use cool_logger::CoolLogger;
 
@@ -100,7 +100,12 @@ impl CentralState {
                         }
                     }
                     Err(e) => {
-                        error!("error deserializing from demo-clickgrid {:?}",e);
+                        error!("error deserializing from app {:?}",e);
+                        info!("sending shutdown about app {}",appid);
+                        let im = IncomingMessage { source: appid, command:APICommand::AppDisconnected(AppDisconnected{ app_id: appid.clone() })};
+                        if let Err(e) = sender.send(im) {
+                            error!("error sending command {}",e);
+                        }
                         stream2.shutdown(Shutdown::Both);
                         break;
                     }
@@ -307,6 +312,11 @@ fn start_router(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, state: Arc
                     state.lock().unwrap().send_to_all_wm(resp.clone());
                     state.lock().unwrap().send_to_debugger(DebugMessage::AppConnected(String::from("foo")))
                 },
+                APICommand::AppDisconnected(dis) => {
+                    let resp = APICommand::AppDisconnected(dis);
+                    state.lock().unwrap().send_to_all_wm(resp.clone());
+                    state.lock().unwrap().send_to_debugger(DebugMessage::AppDisconnected(String::from("foo")))
+                }
                 APICommand::OpenWindowCommand(ow) => {
                     info!("opening window");
                     let winid = state.lock().unwrap().add_window_to_app(msg.source, &ow);

@@ -97,6 +97,10 @@ pub struct HelloAppResponse {
     pub app_id:Uuid,
 }
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct AppDisconnected {
+    pub app_id:Uuid,
+}
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct HelloWindowManager {
 
 }
@@ -138,6 +142,7 @@ pub struct OpenWindowResponse {
 pub enum APICommand {
     AppConnect(HelloApp),
     AppConnectResponse(HelloAppResponse),
+    AppDisconnected(AppDisconnected),
     Debug(DebugMessage),
 
     WMConnect(HelloWindowManager),

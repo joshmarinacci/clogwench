@@ -27,7 +27,7 @@ mod tests {
 
 pub struct App {
     pub id:Uuid,
-    windows:Vec<Window>,
+    pub windows:Vec<Window>,
 }
 
 pub const TITLE_BAR_HEIGHT:i32 = 10;
@@ -84,6 +84,13 @@ pub struct WindowManagerState {
 }
 
 impl WindowManagerState {
+    pub fn init() -> WindowManagerState {
+        WindowManagerState {
+            apps: Vec::new(),
+            focused: None,
+        }
+    }
+
     pub fn is_focused_window(&self, win: &Window) -> bool {
         if let Some(foc) = self.get_focused_window() {
             if foc.eq(&win.id) {
@@ -91,15 +98,6 @@ impl WindowManagerState {
             }
         }
         return false
-    }
-}
-
-impl WindowManagerState {
-    pub fn init() -> WindowManagerState {
-        WindowManagerState {
-            apps: Vec::new(),
-            focused: None,
-        }
     }
     pub fn add_app(&mut self, app_id: Uuid) {
         let app = App {
@@ -180,6 +178,12 @@ impl WindowManagerState {
             }
         }
         return res;
+    }
+    pub fn remove_app(&mut self, app_id: Uuid) {
+        if let Some(app) = self.find_app(app_id) {
+            app.windows.clear();
+        }
+        self.apps.retain(|a| a.id != app_id)
     }
 
 }
