@@ -301,7 +301,7 @@ fn buffer_clear_CD32_RGBA_speed() {
     let color = ARGBColor::new_rgb(100,100,100);
     let mut background = GFXBuffer::new(ColorDepth::CD32(), w, h, PixelLayout::ARGB());
     background.fast = true;
-    for n in 0..10 {
+    for _ in 0..10 {
         background.clear(&color);
     }
     // 2.55s vs 0.76s  ~= 3.3x faster
@@ -337,4 +337,36 @@ fn buffer_clear_CD15_RGB565_speed() {
     }
     // 2.55s vs 0.76s  ~= 3.3x faster
     println!("took {}",start.elapsed().as_secs_f32());
+}
+
+
+#[test]
+fn buffer_fill_rect_cd32_rgba_speed() {
+    let w = 1024;
+    let h = 1024;
+    let color = ARGBColor::new_rgb(100,100,100);
+
+    let types = [
+        (ColorDepth::CD32(),PixelLayout::ARGB()),
+        (ColorDepth::CD32(),PixelLayout::RGBA()),
+        (ColorDepth::CD24(),PixelLayout::RGB())];
+
+    for (depth,layout) in types {
+        let mut background = GFXBuffer::new(depth, w, h, layout);
+        background.fast = true;
+        background.clear(&BLACK);
+        let start = Instant::now();
+        let bounds = Rect::from_ints(500, 500, 500, 500);
+        for _ in 0..10 {
+            background.fill_rect(bounds, &color);
+        }
+        println!("took {}",start.elapsed().as_secs_f32());
+        // println!("is black {:?}",background.get_pixel_vec(&PixelLayout::RGBA(),0,0));
+        // println!("is color {:?}",background.get_pixel_vec(&PixelLayout::RGBA(),600,600));
+        assert_eq!(background.get_pixel_vec(&PixelLayout::RGBA(),0,0),BLACK.as_layout(&PixelLayout::RGBA()));
+        assert_eq!(background.get_pixel_vec(&PixelLayout::RGBA(),600,600),color.as_layout(&PixelLayout::RGBA()));
+    }
+
+    // 2.55s vs 0.76s  ~= 3.3x faster
+
 }

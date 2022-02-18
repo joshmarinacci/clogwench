@@ -20,6 +20,7 @@ use crate::{ARGBColor, Rect};
 use crate::graphics::ColorDepth::{CD24, CD32};
 use crate::graphics::PixelLayout::RGBA;
 use serde::{Deserialize, Serialize};
+use crate::PixelLayout::ARGB;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub enum ColorDepth {
@@ -156,9 +157,10 @@ impl GFXBuffer {
             }
             ColorDepth::CD24() => {
                 let n = (x + y * (self.width as u32)) as usize;
-                v[0] = self.data[n*3+0];
-                v[1] = self.data[n*3+1];
-                v[2] = self.data[n*3+2];
+                v[0] = 255;
+                v[1] = self.data[n*3+0];
+                v[2] = self.data[n*3+1];
+                v[3] = self.data[n*3+2];
             }
             ColorDepth::CD32() => {
                 let n = (x + y * (self.width as u32)) as usize;
@@ -181,6 +183,13 @@ impl GFXBuffer {
         }
         return v
     }
+    pub fn get_pixel_vec(&self, layout: &PixelLayout, x: i32, y: i32) -> Vec<u8> {
+        let pix = self.get_pixel_vec_argb(x as u32, y as u32);
+        println!("pix is {:?}",pix);
+        let color = ARGBColor::from_argb_vec(&pix);
+        return color.as_layout(&layout);
+    }
+
     pub fn set_pixel_vec_argb(&mut self, x:u32, y:u32, v:&Vec<u8>) {
         if x >= self.width || y >= self.height {
             println!("set error. pixel {},{} out of bounds {}x{}",x,y,self.width,self.height);
@@ -204,9 +213,9 @@ impl GFXBuffer {
             }
             ColorDepth::CD24() => {
                 let n = (x + y * (self.width as u32)) as usize;
-                self.data[n*3+0] = v[0];
-                self.data[n*3+1] = v[1];
-                self.data[n*3+2] = v[2];
+                self.data[n*3+0] = v[1];
+                self.data[n*3+1] = v[2];
+                self.data[n*3+2] = v[3];
             }
             ColorDepth::CD32() => {
                 let n = (x + y * (self.width as u32)) as usize;
