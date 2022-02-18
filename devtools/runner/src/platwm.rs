@@ -29,6 +29,9 @@ pub struct PlatformWindowManager {
     pub gesture: Box<dyn InputGesture>,
     pub cursor: Point,
     pub cursor_image: GFXBuffer,
+    tick:u128,
+    fps:Vec<u128>,
+    start:Instant,
 }
 
 impl PlatformWindowManager {
@@ -121,6 +124,9 @@ impl PlatformWindowManager {
                     gesture: Box::new(NoOpGesture::init()) as Box<dyn InputGesture>,
                     cursor:Point::init(0,0),
                     cursor_image,
+                    tick: 0,
+                    fps: vec![],
+                    start: Instant::now()
                 })
             }
             _ => {
@@ -266,11 +272,12 @@ impl PlatformWindowManager {
         }
 
 
+
         {
             self.plat.clear();
 
-            // self.background.clear(&ARGBColor::new_rgb(100,100,100));
-            // self.background.fill_rect(Rect::from_ints(0,0,25,25), &BLACK);
+            self.background.clear(&ARGBColor::new_rgb(100,100,100));
+            self.background.fill_rect(Rect::from_ints(0,0,25,25), &BLACK);
             // self.font.draw_text_at(&mut self.background,"Greetings Earthling",40,40,&ARGBColor::new_rgb(0,255,0));
             // self.plat.draw_image(0, 0, &self.background);
             for win in self.state.window_list() {
@@ -288,8 +295,17 @@ impl PlatformWindowManager {
             }
             self.plat.draw_image(self.cursor.x,self.cursor.y,&self.cursor_image);
         }
-
         self.plat.service_loop();
+        self.fps.push(self.start.elapsed().as_millis());
+        if self.fps.len() > 60 { self.fps.remove(0); }
+        if self.tick % 60 == 0 {
+            println ! ("60 ticks");
+            if self.fps.len() >= 60 {
+                let time_for_60 = self.fps[59] - self.fps[0];
+                println!("calculated fps time for 60 {}",time_for_60 as f64 / 60.0 );
+            }
+        }
+        self.tick += 1;
         true
     }
 }
