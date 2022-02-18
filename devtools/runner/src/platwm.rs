@@ -356,7 +356,7 @@ fn buffer_fill_rect_cd32_rgba_speed() {
         background.fast = true;
         background.clear(&BLACK);
         let start = Instant::now();
-        let bounds = Rect::from_ints(500, 500, 500, 500);
+        let bounds = Rect::from_ints(500, 500, 1000, 1000);
         for _ in 0..10 {
             background.fill_rect(bounds, &color);
         }

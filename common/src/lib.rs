@@ -305,6 +305,23 @@ impl Rect {
         if y > self.y + self.h { y = self.y + self.h; }
         return Point::init(x,y);
     }
+    pub(crate) fn intersect(&self, r2: Rect) -> Rect {
+        let c1 = self.lower_right_corner();
+        let c2 = r2.lower_right_corner();
+        let rx = self.x.max(r2.x);
+        let ry = self.y.max(r2.y);
+        let r2x = c1.x.min(c2.x);
+        let r2y = c2.y.min(c2.y);
+        Rect {
+            x:rx,
+            y:ry,
+            w:r2x-rx,
+            h:r2y-ry,
+        }
+    }
+    fn lower_right_corner(&self) -> Point {
+        Point::init(self.x+self.w,self.y+self.h)
+    }
 }
 
 

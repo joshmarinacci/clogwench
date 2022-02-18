@@ -28,6 +28,17 @@ pub enum ColorDepth {
     CD24(),
     CD32(),
 }
+
+impl ColorDepth {
+    pub(crate) fn bytes_per_pixel(&self) -> i32 {
+        match self {
+            ColorDepth::CD16() => 2,
+            ColorDepth::CD24() => 3,
+            ColorDepth::CD32() => 4,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub enum PixelLayout {
     RGB565(),
@@ -113,10 +124,23 @@ impl GFXBuffer {
     }
 
     pub fn fill_rect(&mut self, bounds: Rect, color: &ARGBColor) {
-        let v = color.to_argb_vec();
-        for i in bounds.x .. (bounds.x+bounds.w) {
-            for j in bounds.y .. (bounds.y+bounds.h) {
-                self.set_pixel_vec_argb(i as u32,j as u32,&v);
+        let bounds = bounds.intersect(self.bounds());
+        if self.fast {
+            let cv = color.as_layout(&self.layout);
+            let cv2 = create_filled_row(bounds.w as usize, &cv);
+            let bpp:i32 = self.bitdepth.bytes_per_pixel();
+            // println!("rect w = {} with len {} row len {}",bounds.w, cv2.len(), row_len);
+            for row in self.data.chunks_exact_mut((self.width as i32 * bpp) as usize) {
+                let (_, after) = row.split_at_mut((bounds.x * bpp) as usize);
+                let (mut middle, _) = after.split_at_mut((bounds.w * bpp) as usize);
+                middle.copy_from_slice(&cv2);
+            }
+        } else {
+            let v = color.to_argb_vec();
+            for i in bounds.x..(bounds.x + bounds.w) {
+                for j in bounds.y..(bounds.y + bounds.h) {
+                    self.set_pixel_vec_argb(i as u32, j as u32, &v);
+                }
             }
         }
     }
@@ -239,6 +263,14 @@ impl GFXBuffer {
     }
     pub fn set_pixel_argb(&mut self, x:u32, y:u32, a:u8,r:u8,g:u8,b:u8) {
         self.set_pixel_vec_argb(x,y,&vec![a,r,g,b]);
+    }
+    fn bounds(&self) -> Rect {
+        Rect {
+            x: 0,
+            y: 0,
+            w: self.width as i32,
+            h: self.height as i32,
+        }
     }
 }
 
