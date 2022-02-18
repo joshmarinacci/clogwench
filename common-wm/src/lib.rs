@@ -118,6 +118,7 @@ impl WindowManagerState {
             backbuffer: GFXBuffer::new(CD32(), bounds.w as u32, bounds.h as u32, ARGB()),
             window_type: WindowType::Plain()
         };
+        win.backbuffer.fast = true;
         let BG_COLOR:ARGBColor = ARGBColor::new_rgb(255,128,0);
         win.backbuffer.clear(&BG_COLOR);
         if let Some(app) = self.find_app(app_id) {

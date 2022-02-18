@@ -101,10 +101,12 @@ impl PlatformWindowManager {
 
                 let mut plat = make_plat(stop.clone(), tx_in.clone()).unwrap();
                 let bds = plat.get_screen_bounds();
-                let background = GFXBuffer::new(ColorDepth::CD32(), bds.w as u32, bds.h as u32, PixelLayout::RGBA());
+                let mut background = GFXBuffer::new(ColorDepth::CD32(), bds.w as u32, bds.h as u32, PixelLayout::RGBA());
+                background.fast = true;
                 plat.register_image2(&background);
-                let cursor_image:GFXBuffer = GFXBuffer::from_png_file("../../resources/cursor.png");
+                let mut cursor_image:GFXBuffer = GFXBuffer::from_png_file("../../resources/cursor.png");
                 plat.register_image2(&cursor_image);
+                cursor_image.fast = true;
                 let font = load_font_from_json("../../resources/default-font.json").unwrap();
                 Some(PlatformWindowManager {
                     stream,
