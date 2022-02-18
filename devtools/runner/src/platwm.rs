@@ -6,7 +6,7 @@ use std::sync::atomic::AtomicBool;
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread;
 use std::thread::{JoinHandle, spawn};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use log::info;
 use serde::Deserialize;
 use common::{APICommand, ARGBColor, BLACK, DebugMessage, HelloWindowManager, IncomingMessage, Point, Rect, WHITE, WINDOW_MANAGER_PORT};
@@ -290,4 +290,19 @@ impl PlatformWindowManager {
         self.plat.service_loop();
         true
     }
+}
+
+
+#[test]
+fn buffer_clear_CD32_RGBA_speed() {
+    let start = Instant::now();
+    let w = 1024;
+    let h = 1024;
+    let color = ARGBColor::new_rgb(100,100,100);
+    let mut background = GFXBuffer::new(ColorDepth::CD32(), w, h, PixelLayout::RGBA());
+    for n in 0..10 {
+        background.clear(&color);
+    }
+
+    println!("took {}",start.elapsed().as_secs_f32());
 }
