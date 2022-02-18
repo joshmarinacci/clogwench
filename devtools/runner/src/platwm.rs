@@ -299,10 +299,42 @@ fn buffer_clear_CD32_RGBA_speed() {
     let w = 1024;
     let h = 1024;
     let color = ARGBColor::new_rgb(100,100,100);
-    let mut background = GFXBuffer::new(ColorDepth::CD32(), w, h, PixelLayout::RGBA());
+    let mut background = GFXBuffer::new(ColorDepth::CD32(), w, h, PixelLayout::ARGB());
+    background.fast = true;
     for n in 0..10 {
         background.clear(&color);
     }
+    // 2.55s vs 0.76s  ~= 3.3x faster
+    println!("took {}",start.elapsed().as_secs_f32());
+}
 
+#[test]
+fn buffer_clear_CD24_RGB_speed() {
+    let start = Instant::now();
+    let w = 1024;
+    let h = 1024;
+    let color = ARGBColor::new_rgb(100,100,100);
+    let mut background = GFXBuffer::new(ColorDepth::CD24(), w, h, PixelLayout::RGB());
+    background.fast = true;
+    for n in 0..10 {
+        background.clear(&color);
+    }
+    // 2.55s vs 0.76s  ~= 3.3x faster
+    println!("took {}",start.elapsed().as_secs_f32());
+}
+
+
+#[test]
+fn buffer_clear_CD15_RGB565_speed() {
+    let start = Instant::now();
+    let w = 1024;
+    let h = 1024;
+    let color = ARGBColor::new_rgb(100,100,100);
+    let mut background = GFXBuffer::new(ColorDepth::CD16(), w, h, PixelLayout::RGB565());
+    background.fast = true;
+    for n in 0..10 {
+        background.clear(&color);
+    }
+    // 2.55s vs 0.76s  ~= 3.3x faster
     println!("took {}",start.elapsed().as_secs_f32());
 }

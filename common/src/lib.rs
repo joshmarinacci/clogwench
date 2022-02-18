@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use crate::events::{KeyDownEvent, KeyUpEvent, MouseDownEvent};
-use crate::graphics::GFXBuffer;
+use crate::graphics::{GFXBuffer, PixelLayout};
 
 pub mod client;
 pub mod events;
@@ -69,8 +69,37 @@ impl ARGBColor {
     pub fn to_argb_vec(&self) -> Vec<u8> {
         vec![self.a,self.r,self.g,self.b]
     }
+    pub fn to_rgba_vec(&self) -> Vec<u8> {
+        vec![self.r,self.g,self.b,self.a]
+    }
+    pub fn to_rgb_vec(&self) -> Vec<u8> {
+        vec![self.r,self.g,self.b]
+    }
+    pub fn to_rgb565_vec(&self) -> Vec<u8> {
+        //turn rgba into two adjacent bytes. use set
+        let upper = ((self.r >> 3)<<3) | ((self.g & 0b111_00000) >> 5);
+        let lower = (((self.g & 0b00011100) >> 2) << 5) | ((self.b & 0b1111_1000) >> 3);
+        vec![upper,lower]
+    }
     pub fn from_argb_vec(v:&Vec<u8>) -> ARGBColor {
         ARGBColor { a:v[0], r:v[1],g:v[2],b:v[3]}
+    }
+
+    pub fn as_layout(&self, layout: &PixelLayout) -> Vec<u8> {
+        match layout {
+            PixelLayout::RGB565() => {
+                self.to_rgb565_vec()
+            }
+            PixelLayout::RGB() => {
+                self.to_rgb_vec()
+            }
+            PixelLayout::RGBA() => {
+                self.to_rgba_vec()
+            }
+            PixelLayout::ARGB() => {
+                self.to_argb_vec()
+            }
+        }
     }
 }
 

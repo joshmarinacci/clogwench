@@ -43,6 +43,7 @@ pub struct GFXBuffer {
     pub width:u32,
     pub height:u32,
     pub data: Vec<u8>,
+    pub fast:bool,
 }
 
 impl GFXBuffer {
@@ -238,32 +239,66 @@ impl GFXBuffer {
             ColorDepth::CD16() => {
                 match self.layout {
                     PixelLayout::RGB565() => {
-                        let v = color.to_argb_vec();
-                        let r = v[1];
-                        let g = v[2];
-                        let b = v[3];
-                        let upper = ((r >> 3)<<3) | ((g & 0b111_00000) >> 5);
-                        let lower = (((g & 0b00011100) >> 2) << 5) | ((b & 0b1111_1000) >> 3);
-                        let mut row:Vec<u8> = vec![];
-                        for i in 0..self.width {
-                            row.push(lower);
-                            row.push(upper);
-                        }
-                        for chunk in self.data.chunks_exact_mut((self.width*2) as usize) {
-                            chunk.copy_from_slice(&*row);
+                        if self.fast {
+                            let cv = color.as_layout(&self.layout);
+                            let cv2 = create_filled_row(self.width as usize, &cv);
+                            for chunk in self.data.chunks_exact_mut(cv2.len()) {
+                                chunk.copy_from_slice(&cv2);
+                            }
+                        } else {
+                            let v = color.to_argb_vec();
+                            let r = v[1];
+                            let g = v[2];
+                            let b = v[3];
+                            let upper = ((r >> 3) << 3) | ((g & 0b111_00000) >> 5);
+                            let lower = (((g & 0b00011100) >> 2) << 5) | ((b & 0b1111_1000) >> 3);
+                            let mut row: Vec<u8> = vec![];
+                            for i in 0..self.width {
+                                row.push(lower);
+                                row.push(upper);
+                            }
+                            for chunk in self.data.chunks_exact_mut((self.width * 2) as usize) {
+                                chunk.copy_from_slice(&*row);
+                            }
                         }
                     }
                     _ => {}
                 }
             }
             CD24() => {
-                self.fill_rect(Rect::from_ints(0, 0, self.width as i32, self.height as i32),color);
+                if self.fast {
+                    // println!("pixel layout is {:?}", self.layout);
+                    let cv = color.as_layout(&self.layout);
+                    let cv2 = create_filled_row(self.width as usize, &cv);
+                    for chunk in self.data.chunks_exact_mut(cv2.len()) {
+                        chunk.copy_from_slice(&cv2);
+                    }
+                } else {
+                    self.fill_rect(Rect::from_ints(0, 0, self.width as i32, self.height as i32), color);
+                }
             }
             CD32() => {
-                self.fill_rect(Rect::from_ints(0, 0, self.width as i32, self.height as i32),color);
+                if self.fast {
+                    // println!("pixel layout is {:?}", self.layout);
+                    let cv = color.as_layout(&self.layout);
+                    let cv2 = create_filled_row(self.width as usize, &cv);
+                    for chunk in self.data.chunks_exact_mut(cv2.len()) {
+                        chunk.copy_from_slice(&cv2);
+                    }
+                } else {
+                    self.fill_rect(Rect::from_ints(0, 0, self.width as i32, self.height as i32), color);
+                }
             }
         }
     }
+}
+
+fn create_filled_row(size: usize, color: &Vec<u8>) -> Vec<u8> {
+    let mut nv:Vec<u8> = vec![0;size*color.len()];
+    for n in nv.chunks_exact_mut(color.len()) {
+        n.copy_from_slice(color);
+    }
+    return nv;
 }
 
 impl GFXBuffer {
@@ -281,6 +316,7 @@ impl GFXBuffer {
             height,
             id: Uuid::new_v4(),
             layout,
+            fast: false
         }
     }
 }
