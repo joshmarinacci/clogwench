@@ -212,23 +212,8 @@ fn sdl_to_common(kc: Keycode) -> KeyCode {
 }
 
 fn sync_texture(can: &mut WindowCanvas, tx: &mut Texture, img: &GFXBuffer) {
-    can.with_texture_canvas(tx, |can| {
-        for i in 0..img.width {
-            for j in 0..img.height {
-                let n:usize = ((j * img.width + i) * 4) as usize;
-                match img.bitdepth {
-                    ColorDepth::CD16() => {}
-                    ColorDepth::CD24() => {}
-                    ColorDepth::CD32() => {
-                        //let px = img.get_pixel_32argb(i,j);
-                        let ve = img.get_pixel_vec_argb(i as u32,j as u32);
-                        let col = Color::RGBA(ve[1],ve[2],ve[3], ve[0]);
-                        can.set_draw_color(col);
-                        can.fill_rect(SDLRect::new(i as i32, j as i32, 1, 1)).unwrap();
-                    }
-                }
-            }
-        }
-    }).unwrap();
+    let rect = sdl2::rect::Rect::new(0,0,img.width,img.height);
+    let pitch:usize = (img.width * 4) as usize;
+    tx.update(rect, &img.data, pitch).unwrap();
 }
 
