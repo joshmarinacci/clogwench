@@ -1,5 +1,5 @@
 use std::sync::mpsc::Sender;
-use common::{ARGBColor, IncomingMessage, Rect, BLACK};
+use common::{ARGBColor, IncomingMessage, Rect, BLACK, Point};
 use common::graphics::GFXBuffer;
 use std::sync::{Arc, mpsc};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -79,8 +79,8 @@ impl Plat {
     pub fn draw_rect(&mut self, rect: Rect, color: &ARGBColor, width: i32) {
         self.surf.buf.draw_rect(rect,color,width);
     }
-    pub fn draw_image(&mut self, x: i32, y: i32, img: &GFXBuffer) {
-        self.surf.copy_from(x, y, img);
+    pub fn draw_image(&mut self, dst_pos:&Point, src_bounds:&Rect, src_buf:&GFXBuffer ) {
+        self.surf.draw_image(dst_pos, src_bounds, src_buf);
     }
     pub fn clear(&mut self) {
         self.surf.buf.clear(&BLACK);

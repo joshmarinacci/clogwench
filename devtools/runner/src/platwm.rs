@@ -290,9 +290,9 @@ impl PlatformWindowManager {
                 let bd = win.content_bounds();
                 let MAGENTA = ARGBColor::new_rgb(255, 0, 255);
                 self.plat.fill_rect(bd, &MAGENTA);
-                self.plat.draw_image(win.content_bounds().x, win.content_bounds().y, &win.backbuffer);
+                self.plat.draw_image(&win.content_bounds().position(), &win.backbuffer.bounds(), &win.backbuffer);
             }
-            self.plat.draw_image(self.cursor.x,self.cursor.y,&self.cursor_image);
+            self.plat.draw_image(&self.cursor,&self.cursor_image.bounds(),&self.cursor_image);
         }
         self.plat.service_loop();
         self.fps.push(start.elapsed().as_millis());

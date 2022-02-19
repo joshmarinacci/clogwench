@@ -1,6 +1,6 @@
 use framebuffer::Framebuffer;
 use log::info;
-use common::{ARGBColor, BLACK, Rect};
+use common::{ARGBColor, BLACK, Rect, Point};
 use common::graphics::{ColorDepth, GFXBuffer, PixelLayout};
 use common::graphics::ColorDepth::{CD16, CD24, CD32};
 
@@ -30,8 +30,8 @@ impl Surf {
 }
 
 impl Surf {
-    pub fn copy_from(&mut self, x: i32, y: i32, buf: &GFXBuffer) {
-        self.buf.copy_from(x, y, buf);
+    pub fn draw_image(&mut self, dst_pos:&Point, src_bounds:&Rect, src_buf:&GFXBuffer ) {
+        self.buf.draw_image(dst_pos, src_bounds, src_buf);
     }
     pub fn sync(&mut self) {
         self.fb.write_frame(&self.buf.data);
