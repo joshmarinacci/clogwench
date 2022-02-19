@@ -40,7 +40,7 @@ impl ColorDepth {
     }
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub enum PixelLayout {
     RGB565(),
     RGB(),
@@ -125,8 +125,36 @@ impl GFXBuffer {
         if src_bounds.is_empty() {
             return;
         }
+
+        let stride = ((self.width as i32) * self.bitdepth.bytes_per_pixel()) as usize;
+        for (j, full_dst_row) in self.data.chunks_exact_mut(stride).enumerate() {
+            let j = j as i32;
+            if j < dst_pos.y {
+                continue;
+            }
+            if j >= dst_pos.y + src_bounds.h {
+                continue;
+            }
+            let src_row_start = (src_buf.bitdepth.bytes_per_pixel() * (src_bounds.x + src_bounds.y * (src_buf.width as i32))) as usize;
+            let src_row_len = (src_buf.bitdepth.bytes_per_pixel() * src_bounds.w) as usize;
+            let (_, src_row_first) = src_buf.data.split_at(src_row_start);
+            let (src_row, _) = src_row_first.split_at(src_row_len);
+
+            let dst_row_start = (self.bitdepth.bytes_per_pixel() * (dst_pos.x + dst_pos.y* (self.width as i32))) as usize;
+            let dst_row_len = (self.bitdepth.bytes_per_pixel() * src_bounds.w) as usize;
+            let (_, dst_row_first) = full_dst_row.split_at_mut(dst_row_start);
+            let (dst_row,_) = dst_row_first.split_at_mut(dst_row_len);
+            if self.layout == src_buf.layout {
+                // println!("same layout");
+                dst_row.copy_from_slice(src_row);
+            } else {
+                println!("different layout");
+            }
+        }
+
         self.copy_from(dst_pos.x, dst_pos.y, src_buf);
     }
+
     fn copy_from(&mut self, x:i32, y:i32, src: &GFXBuffer) {
         for i in 0..src.width {
             for j in 0..src.height {
