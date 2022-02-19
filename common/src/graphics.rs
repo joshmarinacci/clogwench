@@ -561,7 +561,7 @@ mod tests {
     fn buffer_fill_rect_cd32_rgba_speed() {
         let w = 1024;
         let h = 1024;
-        let color = ARGBColor::new_rgb(100,100,100);
+        let color = ARGBColor::new_rgb(96,100,96);
 
         let types = [PixelLayout::ARGB(), PixelLayout::RGB565()];
 
@@ -574,8 +574,6 @@ mod tests {
                 background.fill_rect(bounds, &color);
             }
             println!("took {}",start.elapsed().as_secs_f32());
-            // println!("is black {:?}",background.get_pixel_vec(&PixelLayout::RGBA(),0,0));
-            // println!("is color {:?}",background.get_pixel_vec(&PixelLayout::RGBA(),600,600));
             assert_eq!(background.get_pixel_vec_as_layout(&PixelLayout::ARGB(), 0, 0), BLACK.as_layout(&PixelLayout::ARGB()));
             assert_eq!(background.get_pixel_vec_as_layout(&PixelLayout::ARGB(), 600, 600), color.as_layout(&PixelLayout::ARGB()));
         }
