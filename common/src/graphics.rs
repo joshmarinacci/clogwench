@@ -16,7 +16,7 @@ use std::path::{Path, PathBuf};
 use log::info;
 use png;
 use uuid::Uuid;
-use crate::{ARGBColor, Rect};
+use crate::{ARGBColor, Point, Rect};
 use crate::graphics::ColorDepth::{CD24, CD32};
 use crate::graphics::PixelLayout::RGBA;
 use serde::{Deserialize, Serialize};
@@ -114,7 +114,14 @@ impl GFXBuffer {
 }
 
 impl GFXBuffer {
-    pub fn copy_from(&mut self, x:i32, y:i32, src: &GFXBuffer) {
+    pub fn draw_image(&mut self, dst_pos:&Point, src_bounds:&Rect, src_buf:&GFXBuffer ) {
+        let mut src_bounds = src_bounds.intersect(self.bounds());
+        if src_bounds.is_empty() {
+            return;
+        }
+        self.copy_from(dst_pos.x, dst_pos.y, src_buf);
+    }
+    fn copy_from(&mut self, x:i32, y:i32, src: &GFXBuffer) {
         for i in 0..src.width {
             for j in 0..src.height {
                 let v = src.get_pixel_vec_argb(i,j);
@@ -264,7 +271,7 @@ impl GFXBuffer {
     pub fn set_pixel_argb(&mut self, x:u32, y:u32, a:u8,r:u8,g:u8,b:u8) {
         self.set_pixel_vec_argb(x,y,&vec![a,r,g,b]);
     }
-    fn bounds(&self) -> Rect {
+    pub fn bounds(&self) -> Rect {
         Rect {
             x: 0,
             y: 0,

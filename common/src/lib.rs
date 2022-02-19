@@ -322,6 +322,15 @@ impl Rect {
     fn lower_right_corner(&self) -> Point {
         Point::init(self.x+self.w,self.y+self.h)
     }
+    pub(crate) fn is_empty(&self) -> bool {
+        if self.w <= 0 {
+            return true;
+        }
+        if self.h <= 0 {
+            return true;
+        }
+        return false;
+    }
 }
 
 

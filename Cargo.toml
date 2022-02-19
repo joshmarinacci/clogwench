@@ -6,7 +6,6 @@ members = [
     "test-wm",
     "echo-app",
     "central",
-    "graphics_tests",
     "tools-input",
     "common",
     "plat",

@@ -559,20 +559,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "graphics_tests"
-version = "0.1.0"
-dependencies = [
- "common",
- "ctrlc",
- "evdev",
- "framebuffer",
- "libc",
- "log",
- "log4rs",
- "structopt",
-]
-
-[[package]]
 name = "hashbrown"
 version = "0.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"

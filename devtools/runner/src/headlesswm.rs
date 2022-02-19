@@ -103,7 +103,7 @@ impl HeadlessWindowManager {
                                         if let Some(mut win) = state.lookup_window(dr.window_id) {
                                             // info!("draw rect to window {:?} {:?}",&dr.rect, &dr.color);
                                             win.backbuffer.fill_rect(dr.rect, &dr.color);
-                                            buf.copy_from(win.position.x, win.position.y, &win.backbuffer);
+                                            buf.draw_image(&win.position, &win.backbuffer.bounds(), &win.backbuffer);
                                         }
                                     },
                                     APICommand::MouseDown(evt) => {
