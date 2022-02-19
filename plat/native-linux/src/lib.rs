@@ -1,6 +1,6 @@
 use std::sync::mpsc::Sender;
 use common::{ARGBColor, IncomingMessage, Rect, BLACK, Point};
-use common::graphics::GFXBuffer;
+use common::graphics::{GFXBuffer, PixelLayout};
 use std::sync::{Arc, mpsc};
 use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -16,6 +16,7 @@ pub struct Plat {
     sender:Sender<IncomingMessage>,
     surf:Surf,
     screen_size:Rect,
+    layout:PixelLayout,
 }
 
 pub fn make_plat<'a>(stop:Arc<AtomicBool>, sender: Sender<IncomingMessage>) -> Result<Plat, String> {
@@ -31,6 +32,7 @@ pub fn make_plat<'a>(stop:Arc<AtomicBool>, sender: Sender<IncomingMessage>) -> R
     let mut surf:Surf = Surf::make(fb);
     surf.buf.clear(&ARGBColor::new_rgb(0,255,200));
     surf.sync();
+    let layout = surf.buf.layout.clone();
 
     input::setup_evdev_watcher(keyboard, stop.clone(), sender.clone(), screen_size);
     input::setup_evdev_watcher(mouse, stop.clone(), sender.clone(), screen_size);
@@ -40,6 +42,7 @@ pub fn make_plat<'a>(stop:Arc<AtomicBool>, sender: Sender<IncomingMessage>) -> R
         sender: sender,
         surf:surf,
         screen_size: screen_size,
+        layout:layout,
     });
 }
 
@@ -90,6 +93,9 @@ impl Plat {
     }
     pub fn unregister_image2(&mut self, img:&GFXBuffer) {
 
+    }
+    pub fn get_preferred_pixel_layout(&self) -> &PixelLayout{
+        &self.layout
     }
 }
 
