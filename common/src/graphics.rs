@@ -3,6 +3,7 @@ use std::fs;
 use std::fs::File;
 use std::io::BufWriter;
 use std::path::{PathBuf};
+use log::{error, warn};
 use png;
 use uuid::Uuid;
 use crate::{ARGBColor, Point, Rect};
@@ -122,10 +123,42 @@ impl GFXBuffer {
         if src_bounds.is_empty() { return; }
         // println!("drawing {} to {}  at {}  with {}", src_buf, self, dst_pos, src_bounds);
 
-        for j in src_bounds.y .. src_bounds.y + src_bounds.h {
-            for i in src_bounds.x .. src_bounds.x + src_bounds.w {
-                let v = src_buf.get_pixel_vec_argb(i, j);
-                self.set_pixel_vec_argb(i+dst_pos.x, j+dst_pos.y, &v);
+        let self_bounds = self.bounds().clone();
+        if src_buf.layout == self.layout {
+            println!("same layout");
+            let self_stride = self.stride();
+            for (j, full_dst_row) in self.data.chunks_exact_mut(self_stride).enumerate() {
+                let j = j as i32;
+                if j < dst_pos.y { continue; }
+                if j >= dst_pos.y + src_bounds.h { continue; }
+                let src_row_start = (src_buf.layout.bytes_per_pixel() * (src_bounds.x + src_bounds.y * (src_buf.width as i32))) as usize;
+                let src_row_len = (src_buf.layout.bytes_per_pixel() * src_bounds.w) as usize;
+
+                let (_, src_row_first) = src_buf.data.split_at(src_row_start);
+                let (src_row,_) = src_row_first.split_at(src_row_len);
+
+                let dst_row_start = (self.layout.bytes_per_pixel() * (dst_pos.x)) as usize;
+                let dst_row_len = (self.layout.bytes_per_pixel() * src_bounds.w) as usize;
+
+                if dst_row_len != src_row_len {
+                    error!("row slices aren't the same length!");
+                }
+
+                if dst_pos.x + src_bounds.w > (self.width as i32) {
+                    error!("copying src out of dst range {} {} {}", self_bounds, dst_pos, src_bounds);
+                }
+
+                let (_, dst_row_first) = full_dst_row.split_at_mut(dst_row_start);
+                let (dst_row,_) = dst_row_first.split_at_mut(src_row_len);
+                dst_row.copy_from_slice(src_row);
+            }
+        } else {
+            println!("different layout");
+            for j in src_bounds.y .. src_bounds.y + src_bounds.h {
+                for i in src_bounds.x .. src_bounds.x + src_bounds.w {
+                    let v = src_buf.get_pixel_vec_argb(i, j);
+                    self.set_pixel_vec_argb(i+dst_pos.x, j+dst_pos.y, &v);
+                }
             }
         }
         // let stride = ((self.width as i32) * self.bitdepth.bytes_per_pixel()) as usize;
@@ -151,6 +184,9 @@ impl GFXBuffer {
         // }
 
         // self.copy_from(dst_pos.x, dst_pos.y, src_buf);
+    }
+    fn stride(&self) -> usize {
+        ((self.layout.bytes_per_pixel() as u32) * self.width) as usize
     }
 }
 
@@ -601,10 +637,10 @@ mod tests {
                 let src_img = src_img.to_layout(layout2);
                 let start = Instant::now();
                 for _ in 0..10 {
-                    background.draw_image(&Point::init(0, 0), &src_img.bounds(), &src_img);
-                    // background.fill_rect(bounds, &color);
+                    background.draw_image(&Point::init(0, 0),
+                                          &src_img.bounds(), &src_img);
                 }
-                println!("took {}", start.elapsed().as_secs_f32());
+                println!("took {} {:?} -> {:?}", start.elapsed().as_secs_f32(), layout2, layout);
                 // println!("is black {:?}",background.get_pixel_vec(&PixelLayout::RGBA(),0,0));
                 // println!("is color {:?}",background.get_pixel_vec(&PixelLayout::RGBA(),600,600));
                 // assert_eq!(background.get_pixel_vec(&PixelLayout::RGBA(), 0, 0), WHITE.as_layout(&PixelLayout::RGBA()));
