@@ -15,16 +15,6 @@ use common::graphics::ColorDepth::{CD24, CD32};
 use common::graphics::GFXBuffer;
 use common::graphics::PixelLayout::ARGB;
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        let result = 2 + 2;
-        assert_eq!(result, 4);
-    }
-}
-
-
 pub struct App {
     pub id:Uuid,
     pub windows:Vec<Window>,
@@ -115,7 +105,7 @@ impl WindowManagerState {
             position:bounds.position(),
             content_size:bounds.size(),
             owner: app_id,
-            backbuffer: GFXBuffer::new(CD32(), bounds.w as u32, bounds.h as u32, ARGB()),
+            backbuffer: GFXBuffer::new(&CD32(), bounds.w as u32, bounds.h as u32, &ARGB()),
             window_type: WindowType::Plain()
         };
         win.backbuffer.fast = true;

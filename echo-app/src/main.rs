@@ -44,14 +44,14 @@ fn redraw(client: &ClientConnection, appid: Uuid, winid: Uuid, bounds: Rect, px:
 fn main() {
     set_logger(&COOL_LOGGER).map(|()|log::set_max_level(LevelFilter::Info));
 
-    let mut pattern_buffer = GFXBuffer::new(ColorDepth::CD32(), 2,2, PixelLayout::RGBA());
+    let mut pattern_buffer = GFXBuffer::new(&ColorDepth::CD32(), 2,2, &PixelLayout::RGBA());
     pattern_buffer.set_pixel_vec_argb(0,0, &WHITE.to_argb_vec());
     pattern_buffer.set_pixel_vec_argb(1,0, &BLACK.to_argb_vec());
     pattern_buffer.set_pixel_vec_argb(0,1, &BLACK.to_argb_vec());
     pattern_buffer.set_pixel_vec_argb(1,1, &WHITE.to_argb_vec());
 
 
-    let mut text_buffer = GFXBuffer::new(ColorDepth::CD32(), 100,20, PixelLayout::RGBA());
+    let mut text_buffer = GFXBuffer::new(&ColorDepth::CD32(), 100, 20, &PixelLayout::RGBA());
     text_buffer.clear(&BLACK);
     let font = load_font_from_json("../resources/default-font.json").unwrap();
     font.draw_text_at(&mut text_buffer,"Echo Bot Here!",0,10,&ARGBColor::new_rgb(0,255,0));

@@ -4,7 +4,7 @@ use std::thread;
 use std::sync::mpsc::{Receiver, RecvError, Sender};
 use serde::Deserialize;
 use std::io::Write;
-use log::info;
+
 use crate::APICommand;
 
 pub struct ClientConnection {

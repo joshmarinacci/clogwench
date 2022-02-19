@@ -24,7 +24,7 @@ pub struct HeadlessWindowManager {
 
 impl HeadlessWindowManager {
     pub fn init(w: u32, h: u32) -> Option<HeadlessWindowManager> {
-        let mut buf = GFXBuffer::new(ColorDepth::CD24(), w, h, PixelLayout::RGBA());
+        let mut buf = GFXBuffer::new(&ColorDepth::CD24(), w, h, &PixelLayout::RGBA());
         buf.clear(&WHITE);
         let conn_string = format!("localhost:{}",WINDOW_MANAGER_PORT);
 

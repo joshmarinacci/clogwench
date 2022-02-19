@@ -2,14 +2,11 @@
 
 members = [
     "digital-clock",
-    "linux-wm",
-    "test-wm",
     "echo-app",
     "central",
     "tools-input",
     "common",
     "plat",
-    "devtools/mainmain",
     "devtools/runner",
     "test-log",
 ]
