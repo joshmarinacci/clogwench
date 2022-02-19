@@ -11,7 +11,7 @@ use uuid::Uuid;
 use common::{APICommand, ARGBColor, BLACK, HelloWindowManager, IncomingMessage, Padding, Point, Rect, Size};
 use serde::{Deserialize, Serialize};
 use common::events::{MouseDownEvent, MouseMoveEvent, MouseUpEvent};
-use common::graphics::GFXBuffer;
+use common::graphics::{GFXBuffer, PixelLayout};
 use common::graphics::PixelLayout::ARGB;
 
 pub struct App {
@@ -70,13 +70,15 @@ impl Window {
 pub struct WindowManagerState {
     apps:Vec<App>,
     focused:Option<Uuid>,
+    pub preferred_pixel_layout: PixelLayout,
 }
 
 impl WindowManagerState {
-    pub fn init() -> WindowManagerState {
+    pub fn init(ppl:&PixelLayout) -> WindowManagerState {
         WindowManagerState {
             apps: Vec::new(),
             focused: None,
+            preferred_pixel_layout:ppl.clone(),
         }
     }
 
@@ -104,7 +106,7 @@ impl WindowManagerState {
             position:bounds.position(),
             content_size:bounds.size(),
             owner: app_id,
-            backbuffer: GFXBuffer::new(bounds.w as u32, bounds.h as u32, &ARGB()),
+            backbuffer: GFXBuffer::new(bounds.w as u32, bounds.h as u32, &self.preferred_pixel_layout),
             window_type: WindowType::Plain()
         };
         let bg_color:ARGBColor = ARGBColor::new_rgb(255, 128, 0);

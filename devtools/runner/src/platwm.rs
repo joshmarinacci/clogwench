@@ -110,7 +110,7 @@ impl PlatformWindowManager {
                 let font = load_font_from_json("../../resources/default-font.json").unwrap();
                 Some(PlatformWindowManager {
                     stream,
-                    state: WindowManagerState::init(),
+                    state: WindowManagerState::init(plat.get_preferred_pixel_layout()),
                     plat,
                     sending_handle,
                     receiving_handle,
@@ -119,7 +119,7 @@ impl PlatformWindowManager {
                     background,
                     font,
                     gesture: Box::new(NoOpGesture::init()) as Box<dyn InputGesture>,
-                    cursor:Point::init(0,0),
+                    cursor:  Point::init(0,0),
                     cursor_image,
                     tick: 0,
                     fps: vec![],

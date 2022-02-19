@@ -34,7 +34,7 @@ impl HeadlessWindowManager {
                 let (tx_in, rx_in) = mpsc::channel::<IncomingMessage>();
                 info!("connected to the central server");
 
-                let mut state = WindowManagerState::init();
+                let mut state = WindowManagerState::init(&PixelLayout::ARGB());
                 let sending_handle = spawn({
                     let mut stream = stream.try_clone().unwrap();
                     move || {

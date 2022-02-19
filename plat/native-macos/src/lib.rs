@@ -17,7 +17,7 @@ use sdl2::rect::Rect as SDLRect;
 use uuid::Uuid;
 use common::{APICommand, ARGBColor, IncomingMessage, Point, Rect as CommonRect, Rect};
 use common::events::{KeyCode, KeyDownEvent, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent};
-use common::graphics::GFXBuffer;
+use common::graphics::{GFXBuffer, PixelLayout};
 
 
 pub struct Plat {
@@ -50,6 +50,9 @@ pub fn make_plat<'a>(stop:Arc<AtomicBool>, sender: Sender<IncomingMessage>) -> R
 }
 
 impl Plat {
+    pub fn get_preferred_pixel_layout(&self) -> &PixelLayout {
+        &PixelLayout::ARGB()
+    }
 
     pub fn get_screen_bounds(&self) -> CommonRect {
         let r2 = self.canvas.viewport();
