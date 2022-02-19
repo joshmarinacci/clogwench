@@ -12,7 +12,7 @@ use serde::Deserialize;
 use common::{APICommand, ARGBColor, BLACK, DebugMessage, HelloWindowManager, IncomingMessage, Point, Rect, WHITE, WINDOW_MANAGER_PORT};
 use common::events::{KeyCode, KeyDownEvent, MouseButton, MouseDownEvent};
 use common::font::{FontInfo2, load_font_from_json};
-use common::graphics::{GFXBuffer, PixelLayout};
+use common::graphics::{draw_test_pattern, GFXBuffer, PixelLayout};
 use common_wm::{FOCUSED_TITLEBAR_COLOR, FOCUSED_WINDOW_COLOR, InputGesture, NoOpGesture, OutgoingMessage, TITLEBAR_COLOR, WINDOW_BORDER_WIDTH, WINDOW_COLOR, WindowDragGesture, WindowManagerState};
 use plat::{make_plat, Plat};
 
@@ -273,10 +273,21 @@ impl PlatformWindowManager {
         {
             self.plat.clear();
 
-            self.background.clear(&ARGBColor::new_rgb(255,100,0));
-            self.background.fill_rect(Rect::from_ints(0,0,25,25), &ARGBColor::new_rgb(0,0,255));
+            self.background.clear(&ARGBColor::new_rgb(255,0,0));
+            self.background.fill_rect(Rect::from_ints(0,0,25,25), &ARGBColor::new_rgb(0,0,0));
+            self.background.fill_rect(Rect::from_ints(0,25,25,25), &ARGBColor::new_rgb(255,0,0));
+            self.background.fill_rect(Rect::from_ints(0,50,25,25), &ARGBColor::new_rgb(0,255,0));
+            self.background.fill_rect(Rect::from_ints(0,75,25,25), &ARGBColor::new_rgb(0,0,255));
+            self.background.fill_rect(Rect::from_ints(0,100,25,25), &ARGBColor::new_rgb(255,255,0));
+            self.background.fill_rect(Rect::from_ints(0,125,25,25), &ARGBColor::new_rgb(0,255,255));
+            self.background.fill_rect(Rect::from_ints(0,150,25,25), &ARGBColor::new_rgb(255,0,255));
+            self.background.fill_rect(Rect::from_ints(0,175,25,25), &ARGBColor::new_rgb(255,255,255));
+
+            // draw_test_pattern(&mut self.background);
             // self.font.draw_text_at(&mut self.background,"Greetings Earthling",40,40,&ARGBColor::new_rgb(0,255,0));
             self.plat.draw_image(&Point::init(0, 0), &self.background.bounds(), &self.background);
+            // self.background.to_png(&PathBuf::from("output.png"));
+            // panic!();
             for win in self.state.window_list() {
                 let (wc, tc) = if self.state.is_focused_window(win) {
                     (FOCUSED_WINDOW_COLOR, FOCUSED_TITLEBAR_COLOR)

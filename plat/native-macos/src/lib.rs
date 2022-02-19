@@ -181,7 +181,7 @@ impl Plat {
     pub fn register_image2(&mut self, img:&GFXBuffer) {
         let tex_creator = self.canvas.texture_creator();
         let tex = tex_creator.create_texture(
-            PixelFormatEnum::ARGB8888,
+            PixelFormatEnum::RGBA8888,
             TextureAccess::Target, img.width, img.height).unwrap();
         self.textures.insert(img.id, tex);
 
