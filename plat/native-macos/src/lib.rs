@@ -15,7 +15,7 @@ use sdl2::pixels::{Color, PixelFormat, PixelFormatEnum};
 use sdl2::rect::Rect as SDLRect;
 
 use uuid::Uuid;
-use common::{APICommand, ARGBColor, IncomingMessage, Rect as CommonRect, Rect};
+use common::{APICommand, ARGBColor, IncomingMessage, Point, Rect as CommonRect, Rect};
 use common::events::{KeyCode, KeyDownEvent, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent};
 use common::graphics::{ColorDepth, GFXBuffer};
 
@@ -161,13 +161,13 @@ impl Plat {
         self.canvas.set_draw_color(c2);
         self.canvas.fill_rect(SDLRect::new(rect.x, rect.y, rect.w as u32, rect.h as u32));
     }
-    pub fn draw_image(&mut self, x: i32, y: i32, img: &GFXBuffer) {
-        if let Some(tex) = self.textures.get_mut(&img.id) {
-            let dst: SDLRect = SDLRect::new(x, y, img.width, img.height);
-            sync_texture(&mut self.canvas, tex, img);
+    pub fn draw_image(&mut self, dst_pos:&Point, src_bounds: &Rect, src_buf: &GFXBuffer) {
+        if let Some(tex) = self.textures.get_mut(&src_buf.id) {
+            let dst: SDLRect = SDLRect::new(dst_pos.x, dst_pos.y, src_buf.width, src_buf.height);
+            sync_texture(&mut self.canvas, tex, src_buf);
             self.canvas.copy(tex, None, dst);
         } else {
-            error!("no image found for {}",img.id);
+            error!("no image found for {}",src_buf.id);
         }
     }
 

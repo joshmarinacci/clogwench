@@ -1,3 +1,4 @@
+use std::fmt::Formatter;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use crate::events::{KeyDownEvent, KeyUpEvent, MouseDownEvent};
@@ -257,7 +258,7 @@ impl Padding {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Copy, Clone)]
+#[derive(Serialize, Deserialize, Debug, Copy, Clone, PartialEq)]
 pub struct Rect {
     pub x:i32,
     pub y:i32,
@@ -311,7 +312,7 @@ impl Rect {
         let rx = self.x.max(r2.x);
         let ry = self.y.max(r2.y);
         let r2x = c1.x.min(c2.x);
-        let r2y = c2.y.min(c2.y);
+        let r2y = c1.y.min(c2.y);
         Rect {
             x:rx,
             y:ry,
@@ -330,6 +331,16 @@ impl Rect {
             return true;
         }
         return false;
+    }
+}
+impl std::fmt::Display for Point {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(format!("{},{}",self.x,self.y).as_str())
+    }
+}
+impl std::fmt::Display for Rect {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(format!("{},{} {}x{}",self.x,self.y, self.w,self.h).as_str())
     }
 }
 
@@ -361,3 +372,11 @@ pub enum DebugMessage {
     ScreenCaptureResponse(),
 }
 
+#[test]
+fn test_rect_intersect() {
+    let r1 = Rect::from_ints(0,0,500,500);
+    let r2 = Rect::from_ints(0,0,250,250);
+    let r3 = r1.intersect(r2);
+    println!("r3 {}",r3);
+    assert_eq!(r3,Rect::from_ints(0,0,250,250));
+}

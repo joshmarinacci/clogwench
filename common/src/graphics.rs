@@ -9,6 +9,7 @@
  */
 
 use fs::canonicalize;
+use std::fmt::{format, Formatter, Pointer, Write};
 use std::fs;
 use std::fs::File;
 use std::io::BufWriter;
@@ -112,9 +113,14 @@ impl GFXBuffer {
         return gfx
     }
 }
-
+impl std::fmt::Display for GFXBuffer {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(format!("GFXBuffer {:?}{:?} {}x{}",self.bitdepth, self.layout, self.width, self.height).as_str())
+    }
+}
 impl GFXBuffer {
     pub fn draw_image(&mut self, dst_pos:&Point, src_bounds:&Rect, src_buf:&GFXBuffer ) {
+        println!("drawing {} to {}  at {}",src_buf,self, dst_pos);
         let mut src_bounds = src_bounds.intersect(self.bounds());
         if src_bounds.is_empty() {
             return;
@@ -132,23 +138,22 @@ impl GFXBuffer {
 
     pub fn fill_rect(&mut self, bounds: Rect, color: &ARGBColor) {
         let bounds = bounds.intersect(self.bounds());
-        if self.fast {
-            let cv = color.as_layout(&self.layout);
-            let cv2 = create_filled_row(bounds.w as usize, &cv);
-            let bpp:i32 = self.bitdepth.bytes_per_pixel();
-            // println!("rect w = {} with len {} row len {}",bounds.w, cv2.len(), row_len);
-            for row in self.data.chunks_exact_mut((self.width as i32 * bpp) as usize) {
-                let (_, after) = row.split_at_mut((bounds.x * bpp) as usize);
-                let (mut middle, _) = after.split_at_mut((bounds.w * bpp) as usize);
-                middle.copy_from_slice(&cv2);
+        println!("filling rect {}",bounds);
+        let cv = color.as_layout(&self.layout);
+        let cv2 = create_filled_row(bounds.w as usize, &cv);
+        let bpp:i32 = self.bitdepth.bytes_per_pixel();
+        // println!("rect w = {} with len {} row len {}",bounds.w, cv2.len(), row_len);
+        for (j,row) in self.data.chunks_exact_mut((self.width as i32 * bpp) as usize).enumerate() {
+            let j = j as i32;
+            if j < bounds.x {
+                continue;
             }
-        } else {
-            let v = color.to_argb_vec();
-            for i in bounds.x..(bounds.x + bounds.w) {
-                for j in bounds.y..(bounds.y + bounds.h) {
-                    self.set_pixel_vec_argb(i as u32, j as u32, &v);
-                }
+            if j >= bounds.y + bounds.h {
+                continue;
             }
+            let (_, after) = row.split_at_mut((bounds.x * bpp) as usize);
+            let (mut middle, _) = after.split_at_mut((bounds.w * bpp) as usize);
+            middle.copy_from_slice(&cv2);
         }
     }
     pub fn draw_rect(&mut self, bounds: Rect, color: &ARGBColor, size: i32) {
