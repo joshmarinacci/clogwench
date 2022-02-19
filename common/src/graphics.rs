@@ -239,11 +239,16 @@ impl GFXBuffer {
         match self.layout {
             PixelLayout::RGB565() => {
                 let n = (x + y * self.width as i32) as usize;
-                let packed_color:u16 = ((self.data[n*2+0] as u16) << 8) | (self.data[n*2+1] as u16);
+                let lower = self.data[n*2+0];
+                let upper = self.data[n*2+1];
+                //red = up[7-3]
+                //gre = up[2-0] | low[7-5]
+                //blu = up[4-0]
+                // let packed_color:u16 = ((self.data[n*2+0] as u16) << 8) | (self.data[n*2+1] as u16);
                 // return ARGBColor::from_16bit(packed_color).to_argb_vec();
-                let r:u8 = (((packed_color & 0b11111_000000_00000) >> 11) << 3) as u8;
-                let g:u8 = (((packed_color & 0b00000_111111_00000) >> 5)  << 2) as u8;
-                let b:u8 = (((packed_color & 0b00000_000000_11111) >> 0)  << 3) as u8;
+                let r:u8 = (upper & 0b11111_000);
+                let g:u8 = ((upper & 0b0000_0111) << 5) | ((lower & 0b1110_0000) >> 5);
+                let b:u8 = (lower & 0b0001_1111)  << 3;
                 v[0] = 255;
                 v[1] = r;
                 v[2] = g;
@@ -367,7 +372,7 @@ mod tests {
     use std::time::Instant;
     use crate::{ARGBColor, BLACK, Point, Rect, WHITE};
     use crate::font::load_font_from_json;
-    use crate::graphics::GFXBuffer;
+    use crate::graphics::{draw_test_pattern, GFXBuffer};
     use crate::graphics::PixelLayout;
 
 
@@ -647,6 +652,19 @@ mod tests {
                 // assert_eq!(background.get_pixel_vec(&PixelLayout::RGBA(), 0, 256), BLACK.as_layout(&PixelLayout::RGBA()));
             }
         }
+    }
+
+    #[test]
+    fn buffer_image_conversion_correctness() {
+        let mut buf1 = GFXBuffer::new(256, 256, &PixelLayout::ARGB());
+        draw_test_pattern(&mut buf1);
+        buf1.to_png(&PathBuf::from("test_pattern_1.png"));
+
+        let mut buf2 = buf1.to_layout(&PixelLayout::ARGB());
+        buf2.to_png(&PathBuf::from("test_pattern_2.png"));
+
+        let mut buf3 = buf1.to_layout(&PixelLayout::RGB565());
+        buf3.to_png(&PathBuf::from("test_pattern_3.png"));
     }
 
 }
