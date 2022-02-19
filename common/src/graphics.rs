@@ -76,6 +76,7 @@ impl std::fmt::Display for GFXBuffer {
     }
 }
 
+
 impl GFXBuffer {
     pub fn to_layout(&self, layout: &PixelLayout) -> GFXBuffer {
         let mut buf = GFXBuffer::new(self.width, self.height, layout);
@@ -87,9 +88,6 @@ impl GFXBuffer {
         }
         return buf;
     }
-}
-
-impl GFXBuffer {
     pub fn sub_rect(&self, rect: Rect) -> GFXBuffer {
         let mut sub = GFXBuffer::new(
                                  rect.w as u32,
@@ -121,10 +119,8 @@ impl GFXBuffer {
     }
     pub fn draw_image(&mut self, dst_pos:&Point, src_bounds:&Rect, src_buf:&GFXBuffer ) {
         let mut src_bounds = src_bounds.intersect(self.bounds());
-        if src_bounds.is_empty() {
-            return;
-        }
-        println!("drawing {} to {}  at {}  with {}", src_buf, self, dst_pos, src_bounds);
+        if src_bounds.is_empty() { return; }
+        // println!("drawing {} to {}  at {}  with {}", src_buf, self, dst_pos, src_bounds);
 
         for j in src_bounds.y .. src_bounds.y + src_bounds.h {
             for i in src_bounds.x .. src_bounds.x + src_bounds.w {
@@ -179,8 +175,6 @@ impl GFXBuffer {
             }
         }
     }
-
-
     pub fn fill_rect(&mut self, bounds: Rect, color: &ARGBColor) {
         let bounds = bounds.intersect(self.bounds());
         let cv = color.as_layout(&self.layout);
@@ -369,29 +363,29 @@ mod tests {
     #[test]
     fn argb_to_rgb565() {
         let red = ARGBColor::new_rgb(255, 0, 0);
-        let green = ARGBColor::new_rgb(0, 255, 0);
-        let blue = ARGBColor::new_rgb(0, 0, 255);
+        let grn = ARGBColor::new_rgb(0, 255, 0);
+        let blu = ARGBColor::new_rgb(0, 0, 255);
 
         //=== RGB565 ===
         let mut buf2 = GFXBuffer::new(1, 1, &PixelLayout::RGB565());
         buf2.clear(&red);
         assert_eq!(buf2.data,vec![0b000_00000,0b11111_000,]);
-        buf2.clear(&green);
+        buf2.clear(&grn);
         assert_eq!(buf2.data,vec![0b111_00000,0b00000_111,]);
         buf2.fill_rect(Rect::from_ints(0,0,1,1), &red);
         assert_eq!(buf2.data,vec![0b11111_000,0b000_00000,]);
-        buf2.fill_rect(Rect::from_ints(0,0,1,1), &green);
+        buf2.fill_rect(Rect::from_ints(0,0,1,1), &grn);
         assert_eq!(buf2.data,vec![0b00000_111,0b111_00000,]);
 
         // === copy ARGB to RGB565
         let mut buf1 = GFXBuffer::new(1, 1, &PixelLayout::ARGB());
-        buf1.clear(&blue);
+        buf1.clear(&blu);
         assert_eq!(buf1.data,vec![255,0,0,255]);
         buf2.draw_image(&Point::init(0, 0), &buf1.bounds(), &buf1);
         assert_eq!(buf2.data,vec![0b000_11111,0b00000_000, ]);
 
         //copy RGB565 to ARGB
-        buf2.clear(&blue);
+        buf2.clear(&blu);
         assert_eq!(buf2.data,vec![ 0b000_11111, 0b00000_000,]);
         buf1.draw_image(&Point::init(0,0),&buf2.bounds(),&buf2);
         assert_eq!(buf1.data,vec![255,24,224,0]);
