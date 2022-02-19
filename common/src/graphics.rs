@@ -125,7 +125,7 @@ impl GFXBuffer {
 
         let self_bounds = self.bounds().clone();
         if src_buf.layout == self.layout {
-            println!("same layout");
+            //println!("same layout");
             let self_stride = self.stride();
             for (j, full_dst_row) in self.data.chunks_exact_mut(self_stride).enumerate() {
                 let j = j as i32;
