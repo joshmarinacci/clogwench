@@ -31,7 +31,6 @@ pub struct PlatformWindowManager {
     pub cursor_image: GFXBuffer,
     tick:u128,
     fps:Vec<u128>,
-    start:Instant,
 }
 
 impl PlatformWindowManager {
@@ -126,7 +125,6 @@ impl PlatformWindowManager {
                     cursor_image,
                     tick: 0,
                     fps: vec![],
-                    start: Instant::now()
                 })
             }
             _ => {
@@ -138,7 +136,8 @@ impl PlatformWindowManager {
 
 
     pub fn main_service_loop(&mut self) -> bool {
-        // println!("Native WM service loop");
+        let start = Instant::now();
+            // println!("Native WM service loop");
         self.plat.service_input();
         for cmd in self.rx_in.try_iter() {
             // pt(&format!("received {:?}", cmd));
@@ -296,14 +295,17 @@ impl PlatformWindowManager {
             self.plat.draw_image(self.cursor.x,self.cursor.y,&self.cursor_image);
         }
         self.plat.service_loop();
-        self.fps.push(self.start.elapsed().as_millis());
-        if self.fps.len() > 60 { self.fps.remove(0); }
-        if self.tick % 60 == 0 {
-            println ! ("60 ticks");
-            if self.fps.len() >= 60 {
-                let time_for_60 = self.fps[59] - self.fps[0];
-                println!("calculated fps time for 60 {}",time_for_60 as f64 / 60.0 );
+        self.fps.push(start.elapsed().as_millis());
+
+        if self.fps.len() > 60 {
+            self.fps.remove(0);
+        }
+        if self.tick % 30 == 0 {
+            let mut total = 0;
+            for dur in &self.fps {
+                total += dur;
             }
+            println!("calculated avg frame time {}", (total as f64)/(self.fps.len() as f64));
         }
         self.tick += 1;
         true

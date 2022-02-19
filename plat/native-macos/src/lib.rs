@@ -147,7 +147,7 @@ impl Plat {
         // self.canvas.set_draw_color(Color::RED);
         // self.canvas.fill_rect(SDLRect::new(0,0,100,100));
         self.canvas.present();
-        ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
+        // ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
     }
 
     pub fn fill_rect(&mut self, rect: CommonRect, color: &ARGBColor) {
