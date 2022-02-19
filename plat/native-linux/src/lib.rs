@@ -67,12 +67,7 @@ fn print_debug_info(framebuffer: &Framebuffer) {
 
 impl Plat {
     pub fn get_screen_bounds(&self) -> Rect {
-        Rect {
-            x: 0,
-            y: 0,
-            w: 0,
-            h: 0
-        }
+        self.screen_size
     }
     pub fn service_input(&mut self) {}
     pub fn service_loop(&mut self) {
@@ -94,6 +89,9 @@ impl Plat {
 
     }
     pub fn register_image2(&mut self, img:&GFXBuffer) {
+
+    }
+    pub fn unregister_image2(&mut self, img:&GFXBuffer) {
 
     }
 }

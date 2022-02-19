@@ -276,6 +276,7 @@ impl GFXBuffer {
 
 impl GFXBuffer {
     pub fn clear(&mut self, color: &ARGBColor) {
+        //println!("clearing {:?} {:?}  {}x{}",self.bitdepth, self.layout, self.width, self.height);
         match self.bitdepth {
             ColorDepth::CD16() => {
                 match self.layout {
@@ -344,6 +345,9 @@ fn create_filled_row(size: usize, color: &Vec<u8>) -> Vec<u8> {
 
 impl GFXBuffer {
     pub fn new(bitdepth:ColorDepth, width:u32, height:u32, layout: PixelLayout) -> GFXBuffer {
+        if width == 0 || height == 0 {
+            panic!("cannot create buffer of size {}x{}",width,height);
+        }
         let byte_length = match bitdepth {
             ColorDepth::CD16() => {width*height*2}
             ColorDepth::CD24() => {width*height*3}
