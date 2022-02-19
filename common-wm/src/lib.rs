@@ -11,7 +11,6 @@ use uuid::Uuid;
 use common::{APICommand, ARGBColor, BLACK, HelloWindowManager, IncomingMessage, Padding, Point, Rect, Size};
 use serde::{Deserialize, Serialize};
 use common::events::{MouseDownEvent, MouseMoveEvent, MouseUpEvent};
-use common::graphics::ColorDepth::{CD24, CD32};
 use common::graphics::GFXBuffer;
 use common::graphics::PixelLayout::ARGB;
 
@@ -105,12 +104,11 @@ impl WindowManagerState {
             position:bounds.position(),
             content_size:bounds.size(),
             owner: app_id,
-            backbuffer: GFXBuffer::new(&CD32(), bounds.w as u32, bounds.h as u32, &ARGB()),
+            backbuffer: GFXBuffer::new(bounds.w as u32, bounds.h as u32, &ARGB()),
             window_type: WindowType::Plain()
         };
-        win.backbuffer.fast = true;
-        let BG_COLOR:ARGBColor = ARGBColor::new_rgb(255,128,0);
-        win.backbuffer.clear(&BG_COLOR);
+        let bg_color:ARGBColor = ARGBColor::new_rgb(255, 128, 0);
+        win.backbuffer.clear(&bg_color);
         if let Some(app) = self.find_app(app_id) {
             app.windows.push(win);
         }

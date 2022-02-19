@@ -38,7 +38,7 @@ impl FontInfo2 {
                             let fx = dx + (i as u32);
                             let fy = dy + (j as u32);
                             if src_bit == 1 {
-                                buf.set_pixel_vec_argb(fx, fy, &color.to_argb_vec());
+                                buf.set_pixel_vec_argb(fx as i32, fy as i32, &color.to_argb_vec());
                             }
                         }
                     }

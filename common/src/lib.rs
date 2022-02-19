@@ -91,12 +91,6 @@ impl ARGBColor {
             PixelLayout::RGB565() => {
                 self.to_rgb565_vec()
             }
-            PixelLayout::RGB() => {
-                self.to_rgb_vec()
-            }
-            PixelLayout::RGBA() => {
-                self.to_rgba_vec()
-            }
             PixelLayout::ARGB() => {
                 self.to_argb_vec()
             }

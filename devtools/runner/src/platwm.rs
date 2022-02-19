@@ -12,7 +12,7 @@ use serde::Deserialize;
 use common::{APICommand, ARGBColor, BLACK, DebugMessage, HelloWindowManager, IncomingMessage, Point, Rect, WHITE, WINDOW_MANAGER_PORT};
 use common::events::{KeyCode, KeyDownEvent, MouseButton, MouseDownEvent};
 use common::font::{FontInfo2, load_font_from_json};
-use common::graphics::{ColorDepth, export_to_png, GFXBuffer, PixelLayout};
+use common::graphics::{GFXBuffer, PixelLayout};
 use common_wm::{FOCUSED_TITLEBAR_COLOR, FOCUSED_WINDOW_COLOR, InputGesture, NoOpGesture, OutgoingMessage, TITLEBAR_COLOR, WINDOW_BORDER_WIDTH, WINDOW_COLOR, WindowDragGesture, WindowManagerState};
 use plat::{make_plat, Plat};
 
@@ -103,12 +103,10 @@ impl PlatformWindowManager {
 
                 let mut plat = make_plat(stop.clone(), tx_in.clone()).unwrap();
                 let bds = plat.get_screen_bounds();
-                let mut background = GFXBuffer::new(&ColorDepth::CD32(), bds.w as u32, bds.h as u32, &PixelLayout::RGBA());
-                background.fast = true;
+                let mut background = GFXBuffer::new(bds.w as u32, bds.h as u32, &PixelLayout::ARGB());
                 plat.register_image2(&background);
                 let mut cursor_image:GFXBuffer = GFXBuffer::from_png_file("../../resources/cursor.png");
                 plat.register_image2(&cursor_image);
-                cursor_image.fast = true;
                 let font = load_font_from_json("../../resources/default-font.json").unwrap();
                 Some(PlatformWindowManager {
                     stream,

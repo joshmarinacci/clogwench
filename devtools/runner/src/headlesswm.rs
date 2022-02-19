@@ -15,7 +15,7 @@ use thread::spawn;
 use log::{error, info, warn};
 use serde::Deserialize;
 use common::events::{MouseButton, MouseDownEvent};
-use common::graphics::{ColorDepth, export_to_png, GFXBuffer, PixelLayout};
+use common::graphics::{GFXBuffer, PixelLayout};
 
 pub struct HeadlessWindowManager {
     stream: TcpStream,
@@ -24,7 +24,7 @@ pub struct HeadlessWindowManager {
 
 impl HeadlessWindowManager {
     pub fn init(w: u32, h: u32) -> Option<HeadlessWindowManager> {
-        let mut buf = GFXBuffer::new(&ColorDepth::CD24(), w, h, &PixelLayout::RGBA());
+        let mut buf = GFXBuffer::new( w, h, &PixelLayout::ARGB());
         buf.clear(&WHITE);
         let conn_string = format!("localhost:{}",WINDOW_MANAGER_PORT);
 
@@ -140,7 +140,7 @@ impl HeadlessWindowManager {
                                     APICommand::Debug(DebugMessage::ScreenCapture(rect, str)) => {
                                         let pth = PathBuf::from("./screencapture.png");
                                         // info!("rect for screen capture {:?}",pth);
-                                        export_to_png(&buf, &pth);
+                                        buf.to_png(&pth);
                                         tx_out.send(OutgoingMessage {
                                             recipient: Default::default(),
                                             command: APICommand::Debug(DebugMessage::ScreenCaptureResponse()),

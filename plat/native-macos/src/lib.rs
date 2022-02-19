@@ -17,7 +17,7 @@ use sdl2::rect::Rect as SDLRect;
 use uuid::Uuid;
 use common::{APICommand, ARGBColor, IncomingMessage, Point, Rect as CommonRect, Rect};
 use common::events::{KeyCode, KeyDownEvent, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent};
-use common::graphics::{ColorDepth, GFXBuffer};
+use common::graphics::GFXBuffer;
 
 
 pub struct Plat {

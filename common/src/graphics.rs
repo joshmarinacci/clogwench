@@ -1,55 +1,35 @@
-/*
-- make screen and graphics abstraction with separate testing and linux impulse
-	- Build the rect abstraction l. Use it for drawing rects
-	    and window bounds and deciding which
-	    window gets the mouse events.
-	- create a virtual surface used for testing. then the
-	    linux-wm can have multiple gfx implementations.
-	    common screen and surface impls.
- */
-
-use std::fmt::{Formatter, Write};
+use std::fmt::Formatter;
 use std::fs;
 use std::fs::File;
 use std::io::BufWriter;
 use std::path::{PathBuf};
-
 use png;
 use uuid::Uuid;
 use crate::{ARGBColor, Point, Rect};
-use crate::graphics::ColorDepth::{CD24, CD32};
-
 use serde::{Deserialize, Serialize};
-
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub enum ColorDepth {
-    CD16(),
-    CD24(),
-    CD32(),
-}
-
-impl ColorDepth {
-    pub(crate) fn bytes_per_pixel(&self) -> i32 {
-        match self {
-            ColorDepth::CD16() => 2,
-            ColorDepth::CD24() => 3,
-            ColorDepth::CD32() => 4,
-        }
-    }
-}
+use crate::PixelLayout::{ARGB, RGB565};
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub enum PixelLayout {
     RGB565(),
-    RGB(),
-    RGBA(),
+    // RGB(),
+    // RGBA(),
     ARGB(),
 }
+impl PixelLayout {
+    pub(crate) fn bytes_per_pixel(&self) -> i32 {
+        match self {
+            PixelLayout::RGB565() => 2,
+            // PixelLayout::RGB() => 3,
+            // PixelLayout::RGBA() => 4,
+            PixelLayout::ARGB() => 4,
+        }
+    }
+}
+
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct GFXBuffer {
-    pub bitdepth:ColorDepth,
     pub layout:PixelLayout,
     pub id:Uuid,
     pub width:u32,
@@ -58,12 +38,51 @@ pub struct GFXBuffer {
 }
 
 impl GFXBuffer {
-    pub fn to_layout(&self, depth: &ColorDepth, layout: &PixelLayout) -> GFXBuffer {
-        let mut buf = GFXBuffer::new(depth, self.width, self.height, layout);
+    pub fn new(width:u32, height:u32, layout: &PixelLayout) -> GFXBuffer {
+        if width <= 0 || height <= 0 {
+            panic!("cannot create buffer of size {}x{}",width,height);
+        }
+        let byte_length = (layout.bytes_per_pixel() as u32) * width * height;
+        let data = vec![0u8; byte_length as usize];
+        GFXBuffer {
+            data,
+            width,
+            height,
+            id: Uuid::new_v4(),
+            layout:layout.clone(),
+        }
+    }
+    pub fn from_png_file(path: &str) -> GFXBuffer {
+        let decoder = png::Decoder::new(File::open(path).unwrap());
+        let mut reader = decoder.read_info().unwrap();
+        println!("loading bytes {}", reader.output_buffer_size());
+        let mut buf = vec![0; reader.output_buffer_size()];
+        let info = reader.next_frame(&mut buf).unwrap();
+        println!("size {}x{} bitdepth={:?} colortype={:?}",info.width, info.height, info.bit_depth, info.color_type);
+        let bytes = &buf[..info.buffer_size()];
+        let mut gfx = GFXBuffer::new(info.width, info.height, &PixelLayout::ARGB());
+        for j in 0..info.height {
+            for i in 0..info.width {
+                let n = (i + j*info.width) as usize;
+                gfx.set_pixel_argb(i as i32, j as i32, bytes[n*4+3], bytes[n*4+0], bytes[n*4+1], bytes[n*4+2]);
+            }
+        }
+        return gfx
+    }
+}
+impl std::fmt::Display for GFXBuffer {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(format!("GFXBuffer {:?} {}x{}", self.layout, self.width, self.height).as_str())
+    }
+}
+
+impl GFXBuffer {
+    pub fn to_layout(&self, layout: &PixelLayout) -> GFXBuffer {
+        let mut buf = GFXBuffer::new(self.width, self.height, layout);
         for j in 0 .. self.height {
             for i in 0.. self.width {
-                let v = self.get_pixel_vec_argb(i,j);
-                buf.set_pixel_vec_argb(i,j,&v);
+                let v = self.get_pixel_vec_argb(i as i32, j as i32);
+                buf.set_pixel_vec_argb(i as i32, j as i32, &v);
             }
         }
         return buf;
@@ -72,7 +91,7 @@ impl GFXBuffer {
 
 impl GFXBuffer {
     pub fn subrect(&self, rect: Rect) -> GFXBuffer {
-        let mut sub = GFXBuffer::new(&self.bitdepth,
+        let mut sub = GFXBuffer::new(
                                  rect.w as u32,
                                  rect.h as u32,
                                  &self.layout);
@@ -83,70 +102,34 @@ impl GFXBuffer {
                 if x >= (self.width as i32) { continue; }
                 let y = rect.y + j as i32;
                 if y >= (self.height as i32) { continue; }
-                let val = self.get_pixel_vec_argb(x as u32,y as u32);
-                sub.set_pixel_vec_argb(i,j, &val);
+                let val = self.get_pixel_vec_argb(x as i32,y as i32);
+                sub.set_pixel_vec_argb(i as i32, j as i32, &val);
             }
         }
         sub
     }
-}
-
-impl GFXBuffer {
     pub fn fill_rect_with_image(&mut self, rect: &Rect, buf: &GFXBuffer) {
         // info!("filling rect with image {:?}",rect);
         for j in rect.y .. rect.y + rect.h {
             for i in rect.x .. rect.x + rect.w {
                 let v = buf.get_pixel_vec_argb(
-                    ( (i - rect.x) as u32 % buf.width) as u32,
-                    ( (j - rect.y) as u32 % buf.height) as u32);
-                self.set_pixel_vec_argb(i as u32,j as u32,&v);
+                    ( (i - rect.x) as u32 % buf.width) as i32,
+                    ( (j - rect.y) as u32 % buf.height) as i32);
+                self.set_pixel_vec_argb(i as i32,j as i32,&v);
             }
         }
     }
-}
-
-impl GFXBuffer {
-    pub fn from_png_file(path: &str) -> GFXBuffer {
-        let decoder = png::Decoder::new(File::open(path).unwrap());
-        let mut reader = decoder.read_info().unwrap();
-        println!("loading bytes {}", reader.output_buffer_size());
-        let mut buf = vec![0; reader.output_buffer_size()];
-        let info = reader.next_frame(&mut buf).unwrap();
-        println!("size {}x{} bitdepth={:?} colortype={:?}",info.width, info.height, info.bit_depth, info.color_type);
-        let bytes = &buf[..info.buffer_size()];
-        let mut gfx = GFXBuffer::new(&CD32(), info.width, info.height, &PixelLayout::ARGB());
-        for j in 0..info.height {
-            for i in 0..info.width {
-                let n = (i + j*info.width) as usize;
-                gfx.set_pixel_argb(i,j, bytes[n*4+3],bytes[n*4+0],bytes[n*4+1],bytes[n*4+2]);
-            }
-        }
-        return gfx
-    }
-}
-impl std::fmt::Display for GFXBuffer {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_str(format!("GFXBuffer {:?}{:?} {}x{}",self.bitdepth, self.layout, self.width, self.height).as_str())
-    }
-}
-impl GFXBuffer {
     pub fn draw_image(&mut self, dst_pos:&Point, src_bounds:&Rect, src_buf:&GFXBuffer ) {
         let mut src_bounds = src_bounds.intersect(self.bounds());
         if src_bounds.is_empty() {
             return;
         }
-        println!("drawing {} to {}  at {}  with {}",src_buf, self, dst_pos, src_bounds);
+        println!("drawing {} to {}  at {}  with {}", src_buf, self, dst_pos, src_bounds);
 
         for j in src_bounds.y .. src_bounds.y + src_bounds.h {
             for i in src_bounds.x .. src_bounds.x + src_bounds.w {
-                if self.layout == src_buf.layout {
-
-                }
-                if self.layout == PixelLayout::RGB565() && src_buf.layout == PixelLayout::ARGB() {
-                    //println!("draw");
-                    // let lo = src_buf.data[n+0];
-                    // let hi = src_buf.data[n+1];
-                }
+                let v = src_buf.get_pixel_vec_argb(i, j);
+                self.set_pixel_vec_argb(i+dst_pos.x, j+dst_pos.y, &v);
             }
         }
         // let stride = ((self.width as i32) * self.bitdepth.bytes_per_pixel()) as usize;
@@ -173,22 +156,36 @@ impl GFXBuffer {
 
         // self.copy_from(dst_pos.x, dst_pos.y, src_buf);
     }
+}
 
-    fn copy_from(&mut self, x:i32, y:i32, src: &GFXBuffer) {
-        for i in 0..src.width {
-            for j in 0..src.height {
-                let v = src.get_pixel_vec_argb(i,j);
-                self.set_pixel_vec_argb(i+(x as u32), j+(y as u32), &v);
+impl GFXBuffer {
+    pub fn clear(&mut self, color: &ARGBColor) {
+        //println!("clearing {:?} {:?}  {}x{}",self.bitdepth, self.layout, self.width, self.height);
+        match self.layout {
+            RGB565() => {
+                let cv = color.as_layout(&self.layout);
+                let cv2 = create_filled_row(self.width as usize, &cv);
+                for chunk in self.data.chunks_exact_mut(cv2.len()) {
+                    chunk.copy_from_slice(&cv2);
+                }
+            }
+            ARGB() => {
+                // println!("pixel layout is {:?}", self.layout);
+                let cv = color.as_layout(&self.layout);
+                let cv2 = create_filled_row(self.width as usize, &cv);
+                for chunk in self.data.chunks_exact_mut(cv2.len()) {
+                    chunk.copy_from_slice(&cv2);
+                }
             }
         }
     }
 
+
     pub fn fill_rect(&mut self, bounds: Rect, color: &ARGBColor) {
         let bounds = bounds.intersect(self.bounds());
-        println!("filling rect {}",bounds);
         let cv = color.as_layout(&self.layout);
         let cv2 = create_filled_row(bounds.w as usize, &cv);
-        let bpp:i32 = self.bitdepth.bytes_per_pixel();
+        let bpp:i32 = self.layout.bytes_per_pixel();
         // println!("rect w = {} with len {} row len {}",bounds.w, cv2.len(), row_len);
         for (j,row) in self.data.chunks_exact_mut((self.width as i32 * bpp) as usize).enumerate() {
             let j = j as i32;
@@ -207,27 +204,26 @@ impl GFXBuffer {
         let v = color.to_argb_vec();
         for i in bounds.x .. (bounds.x+bounds.w) {
             for j in 0..size {
-                self.set_pixel_vec_argb(i as u32, (bounds.y+j) as u32,&v);
-                self.set_pixel_vec_argb(i as u32, (bounds.y+bounds.h-j) as u32,&v);
+                self.set_pixel_vec_argb(i, (bounds.y+j),&v);
+                self.set_pixel_vec_argb(i, (bounds.y+bounds.h-j),&v);
             }
         }
         for j in bounds.y .. (bounds.y+bounds.h) {
             for i in 0..size {
-                self.set_pixel_vec_argb( (bounds.x+i) as u32, j as u32,&v);
-                self.set_pixel_vec_argb( (bounds.x+bounds.w-i) as u32, j as u32, &v);
+                self.set_pixel_vec_argb( bounds.x+i, j,&v);
+                self.set_pixel_vec_argb( (bounds.x+bounds.w-i), j, &v);
             }
         }
     }
-
-    pub fn get_pixel_vec_argb(&self, x:u32, y:u32) -> Vec<u8>{
+    pub fn get_pixel_vec_argb(&self, x:i32, y:i32) -> Vec<u8>{
         let mut v:Vec<u8> = vec![0,0,0,0];
-        if x >= self.width || y >= self.height {
+        if x < 0 || x >= self.width as i32 || y < 0 || y >= self.height as i32 {
             println!("get error. pixel {},{} out of bounds {}x{}",x,y,self.width,self.height);
             return v;
         }
-        match self.bitdepth {
-            ColorDepth::CD16() => {
-                let n = (x + y * (self.width as u32)) as usize;
+        match self.layout {
+            PixelLayout::RGB565() => {
+                let n = (x + y * self.width as i32) as usize;
                 let packed_color:u16 = ((self.data[n*2+0] as u16) << 8) | (self.data[n*2+1] as u16);
                 // return ARGBColor::from_16bit(packed_color).to_argb_vec();
                 let r:u8 = (((packed_color & 0b11111_000000_00000) >> 11) << 3) as u8;
@@ -238,89 +234,47 @@ impl GFXBuffer {
                 v[2] = g;
                 v[3] = b;
             }
-            ColorDepth::CD24() => {
-                let n = (x + y * (self.width as u32)) as usize;
-                v[0] = 255;
-                v[1] = self.data[n*3+0];
-                v[2] = self.data[n*3+1];
-                v[3] = self.data[n*3+2];
-            }
-            ColorDepth::CD32() => {
-                let n = (x + y * (self.width as u32)) as usize;
-                match self.layout {
-                    PixelLayout::ARGB() => {
-                        v[0] = self.data[n*4+0];
-                        v[1] = self.data[n*4+1];
-                        v[2] = self.data[n*4+2];
-                        v[3] = self.data[n*4+3];
-                    }
-                    PixelLayout::RGBA() => {
-                        v[0] = self.data[n*4+3];
-                        v[1] = self.data[n*4+0];
-                        v[2] = self.data[n*4+1];
-                        v[3] = self.data[n*4+2];
-                    }
-                    _ => {}
-                }
+            PixelLayout::ARGB() => {
+                let n = (x + y * (self.width as i32)) as usize;
+                v[0] = self.data[n*4+0];
+                v[1] = self.data[n*4+1];
+                v[2] = self.data[n*4+2];
+                v[3] = self.data[n*4+3];
             }
         }
         return v
     }
-    pub fn get_pixel_vec(&self, layout: &PixelLayout, x: i32, y: i32) -> Vec<u8> {
-        let pix = self.get_pixel_vec_argb(x as u32, y as u32);
-        println!("pix is {:?}",pix);
+    pub fn get_pixel_vec_as_layout(&self, layout: &PixelLayout, x: i32, y: i32) -> Vec<u8> {
+        let pix = self.get_pixel_vec_argb(x , y);
         let color = ARGBColor::from_argb_vec(&pix);
         return color.as_layout(&layout);
     }
-
-    pub fn set_pixel_vec_argb(&mut self, x:u32, y:u32, v:&Vec<u8>) {
-        if x >= self.width || y >= self.height {
+    pub fn set_pixel_vec_argb(&mut self, x:i32, y:i32, v:&Vec<u8>) {
+        if x >= self.width as i32 || y >= self.height as i32 {
             println!("set error. pixel {},{} out of bounds {}x{}",x,y,self.width,self.height);
             return;
         }
-        match self.bitdepth {
-            ColorDepth::CD16() => {
-                match self.layout {
-                    PixelLayout::RGB565() => {
-                        let n = (x + y * (self.width as u32)) as usize;
-                        let r = v[1];
-                        let g = v[2];
-                        let b = v[3];
-                        let upper = ((r >> 3)<<3) | ((g & 0b111_00000) >> 5);
-                        let lower = (((g & 0b00011100) >> 2) << 5) | ((b & 0b1111_1000) >> 3);
-                        self.data[n*2+0] = lower;
-                        self.data[n*2+1] = upper;
-                    }
-                    _ => {}
-                }
+        match self.layout {
+            PixelLayout::RGB565() => {
+                let n = (x + y * (self.width as i32)) as usize;
+                let r = v[1];
+                let g = v[2];
+                let b = v[3];
+                let upper = ((r >> 3) << 3) | ((g & 0b111_00000) >> 5);
+                let lower = (((g & 0b00011100) >> 2) << 5) | ((b & 0b1111_1000) >> 3);
+                self.data[n * 2 + 0] = lower;
+                self.data[n * 2 + 1] = upper;
             }
-            ColorDepth::CD24() => {
-                let n = (x + y * (self.width as u32)) as usize;
-                self.data[n*3+0] = v[1];
-                self.data[n*3+1] = v[2];
-                self.data[n*3+2] = v[3];
-            }
-            ColorDepth::CD32() => {
-                let n = (x + y * (self.width as u32)) as usize;
-                match self.layout {
-                    PixelLayout::ARGB() => {
-                        self.data[n*4+0] = v[0];
-                        self.data[n*4+1] = v[1];
-                        self.data[n*4+2] = v[2];
-                        self.data[n*4+3] = v[3];
-                    }
-                    PixelLayout::RGBA() => {
-                        self.data[n*4+0] = v[3];
-                        self.data[n*4+1] = v[2];
-                        self.data[n*4+2] = v[1];
-                        self.data[n*4+3] = v[0];
-                    }
-                    _ => {}
-                }
+            PixelLayout::ARGB() => {
+                let n = (x + y * (self.width as i32)) as usize;
+                self.data[n*4+0] = v[0];
+                self.data[n*4+1] = v[1];
+                self.data[n*4+2] = v[2];
+                self.data[n*4+3] = v[3];
             }
         }
     }
-    pub fn set_pixel_argb(&mut self, x:u32, y:u32, a:u8,r:u8,g:u8,b:u8) {
+    pub fn set_pixel_argb(&mut self, x:i32, y:i32, a:u8,r:u8,g:u8,b:u8) {
         self.set_pixel_vec_argb(x,y,&vec![a,r,g,b]);
     }
     pub fn bounds(&self) -> Rect {
@@ -331,41 +285,27 @@ impl GFXBuffer {
             h: self.height as i32,
         }
     }
-}
+    pub fn to_png(&self, pth:&PathBuf) {
+        let file = File::create(pth).unwrap();
+        let ref mut w = BufWriter::new(file);
+        let mut encoder = png::Encoder::new(w, self.width, self.height); // Width is 2 pixels and height is 1.
+        encoder.set_color(png::ColorType::Rgba);
+        encoder.set_depth(png::BitDepth::Eight);
+        let mut writer = encoder.write_header().unwrap();
 
-impl GFXBuffer {
-    pub fn clear(&mut self, color: &ARGBColor) {
-        //println!("clearing {:?} {:?}  {}x{}",self.bitdepth, self.layout, self.width, self.height);
-        match self.bitdepth {
-            ColorDepth::CD16() => {
-                match self.layout {
-                    PixelLayout::RGB565() => {
-                        let cv = color.as_layout(&self.layout);
-                        let cv2 = create_filled_row(self.width as usize, &cv);
-                        for chunk in self.data.chunks_exact_mut(cv2.len()) {
-                            chunk.copy_from_slice(&cv2);
-                        }
-                    }
-                    _ => {}
-                }
-            }
-            CD24() => {
-                // println!("pixel layout is {:?}", self.layout);
-                let cv = color.as_layout(&self.layout);
-                let cv2 = create_filled_row(self.width as usize, &cv);
-                for chunk in self.data.chunks_exact_mut(cv2.len()) {
-                    chunk.copy_from_slice(&cv2);
-                }
-            }
-            CD32() => {
-                // println!("pixel layout is {:?}", self.layout);
-                let cv = color.as_layout(&self.layout);
-                let cv2 = create_filled_row(self.width as usize, &cv);
-                for chunk in self.data.chunks_exact_mut(cv2.len()) {
-                    chunk.copy_from_slice(&cv2);
-                }
+        let mut data:Vec<u8> = vec![];
+        for j in 0..self.height {
+            for i in 0..self.width {
+                let px = self.get_pixel_vec_argb(i as i32, j as i32);
+                // println!("{},{}  {:x}",i,j, buf.get_pixel_32argb(i,j));
+                data.push(px[1]); //R
+                data.push(px[2]); //G
+                data.push(px[3]); //B
+                data.push(255); //A
             }
         }
+        writer.write_image_data(&data).unwrap(); // Save
+        println!("exported to {:?}", fs::canonicalize(&pth).unwrap());
     }
 }
 
@@ -377,50 +317,29 @@ fn create_filled_row(size: usize, color: &Vec<u8>) -> Vec<u8> {
     return nv;
 }
 
-impl GFXBuffer {
-    pub fn new(bitdepth:&ColorDepth, width:u32, height:u32, layout: &PixelLayout) -> GFXBuffer {
-        if width == 0 || height == 0 {
-            panic!("cannot create buffer of size {}x{}",width,height);
-        }
-        let byte_length = match bitdepth {
-            ColorDepth::CD16() => {width*height*2}
-            ColorDepth::CD24() => {width*height*3}
-            ColorDepth::CD32() => {width*height*4}
-        };
-        let data = vec![0u8; byte_length as usize];
-        GFXBuffer {
-            bitdepth:bitdepth.clone(),
-            data,
-            width,
-            height,
-            id: Uuid::new_v4(),
-            layout:layout.clone(),
-        }
-    }
-}
 
 pub fn draw_test_pattern(buf:&mut GFXBuffer) {
     for j in 0..buf.height {
         for i in 0..buf.width {
             let v = (i*4) as u8;
             if j == 0 || j == (buf.height-1) {
-                buf.set_pixel_argb(i,j,255,255,255,255);
+                buf.set_pixel_argb(i as i32, j as i32, 255, 255, 255, 255);
                 continue;
             }
             if j < (buf.height/4)*1 {
-                buf.set_pixel_argb(i,j,255,v,0,0);
+                buf.set_pixel_argb(i as i32, j as i32, 255, v, 0, 0);
                 continue;
             }
             if j < (buf.height/4)*2 {
-                buf.set_pixel_argb(i,j,255,0,v,0);
+                buf.set_pixel_argb(i as i32, j as i32, 255, 0, v, 0);
                 continue;
             }
             if j < (buf.height/4)*3 {
-                buf.set_pixel_argb(i,j,255,0,0,v);
+                buf.set_pixel_argb(i as i32, j as i32, 255, 0, 0, v);
                 continue;
             }
             if j < (buf.height/4)*4 {
-                buf.set_pixel_argb(i,j,v,128,128,128);
+                buf.set_pixel_argb(i as i32, j as i32, v, 128, 128, 128);
                 continue;
             }
         }
@@ -429,87 +348,64 @@ pub fn draw_test_pattern(buf:&mut GFXBuffer) {
 
 #[cfg(test)]
 mod tests {
-
-
     use std::path::{PathBuf};
     use std::time::Instant;
     use crate::{ARGBColor, BLACK, Point, Rect, WHITE};
     use crate::font::load_font_from_json;
-    use crate::graphics::ColorDepth::{CD16, CD32};
-    use crate::graphics::{ColorDepth, export_to_png, GFXBuffer, PixelLayout};
+    use crate::graphics::GFXBuffer;
+    use crate::graphics::PixelLayout;
 
 
     // check ARGB memory buffer copied to RGBA() framebuffer
     // check color drawn to RGBA() framebuffer
     // check ARGB memory buffer copied to RGB565() framebuffer
     #[test]
-    fn ARGB_to_RGBA() {
-        let RED = ARGBColor::new_rgb(255,0,0);
-        let GREEN = ARGBColor::new_rgb(0,255,0);
-        let BLUE = ARGBColor::new_rgb(0,0,255);
-        // let ARGB_RED = vec![255,255,0,0];
-
-        //=== RGBA ===
-        let mut buf2 = GFXBuffer::new(&CD32(), 1, 1, &PixelLayout::RGBA());
-        buf2.clear(&RED);
-        assert_eq!(buf2.data,vec![255,0,0,255]);
-        buf2.clear(&GREEN);
-        assert_eq!(buf2.data,vec![0,255,0,255]);
-        buf2.fill_rect(Rect::from_ints(0,0,1,1), &RED);
-        assert_eq!(buf2.data,vec![255,0,0,255]);
-        buf2.fill_rect(Rect::from_ints(0,0,1,1), &GREEN);
-        assert_eq!(buf2.data,vec![0,255,0,255]);
+    fn argb_to_rgba() {
+        let red = ARGBColor::new_rgb(255, 0, 0);
+        let green = ARGBColor::new_rgb(0, 255, 0);
+        let blue = ARGBColor::new_rgb(0, 0, 255);
 
         //=== ARGB ===
-        let mut buf1 = GFXBuffer::new(&CD32(), 1, 1, &PixelLayout::ARGB());
-        buf1.clear(&RED);
-        assert_eq!(buf1.data,vec![255,255,0,0]);
-        buf1.clear(&GREEN);
-        assert_eq!(buf1.data,vec![255,0,255,0]);
-
-
-        //copy ARGB to RGBA
-        buf1.clear(&BLUE);
-        assert_eq!(buf1.data,vec![255,0,0,255]);
-        // buf2.copy_from(0,0,&buf1);
-        // assert_eq!(buf2.data,vec![0,0,255,255]);
-
-        //copy RGBA to ARGB
-        buf2.clear(&BLUE);
-        assert_eq!(buf2.data,vec![0,0,255,255]);
-        // buf1.copy_from(0,0,&buf2);
-        // assert_eq!(buf1.data,vec![255,0,0,255]);
+        let mut buf2 = GFXBuffer::new(1, 1, &PixelLayout::ARGB());
+        buf2.clear(&red);
+        assert_eq!(buf2.data,vec![255, 255,0,0]);
+        buf2.clear(&green);
+        assert_eq!(buf2.data,vec![255,0,255,0]);
+        buf2.fill_rect(Rect::from_ints(0,0,1,1), &red);
+        assert_eq!(buf2.data,vec![255,255,0,0]);
+        buf2.fill_rect(Rect::from_ints(0,0,1,1), &green);
+        assert_eq!(buf2.data,vec![255,0,255,0]);
     }
 
     #[test]
-    fn ARGB_to_RGB565() {
-        let RED = ARGBColor::new_rgb(255,0,0);
-        let GREEN = ARGBColor::new_rgb(0,255,0);
-        let BLUE = ARGBColor::new_rgb(0,0,255);
+    fn argb_to_rgb565() {
+        let red = ARGBColor::new_rgb(255, 0, 0);
+        let green = ARGBColor::new_rgb(0, 255, 0);
+        let blue = ARGBColor::new_rgb(0, 0, 255);
 
         //=== RGB565 ===
-        let mut buf2 = GFXBuffer::new(&CD16(), 1, 1, &PixelLayout::RGB565());
-        buf2.clear(&RED);
-        // assert_eq!(buf2.data,vec![0b000_00000,0b11111_000,]);
-        buf2.clear(&GREEN);
-        // assert_eq!(buf2.data,vec![0b111_00000,0b00000_111,]);
-        buf2.fill_rect(Rect::from_ints(0,0,1,1), &RED);
-        // assert_eq!(buf2.data,vec![0b11111_000,0b000_00000,]);
-        buf2.fill_rect(Rect::from_ints(0,0,1,1), &GREEN);
-        // assert_eq!(buf2.data,vec![0b00000_111,0b111_00000,]);
+        let mut buf2 = GFXBuffer::new(1, 1, &PixelLayout::RGB565());
+        buf2.clear(&red);
+        assert_eq!(buf2.data,vec![0b000_00000,0b11111_000,]);
+        buf2.clear(&green);
+        assert_eq!(buf2.data,vec![0b111_00000,0b00000_111,]);
+        buf2.fill_rect(Rect::from_ints(0,0,1,1), &red);
+        assert_eq!(buf2.data,vec![0b11111_000,0b000_00000,]);
+        buf2.fill_rect(Rect::from_ints(0,0,1,1), &green);
+        assert_eq!(buf2.data,vec![0b00000_111,0b111_00000,]);
 
         // === copy ARGB to RGB565
-        let mut buf1 = GFXBuffer::new(&CD32(), 1, 1, &PixelLayout::ARGB());
-        buf1.clear(&BLUE);
+        let mut buf1 = GFXBuffer::new(1, 1, &PixelLayout::ARGB());
+        buf1.clear(&blue);
         assert_eq!(buf1.data,vec![255,0,0,255]);
-        // buf2.copy_from(0,0,&buf1);
-        // assert_eq!(buf2.data,vec![0b000_11111,0b00000_000, ]);
+        buf2.draw_image(&Point::init(0, 0), &buf1.bounds(), &buf1);
+        assert_eq!(buf2.data,vec![0b000_11111,0b00000_000, ]);
 
         //copy RGB565 to ARGB
-        buf2.clear(&BLUE);
-        // assert_eq!(buf2.data,vec![ 0b000_11111, 0b00000_000,]);
-        // buf1.copy_from(0,0,&buf2);
-        // assert_eq!(buf1.data,vec![255,24,224,0]);
+        buf2.clear(&blue);
+        assert_eq!(buf2.data,vec![ 0b000_11111, 0b00000_000,]);
+        buf1.draw_image(&Point::init(0,0),&buf2.bounds(),&buf2);
+        assert_eq!(buf1.data,vec![255,24,224,0]);
     }
 
     /*
@@ -628,11 +524,11 @@ mod tests {
 
     #[test]
     fn draw_bitmap() {
-        let mut bitmap = GFXBuffer::new(&CD32(), 200, 100, &PixelLayout::RGBA());
+        let mut bitmap = GFXBuffer::new(200, 100, &PixelLayout::ARGB());
         bitmap.clear(&WHITE);
         let font = load_font_from_json("../resources/default-font.json").unwrap();
         font.draw_text_at(&mut bitmap, "Greetings, Earthling!", 20, 20, &ARGBColor::new_argb(255,0, 255, 0));
-        export_to_png(&bitmap, &PathBuf::from("earthling.png"));
+        bitmap.to_png(&PathBuf::from("earthling.png"));
     }
 
     #[test]
@@ -641,7 +537,7 @@ mod tests {
         let w = 1024;
         let h = 1024;
         let color = ARGBColor::new_rgb(100,100,100);
-        let mut background = GFXBuffer::new(&ColorDepth::CD32(), w, h, &PixelLayout::ARGB());
+        let mut background = GFXBuffer::new( w, h, &PixelLayout::ARGB());
         for _ in 0..10 {
             background.clear(&color);
         }
@@ -654,7 +550,7 @@ mod tests {
         let w = 1024;
         let h = 1024;
         let color = ARGBColor::new_rgb(100,100,100);
-        let mut background = GFXBuffer::new(&ColorDepth::CD24(), w, h, &PixelLayout::RGB());
+        let mut background = GFXBuffer::new( w, h, &PixelLayout::ARGB());
         for _ in 0..10 {
             background.clear(&color);
         }
@@ -669,7 +565,7 @@ mod tests {
         let w = 1024;
         let h = 1024;
         let color = ARGBColor::new_rgb(100,100,100);
-        let mut background = GFXBuffer::new(&ColorDepth::CD16(), w, h, &PixelLayout::RGB565());
+        let mut background = GFXBuffer::new(w, h, &PixelLayout::RGB565());
         for _ in 0..10 {
             background.clear(&color);
         }
@@ -684,13 +580,10 @@ mod tests {
         let h = 1024;
         let color = ARGBColor::new_rgb(100,100,100);
 
-        let types = [
-            (ColorDepth::CD32(),PixelLayout::ARGB()),
-            (ColorDepth::CD32(),PixelLayout::RGBA()),
-            (ColorDepth::CD24(),PixelLayout::RGB())];
+        let types = [PixelLayout::ARGB(), PixelLayout::RGB565()];
 
-        for (depth,layout) in types {
-            let mut background = GFXBuffer::new(&depth, w, h, &layout);
+        for layout in types {
+            let mut background = GFXBuffer::new(w, h, &layout);
             background.clear(&BLACK);
             let start = Instant::now();
             let bounds = Rect::from_ints(500, 500, 1000, 1000);
@@ -700,8 +593,8 @@ mod tests {
             println!("took {}",start.elapsed().as_secs_f32());
             // println!("is black {:?}",background.get_pixel_vec(&PixelLayout::RGBA(),0,0));
             // println!("is color {:?}",background.get_pixel_vec(&PixelLayout::RGBA(),600,600));
-            assert_eq!(background.get_pixel_vec(&PixelLayout::RGBA(),0,0),BLACK.as_layout(&PixelLayout::RGBA()));
-            assert_eq!(background.get_pixel_vec(&PixelLayout::RGBA(),600,600),color.as_layout(&PixelLayout::RGBA()));
+            assert_eq!(background.get_pixel_vec_as_layout(&PixelLayout::ARGB(), 0, 0), BLACK.as_layout(&PixelLayout::ARGB()));
+            assert_eq!(background.get_pixel_vec_as_layout(&PixelLayout::ARGB(), 600, 600), color.as_layout(&PixelLayout::ARGB()));
         }
 
         // 2.55s vs 0.76s  ~= 3.3x faster
@@ -712,22 +605,19 @@ mod tests {
     fn buffer_draw_image_speed() {
         let w = 1024;
         let h = 1024;
-        let types = [
-            (ColorDepth::CD32(),PixelLayout::ARGB()),
-            (ColorDepth::CD32(),PixelLayout::RGBA()),
-            (ColorDepth::CD24(),PixelLayout::RGB())];
+        let types = [PixelLayout::ARGB(),PixelLayout::RGB565()];
 
-        let mut src_img = GFXBuffer::new(&ColorDepth::CD32(), 500, 500, &PixelLayout::RGBA());
+        let mut src_img = GFXBuffer::new(500, 500, &PixelLayout::ARGB());
         src_img.clear(&BLACK);
         src_img.fill_rect(Rect::from_ints(0,0,250,250),&WHITE);
         src_img.fill_rect(Rect::from_ints(250,250,250,250),&WHITE);
         // export_to_png(&src_img, &PathBuf::from("pattern.png"));
-        for (depth,layout) in &types {
-            let mut background = GFXBuffer::new(depth, w, h, layout);
+        for layout in &types {
+            let mut background = GFXBuffer::new( w, h, layout);
             background.clear(&BLACK);
 
-            for (depth2, layout2 ) in &types {
-                let src_img = src_img.to_layout(depth2,layout2);
+            for (layout2 ) in &types {
+                let src_img = src_img.to_layout(layout2);
                 let start = Instant::now();
                 for _ in 0..10 {
                     background.draw_image(&Point::init(0, 0), &src_img.bounds(), &src_img);
@@ -744,25 +634,3 @@ mod tests {
 
 }
 
-pub fn export_to_png(buf: &GFXBuffer, pth:&PathBuf) {
-    let file = File::create(pth).unwrap();
-    let ref mut w = BufWriter::new(file);
-    let mut encoder = png::Encoder::new(w, buf.width, buf.height); // Width is 2 pixels and height is 1.
-    encoder.set_color(png::ColorType::Rgba);
-    encoder.set_depth(png::BitDepth::Eight);
-    let mut writer = encoder.write_header().unwrap();
-
-    let mut data:Vec<u8> = vec![];
-    for j in 0..buf.height {
-        for i in 0..buf.width {
-            let px = buf.get_pixel_vec_argb(i,j);
-            // println!("{},{}  {:x}",i,j, buf.get_pixel_32argb(i,j));
-            data.push(px[1]); //R
-            data.push(px[2]); //G
-            data.push(px[3]); //B
-            data.push(255); //A
-        }
-    }
-    writer.write_image_data(&data).unwrap(); // Save
-    println!("exported to {:?}", fs::canonicalize(&pth).unwrap());
-}
