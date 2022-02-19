@@ -121,7 +121,7 @@ impl GFXBuffer {
     pub fn draw_image(&mut self, dst_pos:&Point, src_bounds:&Rect, src_buf:&GFXBuffer ) {
         let mut src_bounds = src_bounds.intersect(self.bounds());
         if src_bounds.is_empty() { return; }
-        // println!("drawing {} to {}  at {}  with {}", src_buf, self, dst_pos, src_bounds);
+        println!("drawing {} to {}  at {}  with {}", src_buf, self, dst_pos, src_bounds);
 
         let self_bounds = self.bounds().clone();
         if src_buf.layout == self.layout {
@@ -216,10 +216,9 @@ impl GFXBuffer {
         let cv = color.as_layout(&self.layout);
         let cv2 = create_filled_row(bounds.w as usize, &cv);
         let bpp:i32 = self.layout.bytes_per_pixel();
-        // println!("rect w = {} with len {} row len {}",bounds.w, cv2.len(), row_len);
         for (j,row) in self.data.chunks_exact_mut((self.width as i32 * bpp) as usize).enumerate() {
             let j = j as i32;
-            if j < bounds.x {
+            if j < bounds.y {
                 continue;
             }
             if j >= bounds.y + bounds.h {

@@ -80,7 +80,7 @@ impl ARGBColor {
         //turn rgba into two adjacent bytes. use set
         let upper = ((self.r >> 3)<<3) | ((self.g & 0b111_00000) >> 5);
         let lower = (((self.g & 0b00011100) >> 2) << 5) | ((self.b & 0b1111_1000) >> 3);
-        vec![upper,lower]
+        vec![lower,upper]
     }
     pub fn from_argb_vec(v:&Vec<u8>) -> ARGBColor {
         ARGBColor { a:v[0], r:v[1],g:v[2],b:v[3]}

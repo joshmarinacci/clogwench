@@ -103,7 +103,7 @@ impl PlatformWindowManager {
 
                 let mut plat = make_plat(stop.clone(), tx_in.clone()).unwrap();
                 let bds = plat.get_screen_bounds();
-                let mut background = GFXBuffer::new(bds.w as u32, bds.h as u32, &PixelLayout::ARGB());
+                let mut background = GFXBuffer::new(bds.w as u32, bds.h as u32, &plat.get_preferred_pixel_layout());
                 plat.register_image2(&background);
                 let mut cursor_image:GFXBuffer = GFXBuffer::from_png_file("../../resources/cursor.png").to_layout(plat.get_preferred_pixel_layout());
                 plat.register_image2(&cursor_image);
@@ -273,10 +273,10 @@ impl PlatformWindowManager {
         {
             self.plat.clear();
 
-            self.background.clear(&ARGBColor::new_rgb(100,100,100));
-            self.background.fill_rect(Rect::from_ints(0,0,25,25), &BLACK);
+            self.background.clear(&ARGBColor::new_rgb(255,100,0));
+            self.background.fill_rect(Rect::from_ints(0,0,25,25), &ARGBColor::new_rgb(0,0,255));
             // self.font.draw_text_at(&mut self.background,"Greetings Earthling",40,40,&ARGBColor::new_rgb(0,255,0));
-            // self.plat.draw_image(0, 0, &self.background);
+            self.plat.draw_image(&Point::init(0, 0), &self.background.bounds(), &self.background);
             for win in self.state.window_list() {
                 let (wc, tc) = if self.state.is_focused_window(win) {
                     (FOCUSED_WINDOW_COLOR, FOCUSED_TITLEBAR_COLOR)
@@ -306,6 +306,7 @@ impl PlatformWindowManager {
             println!("calculated avg frame time {}", (total as f64)/(self.fps.len() as f64));
         }
         self.tick += 1;
+        //thread::sleep(Duration::from_millis(100));
         true
     }
 }
