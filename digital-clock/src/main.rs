@@ -104,7 +104,7 @@ fn redraw(client: &ClientConnection, appid: Uuid, winid: Uuid, bounds: Rect, spr
             app_id: appid,
             window_id: winid,
             rect: Rect::from_ints(chx, 30, imw, 32),
-            buffer: sprite_sheet.subrect(Rect::from_ints(sx1, 0, imw, 32)),
+            buffer: sprite_sheet.sub_rect(Rect::from_ints(sx1, 0, imw, 32)),
         }));
         chx += imw;
         chx += 10;

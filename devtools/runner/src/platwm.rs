@@ -283,7 +283,7 @@ impl PlatformWindowManager {
                 } else {
                     (WINDOW_COLOR, TITLEBAR_COLOR)
                 };
-                self.plat.draw_rect(win.external_bounds(), &wc, WINDOW_BORDER_WIDTH);
+                // self.plat.draw_rect(win.external_bounds(), &wc, WINDOW_BORDER_WIDTH);
                 self.plat.fill_rect(win.titlebar_bounds(), &tc);
                 let bd = win.content_bounds();
                 let MAGENTA = ARGBColor::new_rgb(255, 0, 255);

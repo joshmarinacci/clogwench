@@ -76,9 +76,6 @@ impl Plat {
     pub fn fill_rect(&mut self, rect: Rect, color: &ARGBColor) {
         self.surf.buf.fill_rect(rect,color);
     }
-    pub fn draw_rect(&mut self, rect: Rect, color: &ARGBColor, width: i32) {
-        self.surf.buf.draw_rect(rect,color,width);
-    }
     pub fn draw_image(&mut self, dst_pos:&Point, src_bounds:&Rect, src_buf:&GFXBuffer ) {
         self.surf.draw_image(dst_pos, src_bounds, src_buf);
     }

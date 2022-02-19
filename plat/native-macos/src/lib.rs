@@ -156,11 +156,6 @@ impl Plat {
         self.canvas.fill_rect(SDLRect::new(rect.x, rect.y, rect.w as u32, rect.h as u32));
     }
 
-    pub fn draw_rect(&mut self, rect: Rect, color: &ARGBColor, width: i32) {
-        let c2 = Color::RGB(color.r, color.g, color.b);
-        self.canvas.set_draw_color(c2);
-        self.canvas.fill_rect(SDLRect::new(rect.x, rect.y, rect.w as u32, rect.h as u32));
-    }
     pub fn draw_image(&mut self, dst_pos:&Point, src_bounds: &Rect, src_buf: &GFXBuffer) {
         if let Some(tex) = self.textures.get_mut(&src_buf.id) {
             let dst: SDLRect = SDLRect::new(dst_pos.x, dst_pos.y, src_buf.width, src_buf.height);
