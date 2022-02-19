@@ -136,6 +136,12 @@ pub fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender
                             }
                         }
                         // info!("cursor {},{}",cx, cy);
+                        if cx < 0.0 {
+                            cx = 0.0;
+                        }
+                        if cy < 0.0 {
+                            cy = 0.0;
+                        }
                         let cmd = IncomingMessage {
                             source: Default::default(),
                             command: APICommand::MouseMove(MouseMoveEvent{
