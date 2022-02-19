@@ -321,7 +321,7 @@ impl GFXBuffer {
                 data.push(px[1]); //R
                 data.push(px[2]); //G
                 data.push(px[3]); //B
-                data.push(255); //A
+                data.push(px[0]); //A
             }
         }
         writer.write_image_data(&data).unwrap(); // Save
@@ -665,6 +665,12 @@ mod tests {
 
         let mut buf3 = buf1.to_layout(&PixelLayout::RGB565());
         buf3.to_png(&PathBuf::from("test_pattern_3.png"));
+
+
+        let mut cursor = GFXBuffer::from_png_file("../resources/cursor.png");
+        cursor.to_png(&PathBuf::from("cursor_1.png"));
+
+        cursor.to_layout(&PixelLayout::RGB565()).to_png(&PathBuf::from("cursor_2.png"));
     }
 
 }
