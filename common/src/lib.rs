@@ -329,7 +329,6 @@ impl Rect {
         let ry = self.y.max(r2.y);
         let r2x = c1.x.min(c2.x);
         let r2y = c1.y.min(c2.y);
-        println!("comparing x {} vs {}",self.x,  r2.x);
         Rect {
             x:rx,
             y:ry,
