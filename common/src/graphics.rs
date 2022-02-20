@@ -123,9 +123,9 @@ impl GFXBuffer {
         if dst_f_bounds.is_empty() { return; }
         let self_bounds = self.bounds().clone();
         let src_f_bounds = dst_f_bounds.subtract(dst_pos);
-        println!("drawing {} to {}  at {}  with {} {}", src_buf, self, dst_pos, src_bounds, self_bounds);
-        println!("drawing in src {}",src_f_bounds);
-        println!("drawing in dst {}", dst_f_bounds);
+        // println!("drawing {} to {}  at {}  with {} {}", src_buf, self, dst_pos, src_bounds, self_bounds);
+        // println!("drawing in src {}",src_f_bounds);
+        // println!("drawing in dst {}", dst_f_bounds);
         if src_buf.layout == self.layout {
             //println!("same layout");
             let dst_x = dst_f_bounds.x;
