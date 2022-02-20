@@ -121,9 +121,8 @@ impl GFXBuffer {
     pub fn draw_image(&mut self, dst_pos:&Point, src_bounds:&Rect, src_buf:&GFXBuffer ) {
         let mut src_bounds = src_bounds.intersect(self.bounds());
         if src_bounds.is_empty() { return; }
-        println!("drawing {} to {}  at {}  with {}", src_buf, self, dst_pos, src_bounds);
-
         let self_bounds = self.bounds().clone();
+        //println!("drawing {} to {}  at {}  with {} {}", src_buf, self, dst_pos, src_bounds, self_bounds);
         if src_buf.layout == self.layout {
             //println!("same layout");
             let self_stride = self.stride();
@@ -131,7 +130,7 @@ impl GFXBuffer {
                 let j = j as i32;
                 if j < dst_pos.y { continue; }
                 if j >= dst_pos.y + src_bounds.h { continue; }
-                let src_row_start = (src_buf.layout.bytes_per_pixel() * (src_bounds.x + src_bounds.y * (src_buf.width as i32))) as usize;
+                let src_row_start = (src_buf.layout.bytes_per_pixel() * (src_bounds.x + (src_bounds.y + j) * (src_buf.width as i32))) as usize;
                 let src_row_len = (src_buf.layout.bytes_per_pixel() * src_bounds.w) as usize;
 
                 let (_, src_row_first) = src_buf.data.split_at(src_row_start);

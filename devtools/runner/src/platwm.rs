@@ -273,7 +273,7 @@ impl PlatformWindowManager {
         {
             self.plat.clear();
 
-            self.background.clear(&ARGBColor::new_rgb(255,0,0));
+            self.background.clear(&ARGBColor::new_rgb(120,128,128));
             self.background.fill_rect(Rect::from_ints(0,0,25,25), &ARGBColor::new_rgb(0,0,0));
             self.background.fill_rect(Rect::from_ints(0,25,25,25), &ARGBColor::new_rgb(255,0,0));
             self.background.fill_rect(Rect::from_ints(0,50,25,25), &ARGBColor::new_rgb(0,255,0));
