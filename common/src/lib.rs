@@ -261,6 +261,28 @@ pub struct Rect {
 }
 
 impl Rect {
+    pub(crate) fn subtract(&self, pt: &Point) -> Rect {
+        Rect {
+            x: self.x - pt.x,
+            y: self.y - pt.y,
+            w: self.w,
+            h: self.h
+        }
+    }
+}
+
+impl Rect {
+    pub(crate) fn add(&self, pt: &Point) -> Rect {
+        Rect {
+            x: self.x + pt.x,
+            y: self.y + pt.y,
+            w: self.w,
+            h: self.h
+        }
+    }
+}
+
+impl Rect {
     pub fn grow(&self, pad: &Padding) -> Rect {
         Rect {
             x: self.x - pad.left,
@@ -307,6 +329,7 @@ impl Rect {
         let ry = self.y.max(r2.y);
         let r2x = c1.x.min(c2.x);
         let r2y = c1.y.min(c2.y);
+        println!("comparing x {} vs {}",self.x,  r2.x);
         Rect {
             x:rx,
             y:ry,

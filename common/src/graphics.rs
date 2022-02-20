@@ -119,70 +119,43 @@ impl GFXBuffer {
         }
     }
     pub fn draw_image(&mut self, dst_pos:&Point, src_bounds:&Rect, src_buf:&GFXBuffer ) {
-        let mut src_bounds = src_bounds.intersect(self.bounds());
-        if src_bounds.is_empty() { return; }
+        let mut dst_f_bounds = src_bounds.add(dst_pos).intersect(self.bounds());
+        if dst_f_bounds.is_empty() { return; }
         let self_bounds = self.bounds().clone();
-        //println!("drawing {} to {}  at {}  with {} {}", src_buf, self, dst_pos, src_bounds, self_bounds);
+        let src_f_bounds = dst_f_bounds.subtract(dst_pos);
+        println!("drawing {} to {}  at {}  with {} {}", src_buf, self, dst_pos, src_bounds, self_bounds);
+        println!("drawing in src {}",src_f_bounds);
+        println!("drawing in dst {}", dst_f_bounds);
         if src_buf.layout == self.layout {
             //println!("same layout");
-            let self_stride = self.stride();
-            for (j, full_dst_row) in self.data.chunks_exact_mut(self_stride).enumerate() {
-                let j = j as i32;
-                if j < dst_pos.y { continue; }
-                if j >= dst_pos.y + src_bounds.h { continue; }
-                let src_row_start = (src_buf.layout.bytes_per_pixel() * (src_bounds.x + (src_bounds.y + j) * (src_buf.width as i32))) as usize;
-                let src_row_len = (src_buf.layout.bytes_per_pixel() * src_bounds.w) as usize;
+            let dst_x = dst_f_bounds.x;
+            let src_x = src_f_bounds.x;
+            let src_bbp = src_buf.layout.bytes_per_pixel();
+            let dst_bpp = self.layout.bytes_per_pixel();
+            let src_w = src_buf.width as i32;
+            let dst_w = self.width as i32;
 
-                let (_, src_row_first) = src_buf.data.split_at(src_row_start);
-                let (src_row,_) = src_row_first.split_at(src_row_len);
+            for dst_y in dst_f_bounds.y .. dst_f_bounds.y + dst_f_bounds.h {
+                let row_len = src_f_bounds.w as i32;
+                let src_y = dst_y - dst_f_bounds.y + src_f_bounds.y;
+                let src_row_start = (src_bbp * (src_y * src_w + src_x)) as usize;
+                let dst_row_start = (dst_bpp * (dst_y * dst_w + dst_x)) as usize;
+                let src_row_len   = (src_bbp * row_len) as usize;
+                let dst_row_len   = (dst_bpp * row_len) as usize;
 
-                let dst_row_start = (self.layout.bytes_per_pixel() * (dst_pos.x)) as usize;
-                let dst_row_len = (self.layout.bytes_per_pixel() * src_bounds.w) as usize;
-
-                if dst_row_len != src_row_len {
-                    error!("row slices aren't the same length!");
-                }
-
-                if dst_pos.x + src_bounds.w > (self.width as i32) {
-                    error!("copying src out of dst range {} {} {}", self_bounds, dst_pos, src_bounds);
-                }
-
-                let (_, dst_row_first) = full_dst_row.split_at_mut(dst_row_start);
-                let (dst_row,_) = dst_row_first.split_at_mut(src_row_len);
-                dst_row.copy_from_slice(src_row);
+                let src_data = &src_buf.data[src_row_start .. src_row_start + src_row_len];
+                let dst_data = &mut self.data[dst_row_start .. dst_row_start + dst_row_len];
+                dst_data.copy_from_slice(src_data);
             }
         } else {
             println!("different layout");
-            for j in src_bounds.y .. src_bounds.y + src_bounds.h {
-                for i in src_bounds.x .. src_bounds.x + src_bounds.w {
+            for j in dst_f_bounds.y .. dst_f_bounds.y + dst_f_bounds.h {
+                for i in dst_f_bounds.x .. dst_f_bounds.x + dst_f_bounds.w {
                     let v = src_buf.get_pixel_vec_argb(i, j);
                     self.set_pixel_vec_argb(i+dst_pos.x, j+dst_pos.y, &v);
                 }
             }
         }
-        // let stride = ((self.width as i32) * self.bitdepth.bytes_per_pixel()) as usize;
-        // for (j, full_dst_row) in self.data.chunks_exact_mut(stride).enumerate() {
-        //     let j = j as i32;
-        //     if j < dst_pos.y { continue; }
-        //     if j >= dst_pos.y + src_bounds.h { continue; }
-        //     let src_row_start = (src_buf.bitdepth.bytes_per_pixel() * (src_bounds.x + src_bounds.y * (src_buf.width as i32))) as usize;
-        //     let src_row_len = (src_buf.bitdepth.bytes_per_pixel() * src_bounds.w) as usize;
-        //     let (_, src_row_first) = src_buf.data.split_at(src_row_start);
-        //     let (src_row, _) = src_row_first.split_at(src_row_len);
-
-        //     let dst_row_start = (self.bitdepth.bytes_per_pixel() * (dst_pos.x + dst_pos.y* (self.width as i32))) as usize;
-        //     let dst_row_len = (self.bitdepth.bytes_per_pixel() * src_bounds.w) as usize;
-        //     let (_, dst_row_first) = full_dst_row.split_at_mut(dst_row_start);
-        //     let (dst_row,_) = dst_row_first.split_at_mut(dst_row_len);
-        //     if self.layout == src_buf.layout {
-        //         // println!("same layout");
-        //         dst_row.copy_from_slice(src_row);
-        //     } else {
-        //         println!("different layout");
-        //     }
-        // }
-
-        // self.copy_from(dst_pos.x, dst_pos.y, src_buf);
     }
     fn stride(&self) -> usize {
         ((self.layout.bytes_per_pixel() as u32) * self.width) as usize
@@ -650,6 +623,15 @@ mod tests {
                 // assert_eq!(background.get_pixel_vec(&PixelLayout::RGBA(), 0, 256), BLACK.as_layout(&PixelLayout::RGBA()));
             }
         }
+    }
+
+    #[test]
+    fn buffer_draw_correctness() {
+        let mut src_img = GFXBuffer::new(100, 100, &PixelLayout::ARGB());
+        draw_test_pattern(&mut src_img);
+
+        let mut dst_img = GFXBuffer::new(200,200, &PixelLayout::ARGB());
+        dst_img.draw_image(&Point::init(150, 150), &src_img.bounds(), &src_img);
     }
 
     #[test]
