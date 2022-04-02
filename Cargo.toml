@@ -9,4 +9,6 @@ members = [
     "plat",
     "devtools/runner",
     "test-log",
+    "uitoolkit",
+    "uitoolkit/toolbar-mock"
 ]

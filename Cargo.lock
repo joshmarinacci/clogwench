@@ -1009,6 +1009,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "toolbar-mock"
+version = "0.1.0"
+dependencies = [
+ "common",
+ "cool-logger",
+ "log",
+ "uuid",
+]
+
+[[package]]
 name = "traitobject"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1022,6 +1032,10 @@ checksum = "653be63c80a3296da5551e1bfd2cca35227e13cdd08c6668903ae2f4f77aa1f6"
 dependencies = [
  "unsafe-any",
 ]
+
+[[package]]
+name = "uitoolkit"
+version = "0.1.0"
 
 [[package]]
 name = "unicode-segmentation"

@@ -228,9 +228,16 @@ pub struct Size {
     pub h:i32,
 }
 impl Size {
-    fn init(w: i32, h: i32) -> Size {
+    pub fn init(w: i32, h: i32) -> Size {
         Size { w, h }
     }
+    pub fn grow(&self, p:i32) -> Size {
+        Size {
+            w: self.w+p,
+            h: self.h+p
+        }
+    }
+
 }
 
 #[derive(Serialize, Deserialize, Debug, Copy, Clone)]

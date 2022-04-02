@@ -20,6 +20,8 @@
       <sourceFolder url="file://$MODULE_DIR$/test-log/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/echo-app/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/digital-clock/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/uitoolkit/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/uitoolkit/toolbar-mock/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/temp" />
       <excludeFolder url="file://$MODULE_DIR$/.tmp" />
       <excludeFolder url="file://$MODULE_DIR$/tmp" />
