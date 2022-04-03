@@ -20,14 +20,17 @@ pub trait UIView {
     fn size(&self) -> Size;
     fn position(&self) -> Point;
     fn set_position(&mut self, point:&Point);
-    fn children(&self) -> Iter<Rc<RefCell<dyn UIView>>>;
+    fn children(&self) -> Iter<UIChild>;
     fn layout(&mut self, g:&DrawingSurface, available:&Size) -> Size;
     fn draw(&self, g:&DrawingSurface);
     fn input(&mut self, e:&PointerEvent);
 }
+pub type UIChild = Rc<RefCell<dyn UIView>>;
 
-pub fn rect_from_view(view: &&ActionButton) -> Rect {
-    Rect::from_ints(view.position().x,view.position().y,view.size().w,view.size().h)
+pub fn rect_from_view(view: &UIChild) -> Rect {
+    let p = view.deref().borrow().position();
+    let s = view.deref().borrow().size();
+    Rect::from_ints(p.x,p.y,s.w,s.h)
 }
 
 pub enum EventType {
@@ -54,94 +57,93 @@ pub struct DrawingSurface {
     pub client: Rc<RefCell<ClientConnection>>,
     pub font: FontInfo2,
     pub(crate) down: bool,
-    pub root: Rc<RefCell<dyn UIView>>,
     _transform:Point,
 }
 
 impl DrawingSurface {
-    pub(crate) fn init(appid: Uuid, winid: Uuid, font: FontInfo2, client: ClientConnection, hbox: HBox) -> DrawingSurface {
+    pub(crate) fn init(appid: Uuid, winid: Uuid, font: FontInfo2, client: ClientConnection) -> DrawingSurface {
         DrawingSurface {
             appid,
             winid,
             client:Rc::new(RefCell::new(client)),
             font,
             down: false,
-            root:Rc::new(RefCell::new(hbox)),
             _transform: Point::init(0,0),
         }
     }
 }
 
-impl DrawingSurface {
-    pub fn repaint(&mut self) {
-        let size = Size::init(300,150);
-        let mut root = self.root.clone();//.deref().borrow_mut();
-        root.deref().borrow_mut().layout(self, &size);
-        self.draw_view(&self.root.clone());
-    }
-    pub fn start_loop(&mut self) {
-        loop {
-            let mut redraw = false;
-            let cli = &self.client;
-            for cmd in cli.deref().borrow().rx.try_iter() {
-                // info!("got an event {:?}",cmd);
-                match cmd {
-                    APICommand::MouseDown(e) => {
-                        self.down = true;
-                        info!("handling mouse down {:?}",e);
-                        let position = Point::init(e.x, e.y);
-                        info!("mouse position {}",position);
-                        let path = self.scan_path(position);
-                        let mut evt = PointerEvent {
-                            button: e.button,
-                            etype: EventType::MouseDown,
-                            position: position,
-                            direction: EventDirection::Down,
-                        };
-                        for item in path {
-                            let mut view = item.deref().borrow_mut();
-                            info!("path item {:?}",view.name());
-                            evt.position = evt.position.subtract(&view.position());
-                            view.input(&mut evt);
-                            redraw = true;
-                        }
+pub fn repaint(surf:&mut DrawingSurface, root: UIChild) {
+    let size = Size::init(300,150);
+    // let mut root = self.root.clone();//.deref().borrow_mut();
+    root.deref().borrow_mut().layout(surf, &size);
+    surf.draw_view(&root);
+}
+pub fn start_loop(surf:&mut DrawingSurface, root:UIChild) {
+    loop {
+        let mut redraw = false;
+        let cli = &surf.client;
+        for cmd in cli.deref().borrow().rx.try_iter() {
+            // info!("got an event {:?}",cmd);
+            match cmd {
+                APICommand::MouseDown(e) => {
+                    surf.down = true;
+                    info!("handling mouse down {:?}",e);
+                    let position = Point::init(e.x, e.y);
+                    info!("mouse position {}",position);
+                    let path = surf.scan_path(position,root.clone());
+                    let mut evt = PointerEvent {
+                        button: e.button,
+                        etype: EventType::MouseDown,
+                        position: position,
+                        direction: EventDirection::Down,
+                    };
+                    for item in path {
+                        let mut view = item.deref().borrow_mut();
+                        info!("path item {:?}",view.name());
+                        evt.position = evt.position.subtract(&view.position());
+                        view.input(&mut evt);
+                        redraw = true;
                     }
-                    APICommand::MouseUp(e) => {
-                        if !self.down {
-                            continue;
-                        }
-                        info!("handling mouse up {:?}",e);
-                        let position = Point::init(e.x, e.y);
-                        info!("mouse position {}",position);
-                        let path = self.scan_path(position);
-                        let mut evt = PointerEvent {
-                            button: e.button,
-                            etype: EventType::MouseUp,
-                            position: position,
-                            direction: EventDirection::Down,
-                        };
-                        for item in path {
-                            let mut view = item.deref().borrow_mut();
-                            info!("path item {:?}",view.name());
-                            evt.position = evt.position.subtract(&view.position());
-                            view.input(&mut evt);
-                            redraw = true;
-                        }
-
-                    }
-                    APICommand::SystemShutdown => {
-                        info!("CLIENT app:  system is shutting down. bye!");
-                        break;
-                    }
-                    _ => {}
                 }
-            }
-            if redraw {
-                self.repaint();
+                APICommand::MouseUp(e) => {
+                    if !surf.down {
+                        continue;
+                    }
+                    info!("handling mouse up {:?}",e);
+                    let position = Point::init(e.x, e.y);
+                    info!("mouse position {}",position);
+                    let path = surf.scan_path(position,root.clone());
+                    let mut evt = PointerEvent {
+                        button: e.button,
+                        etype: EventType::MouseUp,
+                        position: position,
+                        direction: EventDirection::Down,
+                    };
+                    for item in path {
+                        let mut view = item.deref().borrow_mut();
+                        info!("path item {:?}",view.name());
+                        evt.position = evt.position.subtract(&view.position());
+                        view.input(&mut evt);
+                        redraw = true;
+                    }
+
+                }
+                APICommand::SystemShutdown => {
+                    info!("CLIENT app:  system is shutting down. bye!");
+                    break;
+                }
+                _ => {}
             }
         }
-
+        if redraw {
+            repaint(surf,root.clone());
+        }
     }
+
+}
+
+impl DrawingSurface {
     fn handle_mouse_down(&self, e: MouseDownEvent) {
         //             let position = this.surface.screen_to_local(domEvent)
         //             this.last_point = position
@@ -155,10 +157,10 @@ impl DrawingSurface {
         //             this.surface.repaint()
         //             domEvent.preventDefault()
     }
-    fn scan_path(&self, point: Point) -> Vec<Rc<RefCell<dyn UIView>>> {
-        return self.scan_path2(self.root.clone(),&point);
+    fn scan_path(&self, point: Point, root:UIChild) -> Vec<UIChild> {
+        return self.scan_path2(root.clone(),&point);
     }
-    fn scan_path2(&self, view:Rc<RefCell<dyn UIView>>, point:&Point) -> Vec<Rc<RefCell<dyn UIView>>> {
+    fn scan_path2(&self, view:UIChild, point:&Point) -> Vec<UIChild> {
         let mut path:Vec<Rc<RefCell<dyn UIView>>> = vec![];
         let v = view.deref();
         let pos = v.borrow().position();
@@ -252,7 +254,7 @@ impl DrawingSurface {
             color: color.clone(),
         }));
     }
-    fn draw_view(&mut self, view: &Rc<RefCell<dyn UIView>>) {
+    fn draw_view(&mut self, view: &UIChild) {
         let root = view.deref().borrow_mut();
         self.dotranslate(&root.position());
         root.draw(self);
