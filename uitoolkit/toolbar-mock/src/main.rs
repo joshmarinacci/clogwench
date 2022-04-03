@@ -71,26 +71,4 @@ fn main() {
     surf.repaint();
     surf.start_loop();
     println!("CLIENT APP ending");
-
-// hbox
-    // action button 1: Prev
-    // action button 2: Play
-    // action button 3: Next
-    // font icon
-    // hspacer
-    // dropdown button
-
-    /*
-
-    // really fill text inside the drawing surface using a JSON font.
-    - use 8x8 squares as backup
-    // really do metrics
-    // move UIView and DrawingSurface to core.rs
-    // move ActionButton and HBox to components.rs
-    // listen for mouse events, make buttons clickable using active color
-    - not receiving mouse up events from the window server
-    // add action events from the mouse events to app code
-    - create BaseUIView and BaseParentUIView in components.rs
-    - implement the hbox algorithm using spacers, hflex, vflex, and valign
-     */
 }
