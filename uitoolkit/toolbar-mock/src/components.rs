@@ -1,8 +1,9 @@
 use std::any::{Any, TypeId};
-use std::borrow::Borrow;
+use std::borrow::{Borrow, BorrowMut};
 use std::cell::{Ref, RefCell};
 use std::collections::HashMap;
 use std::iter;
+use std::ops::Deref;
 use std::rc::Rc;
 use std::slice::Iter;
 use log::info;
@@ -50,6 +51,10 @@ impl UIView for BaseUIView {
     fn input(&mut self, e: &PointerEvent) {
         todo!()
     }
+
+    fn hflex(&self) -> bool {
+        false
+    }
 }
 
 /*
@@ -72,7 +77,7 @@ pub struct HBox {
     _name:String,
     _size:Size,
     _position:Point,
-    _children:Vec<Rc<RefCell<dyn UIView>>>
+    _children:Vec<UIChild>
 }
 
 impl HBox {
@@ -103,27 +108,45 @@ impl UIView for HBox {
     fn set_position(&mut self, point: &Point) {
         self._position.copy_from(point)
     }
-    fn children(&self) -> Iter<Rc<RefCell<dyn UIView>>> {
+    fn children(&self) -> Iter<UIChild> {
         return self._children.iter();
     }
     fn layout(&mut self, g: &DrawingSurface, available: &Size) -> Size {
         //pick a temp size
         self._size = Size::init(available.w,40);
 
-        //layout children and calc tallest child
+        //find the non-hflex children
+        let non_hflex:Vec<&UIChild> = self._children.iter().filter(|ch:&&UIChild|{
+            let ch2 = ch.deref().deref().borrow();
+            !ch2.hflex()
+        }).collect();
+        //find the yes-hflex children
+        let yes_hflex:Vec<&UIChild> = self._children.iter().filter(|ch:&&UIChild|{
+            let ch2 = ch.deref().deref().borrow();
+            ch2.hflex()
+        }).collect();
+
+        //layout non-hflex children and calc tallest child
         let mut tallest = 0;
-        for ch in &mut self._children {
-            let size = ch.borrow_mut().layout(g, &self._size);
+        let mut used = 0;
+        for ch in non_hflex {
+            let size = ch.deref().borrow_mut().layout(g, &self._size);
+            used += size.w;
             tallest = i32::max(size.h,tallest)
         }
         //set height to tallest child
         self._size.h = tallest + HBOX_PADDING + HBOX_PADDING;
+        //layout flex children
+        let av = Size::init((available.w-used)/(yes_hflex.len() as i32),40);
+        for ch in yes_hflex {
+            ch.deref().borrow_mut().layout(g, &av);
+        }
 
         //position children left to right
         let mut x = HBOX_PADDING;
         let y = HBOX_PADDING;
         for ch in &mut self._children {
-            let mut ch2 = ch.borrow_mut();
+            let mut ch2 = ch.deref().deref().borrow_mut();
             ch2.set_position(&Point::init(x, y));
             x += ch2.size().w;
         }
@@ -134,6 +157,10 @@ impl UIView for HBox {
         g.fill_rect(&bounds,&HBOX_FILL);
     }
     fn input(&mut self, e: &PointerEvent) {
+    }
+
+    fn hflex(&self) -> bool {
+        false
     }
 }
 
@@ -212,6 +239,10 @@ impl UIView for ActionButton {
         }
         println!("action button got a pointer event");
     }
+
+    fn hflex(&self) -> bool {
+        false
+    }
 }
 
 pub struct Label {
@@ -260,6 +291,9 @@ impl UIView for Label {
     fn input(&mut self, e: &PointerEvent) {
         //noop
     }
+    fn hflex(&self) -> bool {
+        false
+    }
 }
 
 pub struct HSpacer {
@@ -295,11 +329,16 @@ impl UIView for HSpacer {
     }
     fn children(&self) -> Iter<UIChild> { self._children.iter() }
     fn layout(&mut self, g: &DrawingSurface, available: &Size) -> Size {
-        self._size = available.clone();
+        println!("laying out hspacer. available size is {:?}", available);
+        self._size = Size::init(available.w,5);
         return self.size()
     }
     fn draw(&self, g: &DrawingSurface) {
     }
     fn input(&mut self, e: &PointerEvent) {
+    }
+
+    fn hflex(&self) -> bool {
+        true
     }
 }
