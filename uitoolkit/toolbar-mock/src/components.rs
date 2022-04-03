@@ -1,11 +1,13 @@
+use std::any::{Any, TypeId};
 use std::borrow::Borrow;
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::iter;
 use std::rc::Rc;
 use std::slice::Iter;
 use log::info;
 use common::{ARGBColor, Point, Rect, Size};
-use crate::core::{DrawingSurface, EventType, PointerEvent, UIView};
+use crate::core::{ActionEvent, DrawingSurface, EventType, JEventDispatcher, PointerEvent, UIView};
 
 pub const HBOX_FILL:ARGBColor = ARGBColor { r: 200, g: 200, b: 200, a: 255 };
 pub const HBOX_PADDING:i32 = 4;
@@ -102,6 +104,7 @@ pub struct ActionButton {
     pub(crate) _caption:String,
     _children:Vec<Rc<RefCell<dyn UIView>>>,
     _active:bool,
+    pub _dispatcher:JEventDispatcher,
 }
 
 impl ActionButton {
@@ -114,6 +117,7 @@ impl ActionButton {
             _caption: "no-caption".to_string(),
             _children: vec![],
             _active:false,
+            _dispatcher: JEventDispatcher::new()
         }
     }
 }
@@ -160,6 +164,9 @@ impl UIView for ActionButton {
         match e.etype {
             EventType::MouseDown => {
                 self._active = true;
+                self._dispatcher.trigger(&ActionEvent {
+                    command: "mouse_button".to_string()
+                })
             }
             EventType::MouseMove => {}
             EventType::MouseUp => {

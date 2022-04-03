@@ -1,5 +1,7 @@
+use std::any::{Any, TypeId};
 use std::borrow::{Borrow, BorrowMut};
 use std::cell::{Ref, RefCell, RefMut};
+use std::collections::HashMap;
 use std::ops::{Deref, DerefMut};
 use std::rc::Rc;
 use std::slice::Iter;
@@ -77,8 +79,8 @@ impl DrawingSurface {
         root.deref().borrow_mut().layout(self, &size);
         self.draw_view(&self.root.clone());
     }
-    pub fn poll_input(&mut self) {
-        while(true) {
+    pub fn start_loop(&mut self) {
+        loop {
             let mut redraw = false;
             let cli = &self.client;
             for cmd in cli.deref().borrow().rx.try_iter() {
@@ -267,3 +269,61 @@ impl DrawingSurface {
     }
 }
 
+
+pub struct TypeMap(HashMap<TypeId, Box<dyn Any>>);
+impl TypeMap {
+    pub fn new() -> TypeMap {
+        TypeMap(HashMap::new())
+    }
+    pub fn set<T:Any + 'static>(&mut self, t: T) {
+        self.0.insert(TypeId::of::<T>(), Box::new(t));
+    }
+    pub fn has<T: 'static+Any>(&self) -> bool {
+        self.0.contains_key(&TypeId::of::<T>())
+    }
+    pub fn get_mut<T: 'static+Any>(&mut self) -> Option<&mut T> {
+        self.0.get_mut(&TypeId::of::<T>()).map(|t|{
+            t.downcast_mut::<T>().unwrap()
+        })
+    }
+}
+
+pub trait JEvent: 'static {}
+//trait JEventListener<E: JEvent> = FnMut(&E) -> () + 'static;
+
+pub struct JEventDispatcher(TypeMap);
+type JListenerVec<E> = Vec<Box<dyn FnMut(&E) -> () + 'static>>;
+
+impl JEventDispatcher {
+    pub fn new() -> JEventDispatcher {
+        JEventDispatcher(TypeMap::new())
+    }
+    pub fn add_event_listener<E, F>(&mut self, f:F)
+        where
+            E:JEvent,
+            F:FnMut(&E) -> () + 'static
+    {
+        if !self.0.has::<JListenerVec<E>>() {
+            self.0.set::<JListenerVec<E>>(Vec::new());
+        }
+        let listeners = self.0.get_mut::<JListenerVec<E>>().unwrap();
+        listeners.push(Box::new(f));
+    }
+    pub(crate) fn trigger<E>(&mut self, event: &E)
+        where
+            E:JEvent
+    {
+        if let Some(listeners) = self.0.get_mut::<JListenerVec<E>>() {
+            for callback in listeners {
+                callback(event)
+            }
+        }
+    }
+}
+
+pub struct ActionEvent {
+    pub(crate) command:String,
+}
+impl JEvent for ActionEvent {
+
+}

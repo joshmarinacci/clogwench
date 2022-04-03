@@ -135,7 +135,7 @@ impl WindowManagerState {
     pub fn pick_window_at<'a>(&'a self, pt: Point) -> Option<&'a Window> {
         for app in &self.apps {
             for win in &app.windows {
-                if win.external_bounds().contains(pt) {
+                if win.external_bounds().contains(&pt) {
                     return Some(win)
                 }
             }
@@ -415,11 +415,11 @@ impl InputGesture for WindowDragGesture {
     fn mouse_move(&mut self, evt: MouseMoveEvent, state:&mut WindowManagerState) {
         // info!("WDG: mouse move {:?}",evt);
         let curr = Point::init(evt.x,evt.y);
-        let diff = self.mouse_start.subtract(self.win_start);
-        let new_pos = curr.subtract(diff);
+        let diff = self.mouse_start.subtract(&self.win_start);
+        let new_pos = curr.subtract(&diff);
         // info!("dragging window {} by {:?}",self.winid,diff);
         if let Some(win) = state.lookup_window(self.winid) {
-            win.position.copy_from(new_pos);
+            win.position.copy_from(&new_pos);
         }
     }
 

@@ -189,12 +189,12 @@ impl PlatformWindowManager {
                         let wid = win.id.clone();
                         let aid = win.owner.clone();
 
-                        if win.titlebar_bounds().contains(point) {
+                        if win.titlebar_bounds().contains(&point) {
                             info!("inside the titlebar");
                             self.gesture = Box::new(WindowDragGesture::init(point,win.id));
                             self.gesture.mouse_down(evt,&mut self.state);
                         } else {
-                            let app_point = point.subtract(win.content_bounds().position());
+                            let app_point = point.subtract(&win.content_bounds().position());
                             self.tx_out.send(OutgoingMessage {
                                 recipient: aid,
                                 command: APICommand::MouseDown(MouseDownEvent {

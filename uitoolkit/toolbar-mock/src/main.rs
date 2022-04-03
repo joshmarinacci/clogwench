@@ -11,7 +11,7 @@ use common::client::ClientConnection;
 use common::font::{load_font_from_json};
 use components::{ActionButton, HBox};
 use cool_logger::CoolLogger;
-use crate::core::{DrawingSurface, UIView};
+use crate::core::{ActionEvent, DrawingSurface, UIView};
 
 static COOL_LOGGER:CoolLogger = CoolLogger;
 
@@ -61,13 +61,15 @@ fn main() {
     hbox.add(button2);
     let mut button3: ActionButton = ActionButton::make();
     button3._caption = "ghijklm".to_string();
+    button3._dispatcher.add_event_listener(|event:&ActionEvent| {
+        println!("an action happened. sweet!");
+    });
     hbox.add(button3);
 
 
     let mut surf:DrawingSurface = DrawingSurface::init(appid,winid,font,client,hbox);
     surf.repaint();
-
-    surf.poll_input();
+    surf.start_loop();
     println!("CLIENT APP ending");
 
 // hbox
@@ -85,8 +87,9 @@ fn main() {
     // really do metrics
     // move UIView and DrawingSurface to core.rs
     // move ActionButton and HBox to components.rs
-    - listen for mouse events, make buttons clickable using active color
-    - add action events from the mouse events to app code
+    // listen for mouse events, make buttons clickable using active color
+    - not receiving mouse up events from the window server
+    // add action events from the mouse events to app code
     - create BaseUIView and BaseParentUIView in components.rs
     - implement the hbox algorithm using spacers, hflex, vflex, and valign
      */
