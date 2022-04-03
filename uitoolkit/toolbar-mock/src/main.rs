@@ -1,8 +1,10 @@
 use std::sync::mpsc::RecvError;
 use log::{info, LevelFilter, set_logger};
 use uuid::Uuid;
-use common::{APICommand, ARGBColor, BLACK, DrawRectCommand, HelloApp, OpenWindowCommand, Padding, Point, Rect, Size, WHITE};
+use common::{APICommand, ARGBColor, BLACK, DrawImageCommand, DrawRectCommand, HelloApp, OpenWindowCommand, Padding, Point, Rect, Size, WHITE};
 use common::client::ClientConnection;
+use common::font::{FontInfo2, load_font_from_json};
+use common::graphics::{GFXBuffer, PixelLayout};
 use cool_logger::CoolLogger;
 
 static COOL_LOGGER:CoolLogger = CoolLogger;
@@ -15,6 +17,7 @@ pub const BUTTON_PADDING:i32 = 4;
 
 pub trait DrawingSurface {
     fn measure_text(&self, text:&str, fontname:&str) -> Size;
+    fn fill_text(&self, text:&str, fontname:&str, position:&Point, color:&ARGBColor);
     fn fill_rect(&self, bounds:&Rect, color:&ARGBColor);
 }
 
@@ -22,11 +25,34 @@ pub struct DrawingSurfaceImpl {
     pub appid: Uuid,
     pub winid: Uuid,
     pub client: ClientConnection,
+    pub font: FontInfo2,
 }
 
 impl DrawingSurface for DrawingSurfaceImpl {
     fn measure_text(&self, text: &str, fontname: &str) -> Size {
-        return Size::init((text.len() * 3) as i32, 10);
+        return self.font.measure_text(text);
+    }
+
+    fn fill_text(&self, text: &str, fontname: &str, position: &Point, color: &ARGBColor) {
+        let size = self.measure_text(text,fontname);
+        let mut text_buffer = GFXBuffer::new(size.w as u32, size.h as u32, &PixelLayout::ARGB());
+        text_buffer.clear(&BLACK);
+        self.font.draw_text_at(&mut text_buffer,
+                               text,
+                               0,0,
+                               &ARGBColor::new_rgb(0,255,0));
+        self.client.send(APICommand::DrawImageCommand(DrawImageCommand{
+            app_id:self.appid,
+            window_id:self.winid,
+            rect:Rect {
+                x:position.x,
+                y:position.y+2,
+                w: text_buffer.width as i32,
+                h: text_buffer.height as i32
+            },
+            buffer: text_buffer,
+        }));
+
     }
 
     fn fill_rect(&self, bounds: &Rect, color: &ARGBColor) {
@@ -158,14 +184,8 @@ impl UIView for ActionButton {
         // info!("draw, {}, at {:?} {:?}",self.name(),self.position(), self.size());
         let bounds = rect_from_view(&self);
         g.fill_rect(&bounds,&BUTTON_FILL);
-        let p = BUTTON_PADDING;
-        let b2 = Rect {
-            x: self.position().x+p,
-            y: self.position().y+p,
-            w: self.size().w-p-p,
-            h: self.size().h-p-p
-        };
-        g.fill_rect(&b2,&BUTTON_TEXT_FILL);
+        let p = self.position().add(Point::init(1,1));
+        g.fill_text(&self._caption, "base",&p,&BUTTON_TEXT_FILL)
     }
 
 }
@@ -209,20 +229,23 @@ fn main() {
         }
     }
 
+    let font = load_font_from_json("../../resources/default-font.json").unwrap();
     let mut surf:DrawingSurfaceImpl = DrawingSurfaceImpl {
         appid,
         winid,
-        client
+        client,
+        font,
     };
+
     let mut hbox:HBox = HBox::make();
     let mut button1: ActionButton = ActionButton::make();
-    button1._caption = "aaa".to_string();
+    button1._caption = "Prev".to_string();
     hbox.add(button1);
     let mut button2: ActionButton = ActionButton::make();
-    button2._caption = "bbbbbb".to_string();
+    button2._caption = "Play".to_string();
     hbox.add(button2);
     let mut button3: ActionButton = ActionButton::make();
-    button3._caption = "cccccccccc".to_string();
+    button3._caption = "Next >".to_string();
     hbox.add(button3);
 
     hbox.layout(&mut surf, &bounds.size());
@@ -240,4 +263,17 @@ fn main() {
     // font icon
     // hspacer
     // dropdown button
+
+    /*
+
+    // really fill text inside the drawing surface using a JSON font.
+    - use 8x8 squares as backup
+    - really do metrics
+    - move UIView and DrawingSurface to core.rs
+    - move ActionButton and HBox to components.rs
+    - listen for mouse events, make buttons clickable using active color
+    - add action events from the mouse events to app code
+    - create BaseUIView and BaseParentUIView in components.rs
+    - implement the hbox algorithm using spacers, hflex, vflex, and valign
+     */
 }

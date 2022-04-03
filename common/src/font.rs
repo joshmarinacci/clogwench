@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::fs::{File, read_to_string};
 // use std::io::BufReader;
 use std::io::Error;
-use crate::ARGBColor;
+use crate::{ARGBColor, Size};
 use crate::graphics::GFXBuffer;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -46,6 +46,19 @@ impl FontInfo2 {
                 }
             }
         }
+    }
+    pub fn measure_text(&self, text:&str) -> Size {
+        let mut x:i32 = 0;
+        let mut h:i32 = 0;
+        for ch in text.chars() {
+            for glyph in &self.glyphs {
+                if glyph.id as u8 as char == ch {
+                    x += (glyph.width - glyph.left - glyph.right + 1) as i32;
+                    h = i32::max(h,glyph.height);
+                }
+            }
+        }
+        return Size::init(x+4,h+1);
     }
 }
 
