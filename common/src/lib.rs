@@ -200,16 +200,16 @@ pub struct Point {
 }
 
 impl Point {
-    pub fn subtract(&self, pt: Point) -> Point {
+    pub fn subtract(&self, pt: &Point) -> Point {
         Point {
             x:self.x - pt.x,
             y:self.y - pt.y,
         }
     }
-    pub fn add(&self, pt:Point) -> Point {
+    pub fn add(&self, pt:&Point) -> Point {
         Point::init(self.x + pt.x, self.y + pt.y)
     }
-    pub fn copy_from(&mut self, pt:Point) {
+    pub fn copy_from(&mut self, pt:&Point) {
         self.x = pt.x;
         self.y = pt.y;
     }
@@ -303,7 +303,7 @@ impl Rect {
             x,y,w,h
         }
     }
-    pub fn contains(&self, pt: Point) -> bool {
+    pub fn contains(&self, pt: &Point) -> bool {
         if pt.x < self.x { return false }
         if pt.y < self.y { return false }
         if pt.x > self.x + self.w { return false }

@@ -1,16 +1,17 @@
 mod core;
 mod components;
 
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::sync::mpsc::RecvError;
 use log::{info, LevelFilter, set_logger};
 use uuid::Uuid;
 use common::{APICommand, ARGBColor, BLACK, DrawImageCommand, DrawRectCommand, HelloApp, OpenWindowCommand, Padding, Point, Rect, Size, WHITE};
 use common::client::ClientConnection;
-use common::font::{FontInfo2, load_font_from_json};
-use common::graphics::{GFXBuffer, PixelLayout};
+use common::font::{load_font_from_json};
 use components::{ActionButton, HBox};
 use cool_logger::CoolLogger;
-use crate::core::{DrawingSurfaceImpl, UIView};
+use crate::core::{DrawingSurface, UIView};
 
 static COOL_LOGGER:CoolLogger = CoolLogger;
 
@@ -20,8 +21,8 @@ fn main() {
 
     info!("toolbar app starting and connecting");
     let bounds = Rect::from_ints(50,50,300,300);
-    let mut px = 50;
-    let mut py = 50;
+    // let mut px = 50;
+    // let mut py = 50;
     let mut appid = Uuid::new_v4();
 
     let client = ClientConnection::init().expect("Can't connect to the central");
@@ -50,12 +51,6 @@ fn main() {
     }
 
     let font = load_font_from_json("../../resources/default-font.json").unwrap();
-    let mut surf:DrawingSurfaceImpl = DrawingSurfaceImpl {
-        appid,
-        winid,
-        client,
-        font,
-    };
 
     let mut hbox:HBox = HBox::make();
     let mut button1: ActionButton = ActionButton::make();
@@ -68,8 +63,9 @@ fn main() {
     button3._caption = "ghijklm".to_string();
     hbox.add(button3);
 
-    hbox.layout(&mut surf, &bounds.size());
-    hbox.draw(&mut surf);
+
+    let mut surf:DrawingSurface = DrawingSurface::init(appid,winid,font,client,hbox);
+    surf.repaint();
 
     surf.poll_input();
     println!("CLIENT APP ending");

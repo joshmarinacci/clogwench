@@ -1,106 +1,226 @@
+use std::borrow::{Borrow, BorrowMut};
+use std::cell::{Ref, RefCell, RefMut};
+use std::ops::{Deref, DerefMut};
+use std::rc::Rc;
+use std::slice::Iter;
 use log::info;
 use common::{APICommand, ARGBColor, BLACK, DrawImageCommand, DrawRectCommand, Point, Rect, Size};
 use common::graphics::{GFXBuffer, PixelLayout};
 use uuid::Uuid;
 use common::client::ClientConnection;
-use common::events::MouseDownEvent;
+use common::events::{MouseButton, MouseDownEvent};
 use common::font::FontInfo2;
 use crate::components::ActionButton;
+use crate::HBox;
 
-pub trait DrawingSurface {
-    fn measure_text(&self, text:&str, fontname:&str) -> Size;
-    fn fill_text(&self, text:&str, fontname:&str, position:&Point, color:&ARGBColor);
-    fn fill_rect(&self, bounds:&Rect, color:&ARGBColor);
+pub trait UIView {
+    fn name(&self) -> &str;
+    fn size(&self) -> Size;
+    fn position(&self) -> Point;
+    fn set_position(&mut self, point:&Point);
+    fn children(&self) -> Iter<Rc<RefCell<dyn UIView>>>;
+    fn layout(&mut self, g:&DrawingSurface, available:&Size) -> Size;
+    fn draw(&self, g:&DrawingSurface);
+    fn input(&mut self, e:&PointerEvent);
 }
 
-pub struct DrawingSurfaceImpl {
+pub fn rect_from_view(view: &&ActionButton) -> Rect {
+    Rect::from_ints(view.position().x,view.position().y,view.size().w,view.size().h)
+}
+
+pub enum EventType {
+    MouseDown,
+    MouseMove,
+    MouseUp,
+    MouseDrag,
+}
+pub enum EventDirection {
+    Up,
+    Down,
+}
+pub struct PointerEvent {
+    pub button: MouseButton,
+    pub etype: EventType,
+    pub position: Point,
+    pub direction: EventDirection,
+}
+
+
+pub struct DrawingSurface {
     pub appid: Uuid,
     pub winid: Uuid,
-    pub client: ClientConnection,
+    pub client: Rc<RefCell<ClientConnection>>,
     pub font: FontInfo2,
-    down:bool,
-    root:dyn UIView,
+    pub(crate) down: bool,
+    pub root: Rc<RefCell<dyn UIView>>,
+    _transform:Point,
 }
 
-pub struct PointerEvent {
-
+impl DrawingSurface {
+    pub(crate) fn init(appid: Uuid, winid: Uuid, font: FontInfo2, client: ClientConnection, hbox: HBox) -> DrawingSurface {
+        DrawingSurface {
+            appid,
+            winid,
+            client:Rc::new(RefCell::new(client)),
+            font,
+            down: false,
+            root:Rc::new(RefCell::new(hbox)),
+            _transform: Point::init(0,0),
+        }
+    }
 }
 
-impl DrawingSurfaceImpl {
-    pub(crate) fn poll_input(&mut self) {
-        for cmd in &self.client.rx {
-            info!("got an event {:?}",cmd);
-            match cmd {
-                // APICommand::KeyDown(kd) => {
-                //     info!("got a keydown event");
-                //     match kd.key {
-                //         KeyCode::ARROW_RIGHT => px += 1,
-                //         KeyCode::ARROW_LEFT => px -= 1,
-                //         KeyCode::ARROW_UP => py -= 1,
-                //         KeyCode::ARROW_DOWN => py += 1,
-                //         _ => {}
-                //     }
-                //     redraw(&client, appid, winid, bounds, px, py, &pattern_buffer, &text_buffer);
-                //     client.send(APICommand::Debug(DebugMessage::AppLog(String::from("got-keyboard-event"))));
-                // }
-                APICommand::MouseDown(md) => {
-                    info!("got a mouse down event {},{}",md.x,md.y);
-                    self.handle_mouse_down(md);
-                    // client.send(APICommand::Debug(DebugMessage::AppLog(String::from("got-mouse-event"))));
+impl DrawingSurface {
+    pub fn repaint(&mut self) {
+        let size = Size::init(300,150);
+        let mut root = self.root.clone();//.deref().borrow_mut();
+        root.deref().borrow_mut().layout(self, &size);
+        self.draw_view(&self.root.clone());
+    }
+    pub fn poll_input(&mut self) {
+        while(true) {
+            let mut redraw = false;
+            let cli = &self.client;
+            for cmd in cli.deref().borrow().rx.try_iter() {
+                // info!("got an event {:?}",cmd);
+                match cmd {
+                    APICommand::MouseDown(e) => {
+                        self.down = true;
+                        info!("handling mouse down {:?}",e);
+                        let position = Point::init(e.x, e.y);
+                        info!("mouse position {}",position);
+                        let path = self.scan_path(position);
+                        let mut evt = PointerEvent {
+                            button: e.button,
+                            etype: EventType::MouseDown,
+                            position: position,
+                            direction: EventDirection::Down,
+                        };
+                        for item in path {
+                            let mut view = item.deref().borrow_mut();
+                            info!("path item {:?}",view.name());
+                            evt.position = evt.position.subtract(&view.position());
+                            view.input(&mut evt);
+                            redraw = true;
+                        }
+                    }
+                    APICommand::MouseUp(e) => {
+                        if !self.down {
+                            continue;
+                        }
+                        info!("handling mouse up {:?}",e);
+                        let position = Point::init(e.x, e.y);
+                        info!("mouse position {}",position);
+                        let path = self.scan_path(position);
+                        let mut evt = PointerEvent {
+                            button: e.button,
+                            etype: EventType::MouseUp,
+                            position: position,
+                            direction: EventDirection::Down,
+                        };
+                        for item in path {
+                            let mut view = item.deref().borrow_mut();
+                            info!("path item {:?}",view.name());
+                            evt.position = evt.position.subtract(&view.position());
+                            view.input(&mut evt);
+                            redraw = true;
+                        }
+
+                    }
+                    APICommand::SystemShutdown => {
+                        info!("CLIENT app:  system is shutting down. bye!");
+                        break;
+                    }
+                    _ => {}
                 }
-                APICommand::SystemShutdown => {
-                    info!("CLIENT app:  system is shutting down. bye!");
-                    // client.send(APICommand::Debug(DebugMessage::AppLog(String::from("got-shutdown"))));
-                    break;
-                }
-                _ => {}
+            }
+            if redraw {
+                self.repaint();
             }
         }
 
     }
-    fn handle_mouse_down(&mut self, e: MouseDownEvent) {
-        info!("handling mouse down {:?}",e);
-        //            this.down = true;
-        self.down = true;
+    fn handle_mouse_down(&self, e: MouseDownEvent) {
         //             let position = this.surface.screen_to_local(domEvent)
-        let position = Point::init(e.x,e.y);
-        info!("mouse position {}",position);
         //             this.last_point = position
         //             this.path = this.scan_path(position)
-        let path = self.scan_path(position);
         //             this.target = this.path[this.path.length-1] // last
         //             let evt = new PointerEvent()
-        let evt = PointerEvent {
-
-        };
-        //             evt.button = domEvent.button
-        evt.button = e.button;
-        //             evt.type = POINTER_DOWN
-        evt.type = POINTER_DOWN;
-        //             evt.category = POINTER_CATEGORY
-        evt.category = POINTER_CATEGORY;
-        //             evt.position = position
-        evt.position = position;
         //             evt.ctx = this.surface
-        //             evt.direction = "down"
-        evt.direction = EVENT_DIRECTION_DOWN;
         //             evt.target = this.target
         //             this.propagatePointerEvent(evt,this.path)
-        self.propagate_pointer_event(evt,path);
+        // self.propagate_pointer_event(evt,path);
         //             this.surface.repaint()
         //             domEvent.preventDefault()
     }
-    fn scan_path(&self, point: Point) -> _ {
-        return vec![&self.root]
+    fn scan_path(&self, point: Point) -> Vec<Rc<RefCell<dyn UIView>>> {
+        return self.scan_path2(self.root.clone(),&point);
     }
-}
+    fn scan_path2(&self, view:Rc<RefCell<dyn UIView>>, point:&Point) -> Vec<Rc<RefCell<dyn UIView>>> {
+        let mut path:Vec<Rc<RefCell<dyn UIView>>> = vec![];
+        let v = view.deref();
+        let pos = v.borrow().position();
+        let siz  = v.borrow().size();
+        let bounds = Rect::from_ints(pos.x,pos.y,siz.w,siz.h);
+        //skip if not visible
+        //if !root.visible()
+        info!("checking {} against {}",point, bounds);
+        if siz.w > point.x && siz.h > point.y {
+        // if(bounds.contains(point)) {
+            info!("inside!");
+            for ch in v.borrow().children() {
+                let ch2: Rc<RefCell<dyn UIView>> = ch.clone();
+                // info!("checking child {}",ch2.deref().borrow().name());
+                let pos= ch.deref().borrow().position();
+                let mut res = self.scan_path2(ch2, &point.subtract(&pos));
+                if res.len() > 0 {
+                    // info!("matched child");
+                    let mut pth = vec![view.clone()];
+                    pth.append(&mut res);
+                    return pth;
+                }
+            }
+            return vec![view.clone()];
+        }
 
-impl DrawingSurface for DrawingSurfaceImpl {
-    fn measure_text(&self, text: &str, fontname: &str) -> Size {
+        return vec![]
+    }
+    /*
+        private calculate_path_to_cursor(view: View, position: Point, path:View[]):boolean {
+        // this.log('searching for',position,'on',view.name())
+        if(!view) return false
+        if (!view.visible()) return false
+        let bounds = rect_from_pos_size(view.position(),view.size())
+        if (bounds.contains(position)) {
+            // @ts-ignore
+            if (view.is_parent_view && view.is_parent_view()) {
+                let parent = view as unknown as ParentView;
+                // go in reverse order to the top drawn children are picked first
+                for (let i = parent.get_children().length-1; i >= 0; i--) {
+                    let ch = parent.get_children()[i]
+                    let pos = position.subtract(view.position())
+                    let picked = this.calculate_path_to_cursor(ch,pos,path)
+                    if(picked) {
+                        path.unshift(ch)
+                        return true
+                    }
+                }
+                if(parent.can_receive_mouse()) {
+                    return true
+                }
+            } else {
+                return true
+            }
+        }
+        return false
+    }
+
+     */
+
+    pub fn measure_text(&self, text: &str, fontname: &str) -> Size {
         return self.font.measure_text(text);
     }
-
-    fn fill_text(&self, text: &str, fontname: &str, position: &Point, color: &ARGBColor) {
+    pub fn fill_text(&self, text: &str, fontname: &str, position: &Point, color: &ARGBColor) {
         let size = self.measure_text(text,fontname);
         let mut text_buffer = GFXBuffer::new(size.w as u32, size.h as u32, &PixelLayout::ARGB());
         text_buffer.clear(&BLACK);
@@ -108,7 +228,7 @@ impl DrawingSurface for DrawingSurfaceImpl {
                                text,
                                0,0,
                                &ARGBColor::new_rgb(0,255,0));
-        self.client.send(APICommand::DrawImageCommand(DrawImageCommand{
+        self.client.deref().borrow().send(APICommand::DrawImageCommand(DrawImageCommand{
             app_id:self.appid,
             window_id:self.winid,
             rect:Rect {
@@ -121,26 +241,29 @@ impl DrawingSurface for DrawingSurfaceImpl {
         }));
 
     }
-
-    fn fill_rect(&self, bounds: &Rect, color: &ARGBColor) {
+    pub fn fill_rect(&self, bounds: &Rect, color: &ARGBColor) {
         // println!("drawing bounds to a surface {:?} {:?}",bounds,color);
-        self.client.send(APICommand::DrawRectCommand(DrawRectCommand{
+        self.client.deref().borrow().send(APICommand::DrawRectCommand(DrawRectCommand{
             app_id:self.appid,
             window_id:self.winid,
             rect: bounds.clone(),
             color: color.clone(),
         }));
     }
+    fn draw_view(&mut self, view: &Rc<RefCell<dyn UIView>>) {
+        let root = view.deref().borrow_mut();
+        self.dotranslate(&root.position());
+        root.draw(self);
+        for ch in root.children() {
+            self.draw_view(ch);
+        }
+        self.untranslate(&root.position());
+    }
+    fn dotranslate(&mut self, off: &Point) {
+        self._transform = self._transform.add(off);
+    }
+    fn untranslate(&mut self, off: &Point) {
+        self._transform = self._transform.subtract(off);
+    }
 }
 
-pub trait UIView {
-    fn name(&self) -> &str;
-    fn size(&self) -> Size;
-    fn position(&self) -> Point;
-    fn layout(&mut self, g:&impl DrawingSurface, available:&Size) -> Size;
-    fn draw(&self, g:&impl DrawingSurface);
-}
-
-pub fn rect_from_view(view: &&ActionButton) -> Rect {
-    Rect::from_ints(view.position().x,view.position().y,view.size().w,view.size().h)
-}
