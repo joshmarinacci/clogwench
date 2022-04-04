@@ -184,7 +184,12 @@ impl GFXBuffer {
         }
     }
     pub fn fill_rect(&mut self, bounds: Rect, color: &ARGBColor) {
+        // println!("filling bounds {:?}",bounds);
         let bounds = bounds.intersect(self.bounds());
+        // println!("clipped {:?}",bounds);
+        //skip empty clipped bounds
+        if bounds.w <= 0 { return };
+        if bounds.h <= 0 { return };
         let cv = color.as_layout(&self.layout);
         let cv2 = create_filled_row(bounds.w as usize, &cv);
         let bpp:i32 = self.layout.bytes_per_pixel();

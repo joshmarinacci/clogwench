@@ -8,11 +8,12 @@ use std::rc::Rc;
 use std::slice::Iter;
 use log::info;
 use common::{ARGBColor, Point, Rect, Size};
-use crate::core::{ActionEvent, DrawingSurface, EventType, JEventDispatcher, PointerEvent, UIView};
+use crate::core::{ActionEvent, DrawingSurface, EventType, JEventDispatcher, PointerEvent, rect_from_view, UIView};
 use crate::UIChild;
 
-pub const HBOX_FILL:ARGBColor = ARGBColor { r: 200, g: 200, b: 200, a: 255 };
-pub const HBOX_PADDING:i32 = 4;
+pub const HBOX_FILL:ARGBColor = ARGBColor { r: 200, g: 0, b: 200, a: 255 };
+pub const VBOX_FILL:ARGBColor = ARGBColor { r: 200, g: 200, b: 200, a: 255 };
+pub const BOX_PADDING:i32 = 4;
 pub const BUTTON_FILL:ARGBColor = ARGBColor { r: 255, g: 255, b: 255, a: 255};
 pub const BUTTON_FILL_ACTIVE:ARGBColor = ARGBColor { r: 0, g: 255, b: 0, a: 255};
 pub const BUTTON_TEXT_FILL:ARGBColor = ARGBColor { r: 0, g: 0, b: 0, a: 255};
@@ -53,6 +54,9 @@ impl UIView for BaseUIView {
     }
 
     fn hflex(&self) -> bool {
+        false
+    }
+    fn vflex(&self) -> bool {
         false
     }
 }
@@ -112,8 +116,9 @@ impl UIView for HBox {
         return self._children.iter();
     }
     fn layout(&mut self, g: &DrawingSurface, available: &Size) -> Size {
+        // println!("hbox:layout:available {:?}",available);
         //pick a temp size
-        self._size = Size::init(available.w,40);
+        self._size = Size::init(available.w-BOX_PADDING-BOX_PADDING,100-BOX_PADDING-BOX_PADDING);
 
         //find the non-hflex children
         let non_hflex:Vec<&UIChild> = self._children.iter().filter(|ch:&&UIChild|{
@@ -135,31 +140,132 @@ impl UIView for HBox {
             tallest = i32::max(size.h,tallest)
         }
         //set height to tallest child
-        self._size.h = tallest + HBOX_PADDING + HBOX_PADDING;
+        self._size.h = tallest + BOX_PADDING + BOX_PADDING;
         //layout flex children
-        let av = Size::init((available.w-used)/(yes_hflex.len() as i32),40);
-        for ch in yes_hflex {
-            ch.deref().borrow_mut().layout(g, &av);
+        if yes_hflex.len() > 0 {
+            let av = Size::init((available.w - used - BOX_PADDING - BOX_PADDING) / (yes_hflex.len() as i32), tallest);
+            for ch in yes_hflex {
+                ch.deref().borrow_mut().layout(g, &av);
+            }
         }
 
         //position children left to right
-        let mut x = HBOX_PADDING;
-        let y = HBOX_PADDING;
+        let mut x = BOX_PADDING;
+        let y = BOX_PADDING;
         for ch in &mut self._children {
             let mut ch2 = ch.deref().deref().borrow_mut();
             ch2.set_position(&Point::init(x, y));
             x += ch2.size().w;
         }
+        println!("hbox:layout:final size {:?}",self.size());
         self.size()
     }
     fn draw(&self, g: &DrawingSurface) {
-        let bounds = Rect::from_ints(self.position().x,self.position().y,self.size().w,self.size().h);
+        let bounds = Rect::from_size(self.size());
         g.fill_rect(&bounds,&HBOX_FILL);
     }
     fn input(&mut self, e: &PointerEvent) {
     }
 
     fn hflex(&self) -> bool {
+        false
+    }
+    fn vflex(&self) -> bool {
+        false
+    }
+}
+
+pub struct VBox {
+    _id:String,
+    _name:String,
+    _size:Size,
+    _position:Point,
+    _children:Vec<UIChild>
+}
+impl VBox {
+    pub fn add(&mut self, child: UIChild) {
+        self._children.push(child)
+    }
+    pub fn make() -> VBox {
+        VBox {
+            _id: "vbox-id".to_string(),
+            _name: "vbox-name".to_string(),
+            _size: Size::init(200,20),
+            _position: Point::init(0,0),
+            _children: vec![]
+        }
+    }
+}
+
+impl UIView for VBox {
+    fn name(&self) -> &str {
+        return &self._name;
+    }
+    fn size(&self) -> Size {
+        self._size
+    }
+    fn position(&self) -> Point {
+        self._position
+    }
+    fn set_position(&mut self, point: &Point) {
+        self._position.copy_from(point)
+    }
+    fn children(&self) -> Iter<UIChild> {
+        return self._children.iter();
+    }
+    fn layout(&mut self, g: &DrawingSurface, available: &Size) -> Size {
+        println!("vbox:layout:available {:?}",available);
+        //pick a temp size
+        self._size = Size::init(available.w-BOX_PADDING-BOX_PADDING,available.h-BOX_PADDING-BOX_PADDING);
+
+        //find the non-hflex children
+        let non_vflex:Vec<&UIChild> = self._children.iter().filter(|ch:&&UIChild| !ch.deref().deref().borrow().vflex()).collect();
+        //find the yes-hflex children
+        let yes_vflex:Vec<&UIChild> = self._children.iter().filter(|ch:&&UIChild|ch.deref().deref().borrow().vflex()).collect();
+
+        //layout non-vflex children and calc tallest child
+        let mut widest = 0;
+        let mut used = 0;
+        for ch in non_vflex {
+            let mut ch2 = ch.deref().borrow_mut();
+            let size = ch2.layout(g, &self._size);
+            used += size.h;
+            widest = i32::max(size.w, widest);
+            println!("vbox:layout:non-flex-child {} {:?} -> {:?}",ch2.name(), available, size);
+        }
+        //set height to tallest child
+        self._size.w = widest + BOX_PADDING + BOX_PADDING;
+        //layout flex children
+        // println!("available left {} {}",available.h, used);
+        let av = Size::init(available.w-BOX_PADDING-BOX_PADDING,(available.h-used-BOX_PADDING-BOX_PADDING)/(yes_vflex.len() as i32));
+        for ch in yes_vflex {
+            let mut ch2 = ch.deref().borrow_mut();
+            let size = ch2.layout(g, &av);
+            println!("vbox:layout:yes-flex-child {} {:?} -> {:?}",ch2.name(), av, size);
+        }
+
+        //position children left to right
+        let mut x = BOX_PADDING;
+        let mut y = BOX_PADDING;
+        for ch in &mut self._children {
+            let mut ch2 = ch.deref().deref().borrow_mut();
+            ch2.set_position(&Point::init(x, y));
+            y += ch2.size().h;
+        }
+        println!("vbox:layout:final size {:?}",self.size());
+        self.size()
+    }
+    fn draw(&self, g: &DrawingSurface) {
+        let bounds = Rect::from_size(self.size());
+        g.fill_rect(&bounds,&VBOX_FILL);
+    }
+    fn input(&mut self, e: &PointerEvent) {
+    }
+
+    fn hflex(&self) -> bool {
+        false
+    }
+    fn vflex(&self) -> bool {
         false
     }
 }
@@ -174,7 +280,6 @@ pub struct ActionButton {
     _active:bool,
     pub _dispatcher:JEventDispatcher,
 }
-
 impl ActionButton {
     pub(crate) fn make() -> ActionButton {
         ActionButton {
@@ -189,7 +294,6 @@ impl ActionButton {
         }
     }
 }
-
 impl UIView for ActionButton {
     fn name(&self) -> &str {
         &self._name
@@ -211,16 +315,14 @@ impl UIView for ActionButton {
         return self.size()
     }
     fn draw(&self, g: &DrawingSurface) {
-        let p = self.position();
         let s = self.size();
-        let bounds = Rect::from_ints(p.x,p.y,s.w,s.h);
-
+        let bounds = Rect::from_size(s);
         if self._active {
             g.fill_rect(&bounds, &BUTTON_FILL_ACTIVE);
         } else {
             g.fill_rect(&bounds, &BUTTON_FILL);
         }
-        let p = self.position().add(&Point::init(1, 1));
+        let p = Point::init(1, 1);
         g.fill_text(&self._caption, "base",&p,&BUTTON_TEXT_FILL)
     }
     fn input(&mut self, e: &PointerEvent) {
@@ -243,6 +345,9 @@ impl UIView for ActionButton {
     fn hflex(&self) -> bool {
         false
     }
+    fn vflex(&self) -> bool {
+        false
+    }
 }
 
 pub struct Label {
@@ -253,7 +358,6 @@ pub struct Label {
     pub _caption:String,
     _children:Vec<UIChild>,
 }
-
 impl Label {
     pub fn make() -> Label {
         Label {
@@ -285,13 +389,16 @@ impl UIView for Label {
         return self.size()
     }
     fn draw(&self, g: &DrawingSurface) {
-        let p = self.position().add(&Point::init(1, 1));
+        let p = Point::init(1, 1);
         g.fill_text(&self._caption, "base",&p,&BUTTON_TEXT_FILL)
     }
     fn input(&mut self, e: &PointerEvent) {
         //noop
     }
     fn hflex(&self) -> bool {
+        false
+    }
+    fn vflex(&self) -> bool {
         false
     }
 }
@@ -341,4 +448,68 @@ impl UIView for HSpacer {
     fn hflex(&self) -> bool {
         true
     }
+    fn vflex(&self) -> bool {
+        false
+    }
+}
+
+
+pub struct FlexPanel {
+    _id:String,
+    _name:String,
+    _size:Size,
+    _position:Point,
+    _children:Vec<UIChild>,
+    _fill:ARGBColor,
+    _hflex: bool,
+    _vflex: bool,
+}
+
+impl FlexPanel {
+    pub(crate) fn make(fill: &ARGBColor, hflex: bool, vflex: bool) -> FlexPanel {
+        FlexPanel {
+            _id: "flexpanel-name".to_string(),
+            _name: "flexpanel-name".to_string(),
+            _size: Size::init(10,10),
+            _position: Point::init(0,0),
+            _children: vec![],
+            _fill:fill.clone(),
+            _hflex:hflex,
+            _vflex:vflex,
+        }
+    }
+}
+
+impl UIView for FlexPanel {
+    fn name(&self) -> &str {
+        &self._name
+    }
+    fn size(&self) -> Size {
+        self._size
+    }
+    fn position(&self) -> Point {
+        self._position
+    }
+    fn set_position(&mut self, point: &Point) {
+        self._position.copy_from(point);
+    }
+    fn children(&self) -> Iter<UIChild> { self._children.iter() }
+
+    fn layout(&mut self, g: &DrawingSurface, available: &Size) -> Size {
+        println!("laying out the flex panel");
+        self._size = available.clone();
+        return self.size()
+    }
+
+    fn draw(&self, g: &DrawingSurface) {
+        println!("drawing the flex panel {:?}", self.size());
+        let bounds = Rect::from_size(self.size());
+        g.fill_rect(&bounds, &self._fill)
+    }
+
+    fn input(&mut self, e: &PointerEvent) { }
+
+    fn hflex(&self) -> bool { self._hflex }
+
+    fn vflex(&self) -> bool { self._vflex }
 }

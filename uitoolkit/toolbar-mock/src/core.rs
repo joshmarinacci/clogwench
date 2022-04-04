@@ -2,7 +2,7 @@ use std::any::{Any, TypeId};
 use std::borrow::{Borrow, BorrowMut};
 use std::cell::{Ref, RefCell, RefMut};
 use std::collections::HashMap;
-use std::ops::{Deref, DerefMut};
+use std::ops::{Add, Deref, DerefMut};
 use std::rc::Rc;
 use std::slice::Iter;
 use log::info;
@@ -25,6 +25,7 @@ pub trait UIView {
     fn draw(&self, g:&DrawingSurface);
     fn input(&mut self, e:&PointerEvent);
     fn hflex(&self) -> bool;
+    fn vflex(&self) -> bool;
 }
 pub type UIChild = Rc<RefCell<dyn UIView>>;
 
@@ -59,13 +60,15 @@ pub struct DrawingSurface {
     pub font: FontInfo2,
     pub(crate) down: bool,
     _transform:Point,
+    pub window_bounds: Rect,
 }
 
 impl DrawingSurface {
-    pub(crate) fn init(appid: Uuid, winid: Uuid, font: FontInfo2, client: ClientConnection) -> DrawingSurface {
+    pub(crate) fn init(appid: Uuid, winid: Uuid, window_bounds: &Rect, font: FontInfo2, client: ClientConnection) -> DrawingSurface {
         DrawingSurface {
             appid,
             winid,
+            window_bounds:window_bounds.clone(),
             client:Rc::new(RefCell::new(client)),
             font,
             down: false,
@@ -75,10 +78,9 @@ impl DrawingSurface {
 }
 
 pub fn repaint(surf:&mut DrawingSurface, root: UIChild) {
-    let size = Size::init(300,150);
     // let mut root = self.root.clone();//.deref().borrow_mut();
-    root.deref().borrow_mut().layout(surf, &size);
-    surf.draw_view(&root);
+    root.deref().borrow_mut().layout(surf, &surf.window_bounds.size());
+    surf.draw_view(&root, 0);
 }
 pub fn start_loop(surf:&mut DrawingSurface, root:UIChild) {
     loop {
@@ -233,6 +235,7 @@ impl DrawingSurface {
                                text,
                                0,0,
                                &ARGBColor::new_rgb(0,255,0));
+        let position = position.add(&self._transform);
         self.client.deref().borrow().send(APICommand::DrawImageCommand(DrawImageCommand{
             app_id:self.appid,
             window_id:self.winid,
@@ -248,6 +251,7 @@ impl DrawingSurface {
     }
     pub fn fill_rect(&self, bounds: &Rect, color: &ARGBColor) {
         // println!("drawing bounds to a surface {:?} {:?}",bounds,color);
+        let bounds = bounds.add(&self._transform);
         self.client.deref().borrow().send(APICommand::DrawRectCommand(DrawRectCommand{
             app_id:self.appid,
             window_id:self.winid,
@@ -255,12 +259,13 @@ impl DrawingSurface {
             color: color.clone(),
         }));
     }
-    fn draw_view(&mut self, view: &UIChild) {
+    fn draw_view(&mut self, view: &UIChild, depth:i32) {
         let root = view.deref().borrow_mut();
         self.dotranslate(&root.position());
+        // println!("{} {} -> {} {}", indent(depth), depth, root.name(), self._transform);
         root.draw(self);
         for ch in root.children() {
-            self.draw_view(ch);
+            self.draw_view(ch, depth+1);
         }
         self.untranslate(&root.position());
     }
@@ -270,6 +275,14 @@ impl DrawingSurface {
     fn untranslate(&mut self, off: &Point) {
         self._transform = self._transform.subtract(off);
     }
+}
+
+fn indent(depth: i32) -> String {
+    let mut s:String = String::new();
+    for i in 0..depth {
+        s.push_str("  ");
+    }
+    return s
 }
 
 

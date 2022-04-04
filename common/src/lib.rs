@@ -268,6 +268,28 @@ pub struct Rect {
 }
 
 impl Rect {
+    pub fn from_size(size: Size) -> Rect {
+        Rect {
+            x: 0,
+            y: 0,
+            w: size.w,
+            h: size.h
+        }
+    }
+}
+
+impl Rect {
+    pub fn from_pos_size(pos: Point, size: Size) -> Rect {
+        Rect {
+            x: pos.x,
+            y: pos.y,
+            w: size.w,
+            h: size.h
+        }
+    }
+}
+
+impl Rect {
     pub(crate) fn subtract(&self, pt: &Point) -> Rect {
         Rect {
             x: self.x - pt.x,
@@ -279,7 +301,7 @@ impl Rect {
 }
 
 impl Rect {
-    pub(crate) fn add(&self, pt: &Point) -> Rect {
+    pub fn add(&self, pt: &Point) -> Rect {
         Rect {
             x: self.x + pt.x,
             y: self.y + pt.y,
