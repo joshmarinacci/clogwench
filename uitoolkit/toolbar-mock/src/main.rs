@@ -1,5 +1,6 @@
 mod core;
 mod components;
+mod v2try;
 
 use std::cell::RefCell;
 use std::rc::Rc;
