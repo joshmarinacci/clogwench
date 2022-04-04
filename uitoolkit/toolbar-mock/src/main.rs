@@ -63,6 +63,7 @@ fn main() {
     }
 
     let mut center_box = HBox::make();
+    center_box._vflex = true;
     {
         let select_list = SelectList::make(&vec![
             "aaa".to_string(),

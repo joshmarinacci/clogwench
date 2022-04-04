@@ -81,7 +81,8 @@ pub struct HBox {
     _name:String,
     _size:Size,
     _position:Point,
-    _children:Vec<UIChild>
+    _children:Vec<UIChild>,
+    pub _vflex:bool,
 }
 
 impl HBox {
@@ -94,7 +95,8 @@ impl HBox {
             _name: "hbox-name".to_string(),
             _size: Size::init(200,20),
             _position: Point::init(0,0),
-            _children: vec![]
+            _children: vec![],
+            _vflex: false,
         }
     }
 }
@@ -119,6 +121,9 @@ impl UIView for HBox {
         // println!("hbox:layout:available {:?}",available);
         //pick a temp size
         self._size = Size::init(available.w-BOX_PADDING-BOX_PADDING,100-BOX_PADDING-BOX_PADDING);
+        if(self.vflex()) {
+            self._size.h = available.h;
+        }
 
         //find the non-hflex children
         let non_hflex:Vec<&UIChild> = self._children.iter().filter(|ch:&&UIChild|{
@@ -157,7 +162,7 @@ impl UIView for HBox {
             ch2.set_position(&Point::init(x, y));
             x += ch2.size().w;
         }
-        println!("hbox:layout:final size {:?}",self.size());
+        // println!("hbox:layout:final size {:?}",self.size());
         self.size()
     }
     fn draw(&self, g: &DrawingSurface) {
@@ -170,9 +175,7 @@ impl UIView for HBox {
     fn hflex(&self) -> bool {
         false
     }
-    fn vflex(&self) -> bool {
-        false
-    }
+    fn vflex(&self) -> bool { self._vflex }
 }
 
 pub struct VBox {
@@ -527,6 +530,7 @@ pub struct SelectList {
     _children:Vec<UIChild>,
     _hflex: bool,
     _vflex: bool,
+    _preferred_width: u32,
 }
 
 impl SelectList {
@@ -541,6 +545,7 @@ impl SelectList {
             _children: vec![],
             _hflex: false,
             _vflex: true,
+            _preferred_width: 80,
         }
     }
 }
@@ -551,7 +556,7 @@ impl UIView for SelectList {
     fn set_position(&mut self, point: &Point) { self._position.copy_from(point) }
     fn children(&self) -> Iter<UIChild> { self._children.iter() }
     fn layout(&mut self, g: &DrawingSurface, available: &Size) -> Size {
-        self._size = Size::init(100,100);
+        self._size = Size::init(self._preferred_width as i32, available.h);
         return self.size()
     }
     fn draw(&self, g: &DrawingSurface) {
@@ -571,12 +576,12 @@ impl UIView for SelectList {
         }
     }
     fn input(&mut self, e: &PointerEvent) {
-        println!("clicked at {}",e.position);
+        // println!("clicked at {}",e.position);
         if e.position.y < 0 || e.position.y > (self._data.len() * 20) as i32 {
             return
         }
         let item_index =(e.position.y/20);
-        println!("chose {}", item_index);
+        // println!("chose {}", item_index);
         self._selected = item_index as usize;
     }
     fn hflex(&self) -> bool {
