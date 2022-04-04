@@ -13,7 +13,7 @@ use common::client::ClientConnection;
 use common::font::{load_font_from_json};
 use components::{ActionButton, HBox};
 use cool_logger::CoolLogger;
-use crate::components::{FlexPanel, HSpacer, Label, VBox};
+use crate::components::{FlexPanel, HSpacer, Label, SelectList, VBox};
 use crate::core::{ActionEvent, DrawingSurface, repaint, start_loop, UIChild, UIView};
 
 static COOL_LOGGER:CoolLogger = CoolLogger;
@@ -62,7 +62,19 @@ fn main() {
         toolbar.add(button_to_ui_child(button5));
     }
 
-    let mut center_panel2 = FlexPanel::make(&RED, true, true);
+    let mut center_box = HBox::make();
+    {
+        let select_list = SelectList::make(&vec![
+            "aaa".to_string(),
+            "bbb".to_string(),
+            "ccc".to_string(),
+            "ddd".to_string()
+        ]);
+        // let fp1 = FlexPanel::make(&RED, false, true);
+        center_box.add(    Rc::new(RefCell::new(select_list)));
+        let fp2 = FlexPanel::make(&GREEN, true, true);
+        center_box.add(    Rc::new(RefCell::new(fp2)));
+    }
 
     let mut statusbar = HBox::make();
     {
@@ -78,7 +90,7 @@ fn main() {
     vbox.add(Rc::new(RefCell::new(toolbar)));
     // let mut center_panel = FlexPanel::make(&GREEN,true,true);
     // vbox.add(Rc::new(RefCell::new(center_panel)));
-    vbox.add(Rc::new(RefCell::new(center_panel2)));
+    vbox.add(Rc::new(RefCell::new(center_box)));
     vbox.add(Rc::new(RefCell::new(statusbar)));
 
     let root:UIChild = Rc::new(RefCell::new(vbox));

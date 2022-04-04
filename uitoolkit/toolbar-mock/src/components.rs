@@ -7,7 +7,7 @@ use std::ops::Deref;
 use std::rc::Rc;
 use std::slice::Iter;
 use log::info;
-use common::{ARGBColor, Point, Rect, Size};
+use common::{ARGBColor, BLACK, Point, Rect, Size, WHITE};
 use crate::core::{ActionEvent, DrawingSurface, EventType, JEventDispatcher, PointerEvent, rect_from_view, UIView};
 use crate::UIChild;
 
@@ -237,11 +237,13 @@ impl UIView for VBox {
         self._size.w = widest + BOX_PADDING + BOX_PADDING;
         //layout flex children
         // println!("available left {} {}",available.h, used);
-        let av = Size::init(available.w-BOX_PADDING-BOX_PADDING,(available.h-used-BOX_PADDING-BOX_PADDING)/(yes_vflex.len() as i32));
-        for ch in yes_vflex {
-            let mut ch2 = ch.deref().borrow_mut();
-            let size = ch2.layout(g, &av);
-            println!("vbox:layout:yes-flex-child {} {:?} -> {:?}",ch2.name(), av, size);
+        if yes_vflex.len() > 0 {
+            let av = Size::init(available.w - BOX_PADDING - BOX_PADDING, (available.h - used - BOX_PADDING - BOX_PADDING) / (yes_vflex.len() as i32));
+            for ch in yes_vflex {
+                let mut ch2 = ch.deref().borrow_mut();
+                let size = ch2.layout(g, &av);
+                println!("vbox:layout:yes-flex-child {} {:?} -> {:?}", ch2.name(), av, size);
+            }
         }
 
         //position children left to right
@@ -512,4 +514,75 @@ impl UIView for FlexPanel {
     fn hflex(&self) -> bool { self._hflex }
 
     fn vflex(&self) -> bool { self._vflex }
+}
+
+
+pub struct SelectList {
+    _data:Vec<String>,
+    _selected:usize,
+    _id:String,
+    _name:String,
+    _size:Size,
+    _position:Point,
+    _children:Vec<UIChild>,
+    _hflex: bool,
+    _vflex: bool,
+}
+
+impl SelectList {
+    pub(crate) fn make(list: &Vec<String>) -> SelectList {
+        SelectList {
+            _data: list.clone(),
+            _selected: 0,
+            _id: "".to_string(),
+            _name: "".to_string(),
+            _size: Size::init(10,10),
+            _position: Point::init(0,0),
+            _children: vec![],
+            _hflex: false,
+            _vflex: true,
+        }
+    }
+}
+impl UIView for SelectList {
+    fn name(&self) -> &str { &self._name }
+    fn size(&self) -> Size { self._size  }
+    fn position(&self) -> Point { self._position }
+    fn set_position(&mut self, point: &Point) { self._position.copy_from(point) }
+    fn children(&self) -> Iter<UIChild> { self._children.iter() }
+    fn layout(&mut self, g: &DrawingSurface, available: &Size) -> Size {
+        self._size = Size::init(100,100);
+        return self.size()
+    }
+    fn draw(&self, g: &DrawingSurface) {
+        const RED:ARGBColor = ARGBColor { r: 0, g: 0, b: 255, a: 255 };
+        g.fill_rect(&Rect::from_size(self.size()), &RED);
+        let mut pos = Point::init(BOX_PADDING, BOX_PADDING);
+        let mut bounds = Rect::from_ints(pos.x,pos.y,self.size().w,19);
+        for (i,item) in self._data.iter().enumerate() {
+            let mut bg = &WHITE;
+            if i == self._selected {
+                bg = &BLACK
+            }
+            g.fill_rect(&bounds, bg);
+            g.fill_text(item, "base", &pos, &BLACK);
+            pos.y += 20;
+            bounds.y += 20;
+        }
+    }
+    fn input(&mut self, e: &PointerEvent) {
+        println!("clicked at {}",e.position);
+        if e.position.y < 0 || e.position.y > (self._data.len() * 20) as i32 {
+            return
+        }
+        let item_index =(e.position.y/20);
+        println!("chose {}", item_index);
+        self._selected = item_index as usize;
+    }
+    fn hflex(&self) -> bool {
+        self._hflex
+    }
+    fn vflex(&self) -> bool {
+        self._vflex
+    }
 }
