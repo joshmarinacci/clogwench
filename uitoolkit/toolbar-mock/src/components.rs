@@ -150,10 +150,10 @@ impl UIView for HBox {
         // println!("hbox:layout:final size {:?}",self.size());
         self.size()
     }
-    fn draw(&self, g: &DrawingSurface) {
-        let bounds = Rect::from_size(self.size());
-        g.fill_rect(&bounds,&HBOX_FILL);
-    }
+    // fn draw(&self, g: &DrawingSurface) {
+    //     let bounds = Rect::from_size(self.size());
+    //     g.fill_rect(&bounds,&HBOX_FILL);
+    // }
     fn input(&mut self, e: &PointerEvent) {}
     fn vflex(&self) -> bool { self._vflex }
 }
@@ -239,10 +239,10 @@ impl UIView for VBox {
         println!("vbox:layout:final size {:?}",self.size());
         self.size()
     }
-    fn draw(&self, g: &DrawingSurface) {
-        let bounds = Rect::from_size(self.size());
-        g.fill_rect(&bounds,&VBOX_FILL);
-    }
+    // fn draw(&self, g: &DrawingSurface) {
+    //     let bounds = Rect::from_size(self.size());
+    //     g.fill_rect(&bounds,&VBOX_FILL);
+    // }
     fn input(&mut self, e: &PointerEvent) { }
 }
 
@@ -292,7 +292,11 @@ impl UIView for ActionButton {
     }
     fn draw(&self, g: &DrawingSurface) {
         let s = self.size();
+        // draw the border
         let bounds = Rect::from_size(s);
+        g.fill_rect(&bounds, &BLACK);
+        // draw the background
+        let bounds = Rect::from_pos_size(Point::init(1,1),s.grow(-2));
         if self._active {
             g.fill_rect(&bounds, &BUTTON_FILL_ACTIVE);
         } else {
@@ -529,8 +533,8 @@ impl UIView for SelectList {
         return self.size()
     }
     fn draw(&self, g: &DrawingSurface) {
-        const RED:ARGBColor = ARGBColor { r: 0, g: 0, b: 255, a: 255 };
-        g.fill_rect(&Rect::from_size(self.size()), &RED);
+        // const RED:ARGBColor = ARGBColor { r: 0, g: 0, b: 255, a: 255 };
+        // g.fill_rect(&Rect::from_size(self.size()), &RED);
         let mut pos = Point::init(BOX_PADDING, BOX_PADDING);
         let mut bounds = Rect::from_ints(pos.x,pos.y,self.size().w,19);
         let len = self._data.len();

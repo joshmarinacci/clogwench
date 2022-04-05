@@ -6,7 +6,7 @@ use std::ops::{Add, Deref, DerefMut};
 use std::rc::Rc;
 use std::slice::Iter;
 use log::info;
-use common::{APICommand, ARGBColor, BLACK, DrawImageCommand, DrawRectCommand, Point, Rect, Size};
+use common::{APICommand, ARGBColor, BLACK, DrawImageCommand, DrawRectCommand, Point, Rect, Size, WHITE};
 use common::graphics::{GFXBuffer, PixelLayout};
 use uuid::Uuid;
 use common::client::ClientConnection;
@@ -230,11 +230,11 @@ impl DrawingSurface {
     pub fn fill_text(&self, text: &str, fontname: &str, position: &Point, color: &ARGBColor) {
         let size = self.measure_text(text,fontname);
         let mut text_buffer = GFXBuffer::new(size.w as u32, size.h as u32, &PixelLayout::ARGB());
-        text_buffer.clear(&BLACK);
+        text_buffer.clear(&WHITE);
         self.font.draw_text_at(&mut text_buffer,
                                text,
                                0,0,
-                               &ARGBColor::new_rgb(0,255,0));
+                               color);
         let position = position.add(&self._transform);
         self.client.deref().borrow().send(APICommand::DrawImageCommand(DrawImageCommand{
             app_id:self.appid,
