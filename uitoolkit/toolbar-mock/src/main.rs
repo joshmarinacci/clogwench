@@ -13,7 +13,7 @@ use common::client::ClientConnection;
 use common::font::{load_font_from_json};
 use components::{ActionButton, HBox};
 use cool_logger::CoolLogger;
-use crate::components::{FlexPanel, HSpacer, Label, SelectList, VBox};
+use crate::components::{FlexPanel, HSpacer, Label, SelectList, StringVecSelectModel, VBox};
 use crate::core::{ActionEvent, DrawingSurface, repaint, start_loop, UIChild, UIView};
 
 static COOL_LOGGER:CoolLogger = CoolLogger;
@@ -65,12 +65,13 @@ fn main() {
     let mut center_box = HBox::make();
     center_box._vflex = true;
     {
-        let select_list = SelectList::make(&vec![
+        let data = StringVecSelectModel::new(vec![
             "aaa".to_string(),
             "bbb".to_string(),
             "ccc".to_string(),
             "ddd".to_string()
         ]);
+        let select_list = SelectList::make(Box::new(data));
         // let fp1 = FlexPanel::make(&RED, false, true);
         center_box.add(    Rc::new(RefCell::new(select_list)));
         let fp2 = FlexPanel::make(&GREEN, true, true);

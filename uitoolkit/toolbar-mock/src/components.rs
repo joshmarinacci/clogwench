@@ -462,8 +462,36 @@ impl UIView for FlexPanel {
     fn vflex(&self) -> bool { self._vflex }
 }
 
+pub trait SelectModel {
+    fn len(&self) -> usize;
+    fn string_at(&self, n:usize) -> &str;
+}
+
+pub struct StringVecSelectModel {
+    _data:Vec<String>
+}
+
+impl StringVecSelectModel {
+    pub(crate) fn new(data: Vec<String>) -> StringVecSelectModel {
+        StringVecSelectModel {
+            _data: data
+        }
+    }
+}
+
+impl SelectModel for StringVecSelectModel {
+    fn len(&self) -> usize {
+        self._data.len()
+    }
+
+    fn string_at(&self, n:usize) -> &str {
+        &self._data[n]
+    }
+}
+
+
 pub struct SelectList {
-    _data:Vec<String>,
+    _data:Box<dyn SelectModel>,
     _selected:usize,
     _id:String,
     _name:String,
@@ -474,11 +502,10 @@ pub struct SelectList {
     _vflex: bool,
     _preferred_width: u32,
 }
-
 impl SelectList {
-    pub(crate) fn make(list: &Vec<String>) -> SelectList {
+    pub(crate) fn make(model: Box<dyn SelectModel>) -> SelectList {
         SelectList {
-            _data: list.clone(),
+            _data: model,
             _selected: 0,
             _id: "".to_string(),
             _name: "".to_string(),
@@ -506,7 +533,9 @@ impl UIView for SelectList {
         g.fill_rect(&Rect::from_size(self.size()), &RED);
         let mut pos = Point::init(BOX_PADDING, BOX_PADDING);
         let mut bounds = Rect::from_ints(pos.x,pos.y,self.size().w,19);
-        for (i,item) in self._data.iter().enumerate() {
+        let len = self._data.len();
+        for i in 0..len {
+            let item = self._data.string_at(i);
             let mut bg = &WHITE;
             if i == self._selected {
                 bg = &BLACK
