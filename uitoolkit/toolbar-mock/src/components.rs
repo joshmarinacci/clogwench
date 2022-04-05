@@ -46,19 +46,6 @@ impl UIView for BaseUIView {
     fn layout(&mut self, g: &DrawingSurface, available: &Size) -> Size {
         todo!()
     }
-    fn draw(&self, g: &DrawingSurface) {
-        todo!()
-    }
-    fn input(&mut self, e: &PointerEvent) {
-        todo!()
-    }
-
-    fn hflex(&self) -> bool {
-        false
-    }
-    fn vflex(&self) -> bool {
-        false
-    }
 }
 
 /*
@@ -84,7 +71,6 @@ pub struct HBox {
     _children:Vec<UIChild>,
     pub _vflex:bool,
 }
-
 impl HBox {
     pub fn add(&mut self, child: UIChild) {
         self._children.push(child)
@@ -100,7 +86,6 @@ impl HBox {
         }
     }
 }
-
 impl UIView for HBox {
     fn name(&self) -> &str {
         return &self._name;
@@ -169,12 +154,7 @@ impl UIView for HBox {
         let bounds = Rect::from_size(self.size());
         g.fill_rect(&bounds,&HBOX_FILL);
     }
-    fn input(&mut self, e: &PointerEvent) {
-    }
-
-    fn hflex(&self) -> bool {
-        false
-    }
+    fn input(&mut self, e: &PointerEvent) {}
     fn vflex(&self) -> bool { self._vflex }
 }
 
@@ -199,7 +179,6 @@ impl VBox {
         }
     }
 }
-
 impl UIView for VBox {
     fn name(&self) -> &str {
         return &self._name;
@@ -264,15 +243,7 @@ impl UIView for VBox {
         let bounds = Rect::from_size(self.size());
         g.fill_rect(&bounds,&VBOX_FILL);
     }
-    fn input(&mut self, e: &PointerEvent) {
-    }
-
-    fn hflex(&self) -> bool {
-        false
-    }
-    fn vflex(&self) -> bool {
-        false
-    }
+    fn input(&mut self, e: &PointerEvent) { }
 }
 
 pub struct ActionButton {
@@ -346,13 +317,6 @@ impl UIView for ActionButton {
         }
         println!("action button got a pointer event");
     }
-
-    fn hflex(&self) -> bool {
-        false
-    }
-    fn vflex(&self) -> bool {
-        false
-    }
 }
 
 pub struct Label {
@@ -397,15 +361,6 @@ impl UIView for Label {
         let p = Point::init(1, 1);
         g.fill_text(&self._caption, "base",&p,&BUTTON_TEXT_FILL)
     }
-    fn input(&mut self, e: &PointerEvent) {
-        //noop
-    }
-    fn hflex(&self) -> bool {
-        false
-    }
-    fn vflex(&self) -> bool {
-        false
-    }
 }
 
 pub struct HSpacer {
@@ -441,20 +396,12 @@ impl UIView for HSpacer {
     }
     fn children(&self) -> Iter<UIChild> { self._children.iter() }
     fn layout(&mut self, g: &DrawingSurface, available: &Size) -> Size {
-        println!("laying out hspacer. available size is {:?}", available);
+        // println!("laying out hspacer. available size is {:?}", available);
         self._size = Size::init(available.w,5);
         return self.size()
     }
-    fn draw(&self, g: &DrawingSurface) {
-    }
-    fn input(&mut self, e: &PointerEvent) {
-    }
-
     fn hflex(&self) -> bool {
         true
-    }
-    fn vflex(&self) -> bool {
-        false
     }
 }
 
@@ -469,7 +416,6 @@ pub struct FlexPanel {
     _hflex: bool,
     _vflex: bool,
 }
-
 impl FlexPanel {
     pub(crate) fn make(fill: &ARGBColor, hflex: bool, vflex: bool) -> FlexPanel {
         FlexPanel {
@@ -484,7 +430,6 @@ impl FlexPanel {
         }
     }
 }
-
 impl UIView for FlexPanel {
     fn name(&self) -> &str {
         &self._name
@@ -512,13 +457,10 @@ impl UIView for FlexPanel {
         g.fill_rect(&bounds, &self._fill)
     }
 
-    fn input(&mut self, e: &PointerEvent) { }
-
     fn hflex(&self) -> bool { self._hflex }
 
     fn vflex(&self) -> bool { self._vflex }
 }
-
 
 pub struct SelectList {
     _data:Vec<String>,

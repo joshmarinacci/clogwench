@@ -22,10 +22,10 @@ pub trait UIView {
     fn set_position(&mut self, point:&Point);
     fn children(&self) -> Iter<UIChild>;
     fn layout(&mut self, g:&DrawingSurface, available:&Size) -> Size;
-    fn draw(&self, g:&DrawingSurface);
-    fn input(&mut self, e:&PointerEvent);
-    fn hflex(&self) -> bool;
-    fn vflex(&self) -> bool;
+    fn draw(&self, g:&DrawingSurface) {  }
+    fn input(&mut self, e:&PointerEvent) {  }
+    fn hflex(&self) -> bool { false }
+    fn vflex(&self) -> bool { false }
 }
 pub type UIChild = Rc<RefCell<dyn UIView>>;
 
