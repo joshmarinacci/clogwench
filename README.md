@@ -1,7 +1,21 @@
 
-add stuff
+
+# new instructions June 2022
+
+```shell
+cd central
+cargo build
+cd ..
+cd devtools/runner
+cargo run -- --wmtype native --start-clock
+```
+
+An SDL window will open with a dock and a clock app running
 
 
+
+
+# old stuff
 # initial setup
 
 __adapted from https://graspingtech.com/ubuntu-desktop-18.04-virtual-machine-macos-qemu/__
