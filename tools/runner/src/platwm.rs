@@ -314,7 +314,7 @@ impl PlatformWindowManager {
             for dur in &self.fps {
                 total += dur;
             }
-            println!("calculated avg frame time {}", (total as f64)/(self.fps.len() as f64));
+            // println!("calculated avg frame time {}", (total as f64)/(self.fps.len() as f64));
         }
         self.tick += 1;
         //thread::sleep(Duration::from_millis(100));

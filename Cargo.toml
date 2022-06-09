@@ -1,14 +1,10 @@
 [workspace]
 
 members = [
-    "digital-clock",
-    "echo-app",
+    "apps/digital-clock",
+    "apps/echo-app",
     "central",
-    "tools-input",
     "common",
     "plat",
-    "devtools/runner",
-    "test-log",
-    "uitoolkit",
-    "uitoolkit/toolbar-mock"
+    "tools/runner",
 ]

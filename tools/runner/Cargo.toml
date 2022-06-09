@@ -9,8 +9,8 @@ edition = "2021"
 serde = "1.0.133"
 serde_json = "1.0.74"
 common = { path= "../../common" }
-common-wm = { path= "../../common-wm"}
-cool-logger = { path="../../cool-logger"}
+common-wm = { path= "../../common-wm" }
+cool-logger = { path= "../../cool-logger" }
 plat = { path= "../../plat" }
 log = "0.4.14"
 structopt = "0.3.25"

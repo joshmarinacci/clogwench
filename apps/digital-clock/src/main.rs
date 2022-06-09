@@ -41,7 +41,7 @@ fn main()  {
     }
 
 
-    let sprite_sheet = GFXBuffer::from_png_file("../resources/digital_clock@1.png");
+    let sprite_sheet = GFXBuffer::from_png_file("./digital_clock@1.png");
 
 
 

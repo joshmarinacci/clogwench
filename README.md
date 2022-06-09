@@ -6,7 +6,10 @@
 cd central
 cargo build
 cd ..
-cd devtools/runner
+cd apps/digital-clock
+cargo build
+cd ../..
+cd tools/runner
 cargo run -- --wmtype native --start-clock
 ```
 

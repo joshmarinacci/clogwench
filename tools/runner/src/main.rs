@@ -132,7 +132,7 @@ fn main() -> Result<(),String> {
 
 
     if args.start_clock {
-        start_app_with_delay(5000, String::from("../../digital-clock"));
+        start_app_with_delay(5000, String::from("../../apps/digital-clock"));
     }
     if args.start_echo {
         start_app_with_delay(5000, String::from("../../echo-app"));
