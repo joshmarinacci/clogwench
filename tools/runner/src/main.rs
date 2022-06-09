@@ -135,7 +135,7 @@ fn main() -> Result<(),String> {
         start_app_with_delay(5000, String::from("../../apps/digital-clock"));
     }
     if args.start_echo {
-        start_app_with_delay(5000, String::from("../../echo-app"));
+        start_app_with_delay(5000, String::from("../../apps/echo-app"));
     }
     match args.wmtype {
         WMType::Native => {

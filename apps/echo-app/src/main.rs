@@ -53,7 +53,7 @@ fn main() {
 
     let mut text_buffer = GFXBuffer::new(100, 20, &PixelLayout::ARGB());
     text_buffer.clear(&BLACK);
-    let font = load_font_from_json("../resources/default-font.json").unwrap();
+    let font = load_font_from_json("../../resources/default-font.json").unwrap();
     font.draw_text_at(&mut text_buffer,"Echo Bot Here!",0,10,&ARGBColor::new_rgb(0,255,0));
 
     info!("echo app starting and connecting");
