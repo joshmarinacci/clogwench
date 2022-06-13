@@ -5,6 +5,7 @@ members = [
     "apps/echo-app",
     "central",
     "common",
+    "db",
     "plat",
     "tools/runner",
 ]

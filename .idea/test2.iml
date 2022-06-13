@@ -22,6 +22,7 @@
       <sourceFolder url="file://$MODULE_DIR$/apps/digital-clock/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/apps/echo-app/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/tools/runner/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/db/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/temp" />
       <excludeFolder url="file://$MODULE_DIR$/.tmp" />
       <excludeFolder url="file://$MODULE_DIR$/tmp" />
