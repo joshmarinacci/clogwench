@@ -225,7 +225,7 @@ impl CentralState {
 
 static COOL_LOGGER:CoolLogger = CoolLogger;
 fn main() {
-    set_logger(&COOL_LOGGER).map(|()|log::set_max_level(LevelFilter::Warn));
+    set_logger(&COOL_LOGGER).map(|()|log::set_max_level(LevelFilter::Info));
     let args:Cli = Cli::from_args();
     info!("central server starting");
     let state = Arc::new(Mutex::new(CentralState::init()));
