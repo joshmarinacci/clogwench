@@ -1,7 +1,7 @@
 import {Socket} from "net"
 import {Rect, Point, COMMAND_ACTION,
     LayerView,
-    ActionButton, Size, MouseInputService} from "thneed-gfx/dist/module.js";
+    ActionButton, Size, MouseInputService} from "thneed-gfx";
 
 class ClogwenchWindowSurface {
     constructor(win) {

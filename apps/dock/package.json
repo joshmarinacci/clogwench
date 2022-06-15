@@ -1,7 +1,8 @@
 {
   "name": "dock",
   "version": "0.0.1",
-  "main": "test.js",
+  "main": "dist/index.js",
+  "module": "dist/module.js",
   "type": "module",
   "dependencies": {
     "parcel": "^2.6.0",
@@ -11,6 +12,8 @@
   "scripts": {
     "dev": "npx parcel src/index.ts",
     "build": "npx parcel build src/index.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^17.0.44"
   }
 }
-
