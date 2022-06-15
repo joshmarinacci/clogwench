@@ -1,9 +1,9 @@
 import {Socket} from "net"
+import {Rect, Point} from "thneed-gfx/dist/module.js";
 
 class Window {
     constructor(app,info) {
         this.app = app
-        console.log("making window with",info)
         this.app_id = info.app_id
         this.window_id = info.window_id
         this.window_type = info.window_type
@@ -12,13 +12,12 @@ class Window {
     }
 
     draw_rect(rect, color) {
-        console.log('sending draw rect',rect,color)
         this.app.send({DrawRectCommand: {
-                    app_id:this.app_id,
-                    window_id:this.window_id,
-                    rect: rect,
-                    color: color,
-                }})
+                app_id:this.app_id,
+                window_id:this.window_id,
+                rect: rect,
+                color: color,
+            }})
     }
 
     on(type, cb) {
@@ -26,18 +25,21 @@ class Window {
         this.listeners[type].push(cb)
     }
     dispatch(obj) {
-        console.log("window got event",obj)
+        // console.log("window got event",obj)
+        if(obj.MouseDown) this.fire('mousedown',obj.MouseDown)
+    }
+    fire(type, obj) {
+        // console.log("firing", type)
+        if(!this.listeners[type]) this.listeners[type] = []
+        this.listeners[type].forEach(cb => cb(obj))
+    }
+    close() {
+        // console.log("closing the window")
+        // this.app.send_and_wait({WindowCloseRequest:{}})
+        return Promise.resolve()
     }
 }
 
-class Rect {
-    constructor(x,y,w,h) {
-        this.x = x
-        this.y = y
-        this.w = w
-        this.h = h
-    }
-}
 
 class App {
     constructor() {
@@ -92,6 +94,14 @@ class App {
         this.windows.set(win.window_id,win)
         return win
     }
+
+    disconnect() {
+        console.log("disconnecting the app")
+        this.client.end(()=>{
+            console.log("done ending")
+            process.exit(0)
+        })
+    }
 }
 
 function log(...args) {
@@ -110,11 +120,19 @@ async function doit() {
     let win = await app.open_window(new Rect(50,50,300,300))
     console.log("done with open window",win.bounds)
     win.draw_rect(new Rect(0,0,300,300),WHITE)
-    win.draw_rect(new Rect(50,50,50,100),RED)
+    let button_bounds = new Rect(50,50,50,100)
+    win.draw_rect(button_bounds,RED)
 
-    win.on('click',(e) => {
+    win.on('mousedown',async (e) => {
         console.log("got a mouse event",e)
+        let pt = new Point(e.x,e.y)
+        console.log("down on",pt)
+        if(button_bounds.contains(pt)) {
+            console.log("inside the button")
+            await win.close()
+            app.disconnect()
+        }
     })
 }
 
-doit().then(()=>console.log("fully done")).catch((e)=>console.error(e))
+doit().then(()=>console.log("fully started")).catch((e)=>console.error(e))
