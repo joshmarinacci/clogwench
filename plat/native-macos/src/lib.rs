@@ -113,6 +113,8 @@ impl Plat {
                     let cmd = IncomingMessage {
                         source: Default::default(),
                         command: APICommand::MouseUp(MouseUpEvent{
+                            app_id: Default::default(),
+                            window_id: Default::default(),
                             original_timestamp: 0,
                             button: MouseButton::Primary,
                             x,

@@ -76,6 +76,8 @@ pub struct MouseMoveEvent {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MouseUpEvent {
+    pub app_id:Uuid,
+    pub window_id:Uuid,
     pub original_timestamp:u128,
     pub button:MouseButton,
     pub x:i32,

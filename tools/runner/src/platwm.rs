@@ -10,7 +10,7 @@ use std::time::{Duration, Instant};
 use log::info;
 use serde::Deserialize;
 use common::{APICommand, ARGBColor, BLACK, DebugMessage, HelloWindowManager, IncomingMessage, Point, Rect, WHITE, WINDOW_MANAGER_PORT};
-use common::events::{KeyCode, KeyDownEvent, MouseButton, MouseDownEvent};
+use common::events::{KeyCode, KeyDownEvent, MouseButton, MouseDownEvent, MouseUpEvent};
 use common::font::{FontInfo2, load_font_from_json};
 use common::graphics::{draw_test_pattern, GFXBuffer, PixelLayout};
 use common_wm::{FOCUSED_TITLEBAR_COLOR, FOCUSED_WINDOW_COLOR, InputGesture, NoOpGesture, OutgoingMessage, TITLEBAR_COLOR, WINDOW_BORDER_WIDTH, WINDOW_COLOR, WindowDragGesture, WindowManagerState};
@@ -176,6 +176,25 @@ impl PlatformWindowManager {
                     }
                 },
                 APICommand::MouseUp(evt) => {
+                    let point = Point::init(evt.x, evt.y);
+                    if let Some(win) = self.state.pick_window_at(point) {
+                        info!("picked a window for mouse up");
+                        let wid = win.id.clone();
+                        let aid = win.owner.clone();
+                        let app_point = point.subtract(&win.content_bounds().position());
+                        self.tx_out.send(OutgoingMessage {
+                            recipient: aid,
+                            command: APICommand::MouseUp(MouseUpEvent {
+                                app_id: aid,
+                                window_id: wid,
+                                original_timestamp: evt.original_timestamp,
+                                button: MouseButton::Primary,
+                                x: app_point.x,
+                                y: app_point.y
+                            })
+                        }).unwrap();
+                    }
+
                     self.gesture = Box::new(NoOpGesture::init()) as Box<dyn InputGesture>;
                 },
                 APICommand::MouseMove(evt) => {

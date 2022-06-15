@@ -349,6 +349,9 @@ fn start_router(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, state: Arc
                 APICommand::MouseDown(e) => {
                     state.lock().unwrap().send_to_app(e.app_id, APICommand::MouseDown(e))
                 }
+                APICommand::MouseUp(e) => {
+                    state.lock().unwrap().send_to_app(e.app_id, APICommand::MouseUp(e))
+                }
                 _ => {
                     warn!("CENTRAL: message not handled {:?}",msg);
                 }
