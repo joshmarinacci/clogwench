@@ -1,6 +1,5 @@
 import {Socket} from "net";
-import {Rect}
-    from "thneed-gfx";
+import {Rect} from "thneed-gfx";
 
 const STD_PORT = 3333
 
@@ -19,7 +18,7 @@ export class App {
                 console.log('connected event')
                 res()
             })
-            this.client.on('data', (data:Buffer) => {
+            this.client.on('data', (data: Buffer) => {
                 let str = data.toString()
                 console.log("raw incoming data", str)
                 let msg = JSON.parse(str)
@@ -72,11 +71,11 @@ export class App {
 }
 
 export class Window {
-    private app_id: string;
     window_id: string;
+    bounds: Rect;
+    private app_id: string;
     private window_type: string;
     private app: App;
-    bounds: Rect;
     private listeners: Map<string, any>;
 
     constructor(app, info) {

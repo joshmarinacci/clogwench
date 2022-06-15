@@ -1,17 +1,7 @@
-import {
-    KeyboardInputService,
-    MouseInputService,
-    Point,
-    Rect,
-    Size,
-    Sprite,
-    SurfaceContext,
-    View
-}
-    from "thneed-gfx";
+import {KeyboardInputService, MouseInputService, Point, Rect, Size, Sprite, SurfaceContext, View} from "thneed-gfx";
 import {Window} from "./app";
 
-export const RED = {r:0, g:0, b:255, a:255}
+export const RED = {r: 0, g: 0, b: 255, a: 255}
 
 export class ClogwenchWindowSurface implements SurfaceContext {
     private win: Window
