@@ -1,20 +1,30 @@
-import {ActionButton, COMMAND_ACTION, LayerView, Rect,} from "thneed-gfx";
+import {ActionButton, COMMAND_ACTION, LayerView, Rect,
+    VBox,
+    Label,
+} from "thneed-gfx";
 import {App} from "./app";
 import {ClogwenchWindowSurface} from "./surface";
 
-// const WHITE = {r:255, g:255, b:255, a:255}
-// const RED = {r:0, g:0, b:255, a:255}
 
 function start(surface: ClogwenchWindowSurface) {
     let button = new ActionButton()
-    button.set_caption("a button")
-    console.log("action is", COMMAND_ACTION)
+    button.set_caption("foobutton")
     button.on(COMMAND_ACTION, async () => {
         process.exit(0)
     })
 
+    let vbox = new VBox()
+    vbox.add(button)
+    let label = new Label()
+    label.set_caption('foolabel')
+    vbox.add(label)
+
+    let button2 = new ActionButton()
+    button2.set_caption('barbutton')
+    vbox.add(button2)
+
     let root = new LayerView('root-layer')
-    root.add(button)
+    root.add(vbox)
     surface.set_root(root)
     surface.start()
     surface.repaint()

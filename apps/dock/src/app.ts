@@ -89,6 +89,7 @@ export class Window {
 
 
     draw_rect(rect, color) {
+        // console.log("sending",rect,color)
         this.app.send({
             DrawRectCommand: {
                 app_id: this.app_id,
