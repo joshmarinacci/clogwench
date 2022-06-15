@@ -10,7 +10,7 @@
     "typescript": "^4.7.2"
   },
   "scripts": {
-    "dev": "npx parcel src/index.ts",
+    "dev": "npm run build && node dist/index.js",
     "build": "npx parcel build src/index.ts"
   },
   "devDependencies": {

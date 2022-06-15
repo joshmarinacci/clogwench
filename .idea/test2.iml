@@ -29,6 +29,8 @@
       <excludeFolder url="file://$MODULE_DIR$/target" />
       <excludeFolder url="file://$MODULE_DIR$/linux-wm/target" />
       <excludeFolder url="file://$MODULE_DIR$/apps/digital-clock/target" />
+      <excludeFolder url="file://$MODULE_DIR$/apps/dock/.parcel-cache" />
+      <excludeFolder url="file://$MODULE_DIR$/apps/dock/dist" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
