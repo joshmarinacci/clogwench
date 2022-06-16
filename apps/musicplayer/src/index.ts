@@ -94,7 +94,7 @@ function make_toolbar(surface: SurfaceContext) {
     let hbox = new HBox()
     hbox.set_fill('#00ffff')
     hbox.set_hflex(true)
-    hbox.set_vflex(true)
+    hbox.set_vflex(false)
     let prev = new ActionButton()
     prev.set_caption('prev')
     hbox.add(prev)
@@ -129,8 +129,8 @@ export function make_music_player(surface: SurfaceContext):View {
     middle_layer.add(source_list)
     //
     // middle_layer.add(make_song_list(surface))
-    // root.add(make_statusbar());
-    // root.add(middle_layer)
+    root.add(middle_layer)
+    root.add(make_statusbar());
 
     root.set_hflex(true)
     root.set_vflex(true)

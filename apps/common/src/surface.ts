@@ -338,10 +338,9 @@ export class ClogwenchWindowSurface implements SurfaceContext {
     draw_view(view) {
         // this.log("drawing view", view.name(), view.position(), view.size())
         let pos = view.position()
+        this.translate(pos)
         if (view.visible()) {
-            this.translate(pos)
             view.draw(this);
-            this.untranslate(pos)
         }
         if (view.is_parent_view && view.is_parent_view() && view.visible()) {
             let parent = view as unknown as ParentView;
@@ -349,6 +348,7 @@ export class ClogwenchWindowSurface implements SurfaceContext {
                 this.draw_view(ch);
             })
         }
+        this.untranslate(pos)
     }
 
     log(...args) {
