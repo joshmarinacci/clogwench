@@ -1,5 +1,19 @@
-import {KeyboardInputService, MouseInputService, Point, Rect, Size, Sprite, SurfaceContext, View, ParentView} from "thneed-gfx";
+import {
+    KeyboardInputService,
+    MouseInputService,
+    Point,
+    Rect,
+    Size,
+    Sprite,
+    SurfaceContext,
+    View,
+    ParentView,
+    CanvasFont,
+} from "thneed-gfx";
 import {Window} from "./app";
+// @ts-ignore
+import basefont_data from "./base_font.json";
+import {SpriteGlyph, StandardTextHeight} from "../../../../thneed-gfx/src";
 
 export const RED = {r: 0, g: 0, b: 255, a: 255}
 const WHITE = {r:255, g:255, b:255, a:255}
@@ -7,12 +21,144 @@ const BLACK = {r:0, g:0, b:0, a:255}
 const GREEN = {r:0, g:255, b:0, a:255}
 const BLUE = {r:255, g:0, b:0, a:255}
 
+export class BufferImage {
+    width: number;
+    height: number;
+    buffer_data: number[];
+
+    constructor(w:number, h:number) {
+        this.width = w
+        this.height = h
+        this.buffer_data = []
+        for(let i=0; i<this.width*this.height; i++) {
+            this.buffer_data[i*4+0] = 255
+            this.buffer_data[i*4+1] = 255
+            this.buffer_data[i*4+2] = 0
+            this.buffer_data[i*4+3] = 255
+        }
+    }
+    set_pixel(x:number, y:number, color:any) {
+        let n = (y*this.width+x)
+        this.buffer_data[n*4 + 0] = color.a
+        this.buffer_data[n*4 + 1] = color.r
+        this.buffer_data[n*4 + 2] = color.g
+        this.buffer_data[n*4 + 3] = color.b
+    }
+}
+export class BufferFont {
+    private data: any;
+    private metas:Map<number,SpriteGlyph>
+    private scale = 2;
+    constructor(data) {
+        this.data = data
+        this.metas = new Map()
+        this.data.glyphs.forEach(gl => {
+            this.generate_image(gl)
+            this.metas.set(gl.meta.codepoint,gl)
+        })
+    }
+    measureText(text) {
+        let xoff = 0
+        let h = 0
+        for(let i=0; i<text.length; i++) {
+            let cp = text.codePointAt(i)
+            if(this.metas.has(cp)) {
+                let glyph = this.metas.get(cp)
+                let sw = glyph.w - glyph.meta.left - glyph.meta.right
+                xoff += sw + 1
+                h = Math.max(h,glyph.h)
+            } else {
+                xoff += 10
+                h = Math.max(h,10)
+            }
+        }
+        return new Size(xoff*this.scale,h*this.scale)
+    }
+
+    fillText(win: Window, text: string, x: number, y: number, scale?: number) {
+        if(!scale) scale = 1
+        // ctx.fillStyle = 'red'
+        let size = this.measureText(text)
+        let xoff = 0
+        let yoff = 2
+        // ctx.fillRect(x+xoff, y+yoff, size.w, size.h)
+        for (let i = 0; i < text.length; i++) {
+            let cp = text.codePointAt(i)
+            let dx = x + xoff*this.scale*scale
+            if (this.metas.has(cp)) {
+                let glyph = this.metas.get(cp)
+                // ctx.imageSmoothingEnabled = false
+                //@ts-ignore
+                // let img = glyph.img
+                // console.log(glyph)
+                let sx = glyph.meta.left
+                let sy = 0
+                let sw = glyph.w - glyph.meta.left - glyph.meta.right
+                let sh = glyph.h //- glyph.meta.baseline
+                let dy = y + (yoff+glyph.meta.baseline-1)*this.scale*scale
+                let dw = sw*this.scale*scale
+                let dh = sh*this.scale*scale
+                // @ts-ignore
+                // console.log("bf: ", glyph.img)
+                // win.draw_rect(new Rect(dx,dy,dw,dh),BLACK)
+                win.draw_image(new Rect(dx,dy,dw,dh), glyph.img)
+                // ctx.drawImage(img, sx,sy,sw,sh, dx,dy, dw,dh)
+                xoff += sw + 1
+            } else {
+                //missing the glyph
+                let ew = 8
+                let dy = y + (yoff)*this.scale*scale
+                // ctx.strokeRect(dx,dy,ew*this.scale*scale,ew*this.scale*scale)
+                xoff += ew + 1
+
+            }
+        }
+    }
+
+    draw_glpyh(ctx:CanvasRenderingContext2D, cp:number, x:number, y:number, scale?:number) {
+        let xoff = 0
+        let yoff = 2
+        if(this.metas.has(cp)) {
+            let glyph = this.metas.get(cp)
+            ctx.imageSmoothingEnabled = false
+            //@ts-ignore
+            let img = glyph.img
+            let sx = glyph.meta.left
+            let sy = 0
+            let sw = glyph.w - glyph.meta.left - glyph.meta.right
+            let sh = glyph.h //- glyph.meta.baseline
+            let dx = x + xoff*this.scale*scale
+            let dy = y + (yoff+glyph.meta.baseline-1)*this.scale*scale
+            let dw = sw*this.scale*scale
+            let dh = sh*this.scale*scale
+            ctx.drawImage(img, sx,sy,sw,sh, dx,dy, dw,dh)
+        }
+    }
+
+    private generate_image(gl) {
+        gl.img = new BufferImage(gl.w,gl.h)
+        // c.fillRect(0,0,gl.img.width,gl.img.height)
+        for (let j = 0; j < gl.h; j++) {
+            for (let i = 0; i < gl.w; i++) {
+                let n = j * gl.w + i;
+                let v = gl.data[n];
+                if(v %2 === 0) {
+                    gl.img.set_pixel(i,j,WHITE)
+                }
+                if(v%2 === 1) {
+                    gl.img.set_pixel(i,j,BLACK)
+                }
+            }
+        }
+    }
+}
 export class ClogwenchWindowSurface implements SurfaceContext {
     private win: Window
     private mouse: MouseInputService
     private keyboard: KeyboardInputService
     private _root: View
     private translation: Point;
+    private font: BufferFont;
 
     constructor(win) {
         this.win = win
@@ -29,6 +175,9 @@ export class ClogwenchWindowSurface implements SurfaceContext {
             let position = new Point(e.x, e.y)
             this.mouse.trigger_mouse_up(position, 0)
         })
+        let name = 'base'
+        let fnt = basefont_data.fonts.find(ft => ft.name === name)
+        this.font = new BufferFont(fnt)
     }
 
     size(): Size {
@@ -121,10 +270,8 @@ export class ClogwenchWindowSurface implements SurfaceContext {
         }
     }
 
-    // measureText(caption: string, font_name?:string):Size;
     measureText(caption, font_name) {
-        // this.log("measuring text:", caption, ',', font_name)
-        return new Size(caption.length*12, 12)
+        return this.font.measureText(caption)
     }
 
     fillBackgroundSize(size:Size, color:string) {
@@ -139,14 +286,11 @@ export class ClogwenchWindowSurface implements SurfaceContext {
         // this.log('stroking bg ', size, color)
     }
 
-    fillText(caption, pt, color) {
+    fillText(caption, ptx, color) {
         let c = this.hexstring_to_color(color)
-        this.log("filling text",caption,pt,c)
-        for(let i=0; i<caption.length; i++) {
-            let rect = new Rect(i*12,1,10,10)
-            rect.add_position(this.translation)
-            this.win.draw_rect(rect,c)
-        }
+        this.log("filling text",caption,ptx,c)
+        let pt = ptx.add(this.translation)
+        this.font.fillText(this.win, caption,pt.x,pt.y-StandardTextHeight)
     }
 
 

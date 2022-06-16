@@ -1,5 +1,6 @@
 import {Socket} from "net";
 import {Rect} from "thneed-gfx";
+import {BufferImage} from "./surface";
 
 const STD_PORT = 3333
 
@@ -96,6 +97,22 @@ export class Window {
                 window_id: this.window_id,
                 rect: rect,
                 color: color,
+            }
+        })
+    }
+    draw_image(rect:Rect, img:BufferImage):void {
+        this.app.send({
+            DrawImageCommand: {
+                app_id: this.app_id,
+                window_id: this.window_id,
+                rect: rect,
+                buffer:{
+                    layout:{"ARGB":[]},
+                    id:"31586440-53ac-4a47-83dd-54c88e857fa5",
+                    width:img.width,
+                    height:img.height,
+                    data:img.buffer_data,
+                },
             }
         })
     }
