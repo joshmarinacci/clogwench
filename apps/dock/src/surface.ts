@@ -22,6 +22,7 @@ const BLACK = {r:0, g:0, b:0, a:255}
 const GREEN = {r:0, g:255, b:0, a:255}
 const BLUE = {r:255, g:0, b:0, a:255}
 
+console.log("surface loaded font",basefont_data)
 export class BufferImage {
     width: number;
     height: number;
@@ -77,6 +78,7 @@ export class BufferFont {
     }
 
     fillText(win: Window, text: string, x: number, y: number, scale?: number) {
+        this.log("filling text",text)
         if(!scale) scale = 1
         // ctx.fillStyle = 'red'
         let size = this.measureText(text)
@@ -116,14 +118,19 @@ export class BufferFont {
         }
     }
 
-    draw_glpyh(ctx:CanvasRenderingContext2D, cp:number, x:number, y:number, scale?:number) {
+    draw_glpyh(win:Window, cp:number, x:number, y:number, scale?:number) {
+        if(!scale) scale = 1
+        this.log("draw_glyph",cp)
         let xoff = 0
         let yoff = 2
         if(this.metas.has(cp)) {
+            // this.log("have glyph",cp)
             let glyph = this.metas.get(cp)
-            ctx.imageSmoothingEnabled = false
+            // this.log(glyph)
+            // this.log(xoff, x, this.scale, scale)
+            // ctx.imageSmoothingEnabled = false
             //@ts-ignore
-            let img = glyph.img
+            // let img = glyph.img
             let sx = glyph.meta.left
             let sy = 0
             let sw = glyph.w - glyph.meta.left - glyph.meta.right
@@ -132,11 +139,16 @@ export class BufferFont {
             let dy = y + (yoff+glyph.meta.baseline-1)*this.scale*scale
             let dw = sw*this.scale*scale
             let dh = sh*this.scale*scale
-            ctx.drawImage(img, sx,sy,sw,sh, dx,dy, dw,dh)
+            // @ts-ignore
+            win.draw_image(new Rect(dx,dy,dw,dh), glyph.img)
+            // ctx.drawImage(img, sx,sy,sw,sh, dx,dy, dw,dh)
+        } else {
+            this.log("missing glyph",cp)
         }
     }
 
     private generate_image(gl) {
+        this.log("generate image")
         gl.img = new BufferImage(gl.w,gl.h)
         // c.fillRect(0,0,gl.img.width,gl.img.height)
         for (let j = 0; j < gl.h; j++) {
@@ -151,6 +163,10 @@ export class BufferFont {
                 }
             }
         }
+    }
+
+    private log(...args) {
+        console.log("BufferFont:", ...args)
     }
 }
 export class ClogwenchWindowSurface implements SurfaceContext {
@@ -216,7 +232,9 @@ export class ClogwenchWindowSurface implements SurfaceContext {
     }
 
     draw_glyph(codepoint: number, x: number, y: number, font_name: string, fill: string, scale?: number) {
-        throw new Error("Method not implemented.");
+        let ptx = new Point(x,y)
+        let pt = ptx.add(this.translation)
+        this.font.draw_glpyh(this.win, codepoint, pt.x, pt.y)
     }
 
     set_sprite_scale(scale: number) {
@@ -268,7 +286,7 @@ export class ClogwenchWindowSurface implements SurfaceContext {
     }
 
     repaint() {
-        // console.log("repainting")
+        console.log("repainting")
         this.layout_stack();
         this.clear()
         this.draw_stack()

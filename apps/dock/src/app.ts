@@ -48,7 +48,7 @@ export class App {
                 res(msg)
             }
         })
-        this.client.write(JSON.stringify(obj))
+        this.send(obj)
         return prom
     }
 
@@ -71,6 +71,11 @@ export class App {
             process.exit(0)
         })
     }
+}
+
+function is_rect_valid(rect: Rect) {
+    if(Number.isNaN(rect.x)) return false
+    return true
 }
 
 export class Window {
@@ -103,6 +108,11 @@ export class Window {
         })
     }
     draw_image(rect:Rect, img:BufferImage):void {
+        // console.log("window.draw_image",rect)
+        if(!is_rect_valid(rect)) {
+            console.error("invalid rect. cannot send",rect)
+            throw new Error("invalid rect. cannot send")
+        }
         this.app.send({
             DrawImageCommand: {
                 app_id: this.app_id,

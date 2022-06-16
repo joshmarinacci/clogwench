@@ -246,6 +246,10 @@ impl GFXBuffer {
         return color.as_layout(&layout);
     }
     pub fn set_pixel_vec_argb(&mut self, x:i32, y:i32, v:&Vec<u8>) {
+        if( x < 0 || y < 0) {
+            println!("set error. pixel {},{} out of bounds {}x{}",x,y,self.width,self.height);
+            return;
+        }
         if x >= self.width as i32 || y >= self.height as i32 {
             println!("set error. pixel {},{} out of bounds {}x{}",x,y,self.width,self.height);
             return;

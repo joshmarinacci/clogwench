@@ -31,6 +31,8 @@
       <excludeFolder url="file://$MODULE_DIR$/apps/digital-clock/target" />
       <excludeFolder url="file://$MODULE_DIR$/apps/dock/.parcel-cache" />
       <excludeFolder url="file://$MODULE_DIR$/apps/dock/dist" />
+      <excludeFolder url="file://$MODULE_DIR$/apps/musicplayer/.parcel-cache" />
+      <excludeFolder url="file://$MODULE_DIR$/apps/musicplayer/dist" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
