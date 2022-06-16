@@ -13,6 +13,7 @@ pub enum KeyCode {
     ARROW_DOWN,
     SPACE,
     ENTER,
+    LETTER_A,
     LETTER_P,
     LETTER_Q,
 

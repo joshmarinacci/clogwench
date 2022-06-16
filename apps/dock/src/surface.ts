@@ -8,7 +8,7 @@ import {
     SurfaceContext,
     View,
     ParentView,
-    CanvasFont,
+    Modifiers,
 } from "thneed-gfx";
 import {Window} from "./app";
 // @ts-ignore
@@ -16,6 +16,7 @@ import basefont_data from "./base_font.json";
 import {SpriteGlyph, StandardTextHeight} from "../../../../thneed-gfx/src";
 
 export const RED = {r: 0, g: 0, b: 255, a: 255}
+export const MAGENTA = {r:255, g:0, b:255, a:255}
 const WHITE = {r:255, g:255, b:255, a:255}
 const BLACK = {r:0, g:0, b:0, a:255}
 const GREEN = {r:0, g:255, b:0, a:255}
@@ -159,6 +160,7 @@ export class ClogwenchWindowSurface implements SurfaceContext {
     private _root: View
     private translation: Point;
     private font: BufferFont;
+    private _keyboard_focus: View;
 
     constructor(win) {
         this.win = win
@@ -175,6 +177,20 @@ export class ClogwenchWindowSurface implements SurfaceContext {
             let position = new Point(e.x, e.y)
             this.mouse.trigger_mouse_up(position, 0)
         })
+        this.win.on('keydown',async (e) => {
+            console.log("got a keyboard event",e)
+            let mod:Modifiers = {
+                alt: false, ctrl: false, meta: false, shift: false
+            }
+            //ArrowRight
+            if(e.key === 'ARROW_RIGHT') e.code = 'ArrowRight'
+            if(e.key === 'ARROW_LEFT') e.code = 'ArrowLeft'
+            if(e.key === 'LETTER_A') {
+                e.code = 'KeyA'
+                e.key = 'a'
+            }
+            this.keyboard.trigger_key_down(e.key,e.code, mod)
+        })
         let name = 'base'
         let fnt = basefont_data.fonts.find(ft => ft.name === name)
         this.font = new BufferFont(fnt)
@@ -185,7 +201,10 @@ export class ClogwenchWindowSurface implements SurfaceContext {
     }
 
     fill(rect: Rect, color: string) {
-        throw new Error("Method not implemented.");
+        let c = RED
+        if(color.startsWith('#')) c = this.hexstring_to_color(color)
+        rect.add_position(this.translation)
+        this.win.draw_rect(rect,c)
     }
 
     stroke(rect: Rect, color: string) {
@@ -213,15 +232,15 @@ export class ClogwenchWindowSurface implements SurfaceContext {
     }
 
     keyboard_focus(): View {
-        throw new Error("Method not implemented.");
+        return this._keyboard_focus
     }
 
     set_keyboard_focus(view: View) {
-        throw new Error("Method not implemented.");
+        this._keyboard_focus = view
     }
 
     is_keyboard_focus(view: View) {
-        throw new Error("Method not implemented.");
+        return this._keyboard_focus === view && this._keyboard_focus
     }
 
     release_keyboard_focus(view: View) {
@@ -288,7 +307,7 @@ export class ClogwenchWindowSurface implements SurfaceContext {
 
     fillText(caption, ptx, color) {
         let c = this.hexstring_to_color(color)
-        this.log("filling text",caption,ptx,c)
+        // this.log("filling text",caption,ptx,c)
         let pt = ptx.add(this.translation)
         this.font.fillText(this.win, caption,pt.x,pt.y-StandardTextHeight)
     }
@@ -299,7 +318,7 @@ export class ClogwenchWindowSurface implements SurfaceContext {
     }
 
     draw_view(view) {
-        this.log("drawing view", view.name(), view.position(), view.size())
+        // this.log("drawing view", view.name(), view.position(), view.size())
         let pos = view.position()
         if (view.visible()) {
             this.translate(pos)
@@ -319,6 +338,8 @@ export class ClogwenchWindowSurface implements SurfaceContext {
     }
 
     private hexstring_to_color(color: string) {
+        if(!color) return MAGENTA
+        if(color.length !== 7) return MAGENTA
         let r  = Number.parseInt(color.substring(1,3),16)
         let g = Number.parseInt(color.substring(3,5),16)
         let b = Number.parseInt(color.substring(5,7),16)

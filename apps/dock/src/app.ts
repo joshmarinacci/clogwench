@@ -33,7 +33,9 @@ export class App {
     }
 
     send(obj) {
-        this.client.write(JSON.stringify(obj))
+        let str = JSON.stringify(obj)
+        // console.log('sending',str)
+        this.client.write(str)
     }
 
     async send_and_wait(obj) {
@@ -90,7 +92,7 @@ export class Window {
 
 
     draw_rect(rect, color) {
-        // console.log("sending",rect,color)
+        // console.log("window.draw_rect",rect,color)
         this.app.send({
             DrawRectCommand: {
                 app_id: this.app_id,
@@ -126,6 +128,7 @@ export class Window {
         console.log("window got event", obj)
         if (obj.MouseDown) this.fire('mousedown', obj.MouseDown)
         if (obj.MouseUp) this.fire('mouseup', obj.MouseUp)
+        if (obj.KeyDown) this.fire('keydown',obj.KeyDown)
     }
 
     fire(type, obj) {

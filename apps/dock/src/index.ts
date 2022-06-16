@@ -1,6 +1,7 @@
-import {ActionButton, COMMAND_ACTION, LayerView, Rect,
+import {
+    ActionButton, COMMAND_ACTION, LayerView, Rect,
     VBox,
-    Label,
+    Label, TextLine,
 } from "thneed-gfx";
 import {App} from "./app";
 import {ClogwenchWindowSurface} from "./surface";
@@ -22,6 +23,10 @@ function start(surface: ClogwenchWindowSurface) {
     let button2 = new ActionButton()
     button2.set_caption('barbutton')
     vbox.add(button2)
+
+    let text = new TextLine()
+    text.set_text('some text')
+    vbox.add(text)
 
     let root = new LayerView('root-layer')
     root.add(vbox)
