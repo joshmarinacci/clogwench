@@ -9,7 +9,9 @@ export class App {
     private windows: Map<any, any>;
 
     constructor() {
+        console.log("Making a socket")
         this.client = new Socket()
+        console.log("made it")
         this.windows = new Map()
     }
 
@@ -68,7 +70,7 @@ export class App {
         console.log("disconnecting the app")
         this.client.end(() => {
             console.log("done ending")
-            process.exit(0)
+            // process.exit(0)
         })
     }
 }

@@ -12,7 +12,7 @@ import {
 } from "thneed-gfx";
 import {Window} from "./app";
 // @ts-ignore
-import basefont_data from "./base_font.json";
+import basefont_data from "../../dock/src/base_font.json";
 import {SpriteGlyph, StandardTextHeight} from "../../../../thneed-gfx/src";
 
 export const RED = {r: 0, g: 0, b: 255, a: 255}

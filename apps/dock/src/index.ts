@@ -3,8 +3,8 @@ import {
     VBox,
     Label, TextLine,
 } from "thneed-gfx";
-import {App} from "./app";
-import {ClogwenchWindowSurface} from "./surface";
+import {App} from "../../common/src/app";
+import {ClogwenchWindowSurface} from "../../common/src/surface";
 
 
 function start(surface: ClogwenchWindowSurface) {

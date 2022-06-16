@@ -1,0 +1,16 @@
+{
+  "name": "thneed-idealos-common",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "npm run clean && npx parcel build src/index.ts",
+    "clean": "rm -rf dist .parcel-cache",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "thneed-gfx": "0.1.26"
+  },
+  "author": "",
+  "license": "ISC"
+}

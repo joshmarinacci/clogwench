@@ -1,11 +1,7 @@
 import {
     ActionButton,
-    COMMAND_ACTION,
-    LayerView,
-    Rect,
     VBox,
     Label,
-    TextLine,
     View,
     SurfaceContext,
     HBox,
@@ -17,8 +13,6 @@ import {
     randi,
     TableView, BaseView, Size,
 } from "thneed-gfx";
-import {App} from "../../dock/src/app";
-import {ClogwenchWindowSurface} from "../../dock/src/surface";
 
 
 function make_statusbar() {
@@ -105,10 +99,10 @@ function make_toolbar(surface: SurfaceContext) {
     prev.set_caption('prev')
     hbox.add(prev)
     let play = new ActionButton()
-    play.set_caption('prev')
+    play.set_caption('play')
     hbox.add(play)
     let next = new ActionButton()
-    next.set_caption('prev')
+    next.set_caption('next')
     hbox.add(next)
 
     hbox.add(new HSpacer())
@@ -116,7 +110,7 @@ function make_toolbar(surface: SurfaceContext) {
     return hbox
 }
 
-function make_music_player(surface: SurfaceContext):View {
+export function make_music_player(surface: SurfaceContext):View {
     let root = new VBox()
     root.set_name('root')
     root.add(make_toolbar(surface))
@@ -143,20 +137,3 @@ function make_music_player(surface: SurfaceContext):View {
     return root
 }
 
-function start(surface: ClogwenchWindowSurface) {
-    let music_root:View = make_music_player(surface) as View;
-    surface.set_root(music_root)
-    surface.start()
-    surface.repaint()
-}
-
-async function doit() {
-    let app = new App()
-    await app.connect()
-    await app.send_and_wait({AppConnect: {HelloApp: {}}})
-    let win = await app.open_window(new Rect(50, 50, 600, 300))
-    let surface = new ClogwenchWindowSurface(win);
-    start(surface)
-}
-
-doit().then(() => console.log("fully started")).catch((e) => console.error(e))
