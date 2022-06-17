@@ -426,10 +426,11 @@ impl InputGesture for WindowDragGesture {
     fn mouse_up(&mut self, evt: MouseUpEvent, state:&mut WindowManagerState) {
         // info!("WDG completed");
         let curr = Point::init(evt.x,evt.y);
+        let diff = self.mouse_start.subtract(&self.win_start);
+        let new_pos = curr.subtract(&diff);
         // info!("new window position is {} to {:?}",self.winid,curr);
         if let Some(win) = state.lookup_window(self.winid) {
-            win.position.x = curr.x;
-            win.position.y = curr.y;
+            win.position.copy_from(&new_pos);
         }
     }
 }
