@@ -108,7 +108,7 @@ impl GFXBuffer {
         sub
     }
     pub fn fill_rect_with_image(&mut self, rect: &Rect, buf: &GFXBuffer) {
-        // info!("filling rect with image {:?}",rect);
+        // println!("filling rect with image {:?} {}x{}",rect, buf.width, buf.height);
         for j in rect.y .. rect.y + rect.h {
             for i in rect.x .. rect.x + rect.w {
                 let v = buf.get_pixel_vec_argb(

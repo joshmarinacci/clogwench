@@ -18,7 +18,7 @@ import {
 function make_statusbar() {
     let status_bar = new HBox()
     status_bar.set_name('statusbar')
-    status_bar.set_fill('#aaa')
+    status_bar.set_fill('#aaaaaa')
     status_bar.set_vflex(false)
     status_bar.set_hflex(true)
     status_bar.add(new Label("cool status bar"))
@@ -75,7 +75,7 @@ class LCDView extends BaseView {
         this._name = 'lcd-view'
     }
     draw(g: SurfaceContext): void {
-        g.fillBackgroundSize(this.size(),'#ccc')
+        g.fillBackgroundSize(this.size(),'#cccccc')
         let text = 'LCD View'
         let size = g.measureText(text,'base')
         let x = (this.size().w - size.w)/2

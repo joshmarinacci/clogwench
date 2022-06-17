@@ -80,6 +80,9 @@ function is_rect_valid(rect: Rect) {
     return true
 }
 
+function floor_rect(rect:Rect):Rect {
+    return new Rect(Math.floor(rect.x),Math.floor(rect.y),Math.floor(rect.w),Math.floor(rect.h))
+}
 export class Window {
     window_id: string;
     bounds: Rect;
@@ -98,13 +101,13 @@ export class Window {
     }
 
 
-    draw_rect(rect, color) {
+    draw_rect(rect:Rect, color) {
         // console.log("window.draw_rect",rect,color)
         this.app.send({
             DrawRectCommand: {
                 app_id: this.app_id,
                 window_id: this.window_id,
-                rect: rect,
+                rect: floor_rect(rect),
                 color: color,
             }
         })
@@ -119,7 +122,7 @@ export class Window {
             DrawImageCommand: {
                 app_id: this.app_id,
                 window_id: this.window_id,
-                rect: rect,
+                rect: floor_rect(rect),
                 buffer:{
                     layout:{"ARGB":[]},
                     id:"31586440-53ac-4a47-83dd-54c88e857fa5",

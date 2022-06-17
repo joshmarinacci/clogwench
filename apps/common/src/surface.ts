@@ -21,6 +21,7 @@ const WHITE = {r:255, g:255, b:255, a:255}
 const BLACK = {r:0, g:0, b:0, a:255}
 const GREEN = {r:0, g:255, b:0, a:255}
 const BLUE = {r:255, g:0, b:0, a:255}
+const TRANSPARENT = {r:255, g:0, b:255, a:0}
 
 console.log("surface loaded font",basefont_data)
 export class BufferImage {
@@ -40,6 +41,10 @@ export class BufferImage {
         }
     }
     set_pixel(x:number, y:number, color:any) {
+        if(x < 0) return
+        if(y < 0) return
+        if(x >= this.width) return
+        if(y >= this.height) return
         let n = (y*this.width+x)
         this.buffer_data[n*4 + 0] = color.a
         this.buffer_data[n*4 + 1] = color.r
@@ -50,7 +55,7 @@ export class BufferImage {
 export class BufferFont {
     private data: any;
     private metas:Map<number,SpriteGlyph>
-    private scale = 2;
+    private scale = 1;
     constructor(data) {
         this.data = data
         this.metas = new Map()
@@ -111,6 +116,7 @@ export class BufferFont {
                 //missing the glyph
                 let ew = 8
                 let dy = y + (yoff)*this.scale*scale
+                win.draw_rect(new Rect(dx,dy,8,8),BLACK)
                 // ctx.strokeRect(dx,dy,ew*this.scale*scale,ew*this.scale*scale)
                 xoff += ew + 1
 
@@ -149,17 +155,18 @@ export class BufferFont {
 
     private generate_image(gl) {
         this.log("generate image")
-        gl.img = new BufferImage(gl.w,gl.h)
+        let w = gl.w-gl.meta.left-gl.meta.right
+        gl.img = new BufferImage(w,gl.h)
         // c.fillRect(0,0,gl.img.width,gl.img.height)
         for (let j = 0; j < gl.h; j++) {
             for (let i = 0; i < gl.w; i++) {
                 let n = j * gl.w + i;
                 let v = gl.data[n];
                 if(v %2 === 0) {
-                    gl.img.set_pixel(i,j,WHITE)
+                    gl.img.set_pixel(i-gl.meta.left,j,TRANSPARENT)
                 }
                 if(v%2 === 1) {
-                    gl.img.set_pixel(i,j,BLACK)
+                    gl.img.set_pixel(i-gl.meta.left,j,BLACK)
                 }
             }
         }
@@ -357,7 +364,10 @@ export class ClogwenchWindowSurface implements SurfaceContext {
 
     private hexstring_to_color(color: string) {
         if(!color) return MAGENTA
-        if(color.length !== 7) return MAGENTA
+        if(color.length !== 7) {
+            console.warn(`bad color ${color}`)
+            return MAGENTA
+        }
         let r  = Number.parseInt(color.substring(1,3),16)
         let g = Number.parseInt(color.substring(3,5),16)
         let b = Number.parseInt(color.substring(5,7),16)
