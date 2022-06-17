@@ -244,14 +244,20 @@ export class ClogwenchWindowSurface implements SurfaceContext {
     }
 
     fill(rect: Rect, color: string) {
-        let c = RED
-        if(color.startsWith('#')) c = this.hexstring_to_color(color)
+        let c = this.hexstring_to_color(color)
+        rect = rect.clone()
         rect.add_position(this.translation)
         this.win.draw_rect(rect,c)
     }
 
     stroke(rect: Rect, color: string) {
-        throw new Error("Method not implemented.");
+        let c = this.hexstring_to_color(color)
+        let r2 = rect.clone()
+        r2.add_position(this.translation)
+        this.win.draw_rect(new Rect(r2.x,r2.y,r2.w,1),c)
+        this.win.draw_rect(new Rect(r2.x,r2.y+r2.h-1,r2.w,1),c)
+        this.win.draw_rect(new Rect(r2.x,r2.y,1,r2.h),c)
+        this.win.draw_rect(new Rect(r2.x+r2.w-1,r2.y,1,r2.h),c)
     }
 
     fillStandardText(caption: string, x: number, y: number, font_name?: string, scale?: number) {
@@ -349,7 +355,13 @@ export class ClogwenchWindowSurface implements SurfaceContext {
     }
 
     strokeBackgroundSize(size, color) {
-        // this.log('stroking bg ', size, color)
+        let c = this.hexstring_to_color(color)
+        let rect = new Rect(0,0,size.w,size.h)
+        rect.add_position(this.translation)
+        this.win.draw_rect(new Rect(rect.x,rect.y,rect.w,1),c)
+        this.win.draw_rect(new Rect(rect.x,rect.y+rect.h-1,rect.w,1),c)
+        this.win.draw_rect(new Rect(rect.x,rect.y,1,rect.h),c)
+        this.win.draw_rect(new Rect(rect.x+rect.w-1,rect.y,1,rect.h),c)
     }
 
     fillText(caption, ptx, color) {
@@ -384,7 +396,7 @@ export class ClogwenchWindowSurface implements SurfaceContext {
         console.log(...args)
     }
 
-    private hexstring_to_color(color: string) {
+    private hexstring_to_color(color: string):Color {
         if(!color) return MAGENTA
         if(color.length !== 7) {
             console.warn(`bad color ${color}`)
