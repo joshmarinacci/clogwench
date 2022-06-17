@@ -93,7 +93,7 @@ impl CentralState {
                 }
                 match APICommand::deserialize(&mut de) {
                     Ok(cmd) => {
-                        info!("central received command {:?}",cmd);
+                        // info!("central received command {:?}",cmd);
                         let im = IncomingMessage { source: appid, command:cmd, };
                         if let Err(e) = sender.send(im) {
                             error!("error sending command {}",e);
@@ -193,7 +193,7 @@ impl CentralState {
         }
     }
     fn send_to_wm(&mut self, id:Uuid, resp: APICommand) {
-        info!("sending to wm {:?}",resp);
+        // info!("sending to wm {:?}",resp);
         let im = IncomingMessage {
             source: Default::default(),
             command: resp,
@@ -203,7 +203,7 @@ impl CentralState {
         wm.stream.write_all(data.as_ref()).expect("failed to send data to wm");
     }
     fn send_to_all_wm(&mut self, resp: APICommand) {
-        info!("CENTRAL: sending to all wm {:?}",resp);
+        // info!("CENTRAL: sending to all wm {:?}",resp);
         let im = IncomingMessage {
             source: Default::default(),
             command: resp,
@@ -265,7 +265,7 @@ fn start_router(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, state: Arc
     thread::spawn(move||{
         info!("router thread starting");
         for msg in rx {
-            info!("incoming message {:?}",msg);
+            // info!("incoming message {:?}",msg);
             match msg.command {
                 APICommand::Debug(DebugMessage::HelloDebugger) => {
                     let resp = DebugMessage::HelloDebuggerResponse;

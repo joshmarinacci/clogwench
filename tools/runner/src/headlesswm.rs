@@ -88,7 +88,7 @@ impl HeadlessWindowManager {
                         info!("reading from rx_in");
                         loop {
                             for cmd in rx_in.try_iter() {
-                                info!("received message {:?}", cmd);
+                                // info!("received message {:?}", cmd);
                                 match cmd.command {
                                     APICommand::WMConnectResponse(res) => {
                                         // info!("got response for connecting");
@@ -106,6 +106,12 @@ impl HeadlessWindowManager {
                                             buf.draw_image(&win.position, &win.backbuffer.bounds(), &win.backbuffer);
                                         }
                                     },
+                                    APICommand::DrawImageCommand(di) => {
+                                        if let Some(mut win) = state.lookup_window(di.window_id) {
+                                            win.backbuffer.fill_rect_with_image(&di.rect, &di.buffer);
+                                            buf.draw_image(&win.position, &win.backbuffer.bounds(), &win.backbuffer);
+                                        }
+                                    }
                                     APICommand::MouseDown(evt) => {
                                         // info!("pretending to process a mouse down. lets see what becomes focused?");
                                         let point = Point::init(evt.x, evt.y);

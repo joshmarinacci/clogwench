@@ -237,7 +237,7 @@ pub fn start_wm_network_connection(stop: Arc<AtomicBool>, sender: Sender<Incomin
             //     command: APICommand::WMConnect(HelloWindowManager {})
             // };
             let im = IncomingMessage { source: Default::default(), command: APICommand::WMConnect(HelloWindowManager {})};
-            println!("sending out message {:?}",im);
+            // println!("sending out message {:?}",im);
             match serde_json::to_string(&im) {
                 Ok(data) => {
                     // println!("sending data {:?}", data);
@@ -255,7 +255,7 @@ pub fn start_wm_network_connection(stop: Arc<AtomicBool>, sender: Sender<Incomin
             let mut de = serde_json::Deserializer::from_reader(&master_stream);
             match IncomingMessage::deserialize(&mut de) {
                 Ok(cmd) => {
-                    info!("received command {:?}", cmd);
+                    // info!("received command {:?}", cmd);
                     if let APICommand::WMConnectResponse(res) = cmd.command {
                         info!("got response back from the server {:?}",res);
                         // res.wm_id
@@ -310,15 +310,15 @@ pub fn start_wm_network_connection(stop: Arc<AtomicBool>, sender: Sender<Incomin
                         if stop.load(Ordering::Relaxed) == true {
                             break;
                         }
-                        info!("got a message to send back out {:?}",out);
+                        // info!("got a message to send back out {:?}",out);
                         let im = IncomingMessage {
                             source: Default::default(),
                             command: out.command
                         };
-                        println!("sending out message {:?}",im);
+                        // println!("sending out message {:?}",im);
                         match serde_json::to_string(&im) {
                             Ok(data) => {
-                                println!("sending data {:?}", data);
+                                // println!("sending data {:?}", data);
                                 if let Err(e) = stream.write_all(data.as_ref()) {
                                     error!("error sending data back to server {}",e);
                                     break;

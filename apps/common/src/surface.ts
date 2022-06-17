@@ -15,13 +15,20 @@ import {Window} from "./app";
 import basefont_data from "../../dock/src/base_font.json";
 import {SpriteGlyph, StandardTextHeight} from "../../../../thneed-gfx/src";
 
-export const RED = {r: 0, g: 0, b: 255, a: 255}
-export const MAGENTA = {r:255, g:0, b:255, a:255}
-const WHITE = {r:255, g:255, b:255, a:255}
-const BLACK = {r:0, g:0, b:0, a:255}
+type Color = {
+    r:number,
+    g:number,
+    b:number,
+    a:number
+}
+
+export const RED:Color = {r: 0, g: 0, b: 255, a: 255}
+export const MAGENTA:Color = {r:255, g:0, b:255, a:255}
+const WHITE:Color = {r:255, g:255, b:255, a:255}
+const BLACK:Color = {r:0, g:0, b:0, a:255}
 const GREEN = {r:0, g:255, b:0, a:255}
 const BLUE = {r:255, g:0, b:0, a:255}
-const TRANSPARENT = {r:255, g:0, b:255, a:0}
+const TRANSPARENT:Color = {r:255, g:0, b:255, a:0}
 
 console.log("surface loaded font",basefont_data)
 export class BufferImage {
@@ -40,7 +47,7 @@ export class BufferImage {
             this.buffer_data[i*4+3] = 255
         }
     }
-    set_pixel(x:number, y:number, color:any) {
+    set_pixel(x:number, y:number, color:Color) {
         if(x < 0) return
         if(y < 0) return
         if(x >= this.width) return
@@ -51,14 +58,27 @@ export class BufferImage {
         this.buffer_data[n*4 + 2] = color.g
         this.buffer_data[n*4 + 3] = color.b
     }
+
+    draw_rect(rect: Rect, color:Color):void {
+        for(let i = rect.x; i<rect.right(); i++) {
+            for(let j=rect.y; j<rect.bottom(); j++) {
+                // console.log("setting",i,j)
+                this.set_pixel(i,j,color)
+            }
+        }
+    }
+
+    draw_image(rect: Rect, img: BufferImage) {
+        this.draw_rect(rect,MAGENTA);
+    }
 }
 export class BufferFont {
     private data: any;
-    private metas:Map<number,SpriteGlyph>
+    private metas:Map<number,SpriteGlyph>;
     private scale = 1;
     constructor(data) {
         this.data = data
-        this.metas = new Map()
+        this.metas = new Map();
         this.data.glyphs.forEach(gl => {
             this.generate_image(gl)
             this.metas.set(gl.meta.codepoint,gl)
@@ -297,6 +317,8 @@ export class ClogwenchWindowSurface implements SurfaceContext {
         this.layout_stack();
         this.clear()
         this.draw_stack()
+        this.win.flush()
+        console.log("flushed")
     }
 
     clear() {
