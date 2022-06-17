@@ -10,7 +10,7 @@ use log::{error, info};
 use uuid::Uuid;
 use common::{APICommand, ARGBColor, BLACK, HelloWindowManager, IncomingMessage, Padding, Point, Rect, Size};
 use serde::{Deserialize, Serialize};
-use common::events::{MouseDownEvent, MouseMoveEvent, MouseUpEvent};
+use common::events::{MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent};
 use common::graphics::{GFXBuffer, PixelLayout};
 use common::graphics::PixelLayout::ARGB;
 
@@ -355,9 +355,9 @@ pub fn start_wm_network_connection(stop: Arc<AtomicBool>, sender: Sender<Incomin
 
 
 pub trait InputGesture {
-    fn mouse_down(&mut self, evt:MouseDownEvent, state:&mut WindowManagerState);
-    fn mouse_move(&mut self, evt:MouseMoveEvent, state:&mut WindowManagerState);
-    fn mouse_up(  &mut self, evt:MouseUpEvent, state:&mut WindowManagerState);
+    fn mouse_down(&mut self, evt:MouseDownEvent, state:&mut WindowManagerState, tx_out:&Sender<OutgoingMessage>);
+    fn mouse_move(&mut self, evt:MouseMoveEvent, state:&mut WindowManagerState, tx_out:&Sender<OutgoingMessage>);
+    fn mouse_up(  &mut self, evt:MouseUpEvent, state:&mut WindowManagerState, tx_out:&Sender<OutgoingMessage>);
 }
 
 
@@ -372,15 +372,15 @@ impl NoOpGesture {
 }
 
 impl InputGesture for NoOpGesture {
-    fn mouse_down(&mut self, evt: MouseDownEvent, state:&mut WindowManagerState) {
+    fn mouse_down(&mut self, evt: MouseDownEvent, state:&mut WindowManagerState, tx_out:&Sender<OutgoingMessage>) {
         info!("got a mouse down event {:?}",evt);
     }
 
-    fn mouse_move(&mut self, evt: MouseMoveEvent, state:&mut WindowManagerState) {
+    fn mouse_move(&mut self, evt: MouseMoveEvent, state:&mut WindowManagerState, tx_out:&Sender<OutgoingMessage>) {
         //info!("got a mouse move event {:?}",evt);
     }
 
-    fn mouse_up(&mut self, evt: MouseUpEvent, state:&mut WindowManagerState) {
+    fn mouse_up(&mut self, evt: MouseUpEvent, state:&mut WindowManagerState, tx_out:&Sender<OutgoingMessage>) {
         info!("got a mouse up event {:?}",evt);
     }
 }
@@ -402,7 +402,7 @@ impl WindowDragGesture {
 }
 
 impl InputGesture for WindowDragGesture {
-    fn mouse_down(&mut self, evt: MouseDownEvent, state:&mut WindowManagerState) {
+    fn mouse_down(&mut self, evt: MouseDownEvent, state:&mut WindowManagerState, tx_out:&Sender<OutgoingMessage>) {
         // info!("WDG: mouse down {:?}",evt);
         self.win_start = if let Some(win) = state.lookup_window(self.winid) {
             win.position.clone()
@@ -412,7 +412,7 @@ impl InputGesture for WindowDragGesture {
         self.mouse_start = Point::init(evt.x, evt.y);
     }
 
-    fn mouse_move(&mut self, evt: MouseMoveEvent, state:&mut WindowManagerState) {
+    fn mouse_move(&mut self, evt: MouseMoveEvent, state:&mut WindowManagerState, tx_out:&Sender<OutgoingMessage>) {
         // info!("WDG: mouse move {:?}",evt);
         let curr = Point::init(evt.x,evt.y);
         let diff = self.mouse_start.subtract(&self.win_start);
@@ -423,7 +423,7 @@ impl InputGesture for WindowDragGesture {
         }
     }
 
-    fn mouse_up(&mut self, evt: MouseUpEvent, state:&mut WindowManagerState) {
+    fn mouse_up(&mut self, evt: MouseUpEvent, state:&mut WindowManagerState, tx_out:&Sender<OutgoingMessage>) {
         // info!("WDG completed");
         let curr = Point::init(evt.x,evt.y);
         let diff = self.mouse_start.subtract(&self.win_start);
@@ -435,3 +435,84 @@ impl InputGesture for WindowDragGesture {
     }
 }
 
+pub struct AppMouseGesture {
+    pub winid: Uuid,
+    pub app_id: Uuid,
+}
+
+impl AppMouseGesture {
+    pub fn init(app_id:Uuid, winid: Uuid) -> AppMouseGesture {
+        AppMouseGesture {
+            winid,
+            app_id,
+        }
+    }
+}
+
+
+impl InputGesture for AppMouseGesture {
+    fn mouse_down(&mut self, evt: MouseDownEvent, state: &mut WindowManagerState, tx_out:&Sender<OutgoingMessage>) {
+        println!("Mouse down to app");
+        let point = Point::init(evt.x, evt.y);
+        if let Some(win) = state.lookup_window(self.winid) {
+            let app_point = point.subtract(&win.content_bounds().position());
+            // win.position.copy_from(&new_pos);
+            tx_out.send(OutgoingMessage {
+                recipient: self.app_id,
+                command: APICommand::MouseDown(MouseDownEvent {
+                    app_id: self.app_id,
+                    window_id: self.winid,
+                    original_timestamp: evt.original_timestamp,
+                    button: MouseButton::Primary,
+                    x: app_point.x,
+                    y: app_point.y
+                })
+            }).unwrap();
+        }
+
+    }
+
+    fn mouse_move(&mut self, evt: MouseMoveEvent, state: &mut WindowManagerState, tx_out:&Sender<OutgoingMessage>) {
+        println!("Mouse move to app");
+        let point = Point::init(evt.x, evt.y);
+        if let Some(win) = state.pick_window_at(point) {
+            info!("picked a window for mouse move");
+            let wid = win.id.clone();
+            let aid = win.owner.clone();
+            let app_point = point.subtract(&win.content_bounds().position());
+            tx_out.send(OutgoingMessage {
+                recipient: aid,
+                command: APICommand::MouseMove(MouseMoveEvent {
+                    app_id: aid,
+                    window_id: wid,
+                    original_timestamp: evt.original_timestamp,
+                    button: MouseButton::Primary,
+                    x: app_point.x,
+                    y: app_point.y
+                })
+            }).unwrap();
+        }
+    }
+
+    fn mouse_up(&mut self, evt: MouseUpEvent, state: &mut WindowManagerState, tx_out:&Sender<OutgoingMessage>) {
+        println!("Mouse up to app");
+        let point = Point::init(evt.x, evt.y);
+        if let Some(win) = state.pick_window_at(point) {
+            info!("picked a window for mouse up");
+            let wid = win.id.clone();
+            let aid = win.owner.clone();
+            let app_point = point.subtract(&win.content_bounds().position());
+            tx_out.send(OutgoingMessage {
+                recipient: aid,
+                command: APICommand::MouseUp(MouseUpEvent {
+                    app_id: aid,
+                    window_id: wid,
+                    original_timestamp: evt.original_timestamp,
+                    button: MouseButton::Primary,
+                    x: app_point.x,
+                    y: app_point.y
+                })
+            }).unwrap();
+        }
+    }
+}

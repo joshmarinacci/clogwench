@@ -215,6 +215,11 @@ export class ClogwenchWindowSurface implements SurfaceContext {
             let position = new Point(e.x, e.y)
             this.mouse.trigger_mouse_down(position, 0)
         })
+        this.win.on('mousemove', async (e) => {
+            console.log("got a mouse move event", e)
+            let position = new Point(e.x, e.y)
+            this.mouse.trigger_mouse_move(position, 0)
+        })
         this.win.on('mouseup', async (e) => {
             console.log("got a mouse up event", e)
             let position = new Point(e.x, e.y)

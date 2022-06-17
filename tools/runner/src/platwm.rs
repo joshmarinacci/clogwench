@@ -13,7 +13,7 @@ use common::{APICommand, ARGBColor, BLACK, DebugMessage, HelloWindowManager, Inc
 use common::events::{KeyCode, KeyDownEvent, MouseButton, MouseDownEvent, MouseUpEvent};
 use common::font::{FontInfo2, load_font_from_json};
 use common::graphics::{draw_test_pattern, GFXBuffer, PixelLayout};
-use common_wm::{FOCUSED_TITLEBAR_COLOR, FOCUSED_WINDOW_COLOR, InputGesture, NoOpGesture, OutgoingMessage, TITLEBAR_COLOR, WINDOW_BORDER_WIDTH, WINDOW_COLOR, WindowDragGesture, WindowManagerState};
+use common_wm::{AppMouseGesture, FOCUSED_TITLEBAR_COLOR, FOCUSED_WINDOW_COLOR, InputGesture, NoOpGesture, OutgoingMessage, TITLEBAR_COLOR, WINDOW_BORDER_WIDTH, WINDOW_COLOR, WindowDragGesture, WindowManagerState};
 use plat::{make_plat, Plat};
 
 pub struct PlatformWindowManager {
@@ -176,31 +176,12 @@ impl PlatformWindowManager {
                     }
                 },
                 APICommand::MouseUp(evt) => {
-                    self.gesture.mouse_up(evt, &mut self.state);
-                    // let point = Point::init(evt.x, evt.y);
-                    // if let Some(win) = self.state.pick_window_at(point) {
-                    //     info!("picked a window for mouse up");
-                    //     let wid = win.id.clone();
-                    //     let aid = win.owner.clone();
-                    //     let app_point = point.subtract(&win.content_bounds().position());
-                    //     self.tx_out.send(OutgoingMessage {
-                    //         recipient: aid,
-                    //         command: APICommand::MouseUp(MouseUpEvent {
-                    //             app_id: aid,
-                    //             window_id: wid,
-                    //             original_timestamp: evt.original_timestamp,
-                    //             button: MouseButton::Primary,
-                    //             x: app_point.x,
-                    //             y: app_point.y
-                    //         })
-                    //     }).unwrap();
-                    // }
-
+                    self.gesture.mouse_up(evt, &mut self.state, &self.tx_out);
                     self.gesture = Box::new(NoOpGesture::init()) as Box<dyn InputGesture>;
                 },
                 APICommand::MouseMove(evt) => {
                     self.cursor = Point::init(evt.x, evt.y);
-                    self.gesture.mouse_move(evt, &mut self.state);
+                    self.gesture.mouse_move(evt, &mut self.state, &self.tx_out);
                 }
                 APICommand::MouseDown(evt) => {
                     let point = Point::init(evt.x, evt.y);
@@ -212,20 +193,10 @@ impl PlatformWindowManager {
                         if win.titlebar_bounds().contains(&point) {
                             info!("inside the titlebar");
                             self.gesture = Box::new(WindowDragGesture::init(point,win.id));
-                            self.gesture.mouse_down(evt,&mut self.state);
+                            self.gesture.mouse_down(evt,&mut self.state, &self.tx_out);
                         } else {
-                            let app_point = point.subtract(&win.content_bounds().position());
-                            self.tx_out.send(OutgoingMessage {
-                                recipient: aid,
-                                command: APICommand::MouseDown(MouseDownEvent {
-                                    app_id: aid,
-                                    window_id: wid,
-                                    original_timestamp: evt.original_timestamp,
-                                    button: MouseButton::Primary,
-                                    x: app_point.x,
-                                    y: app_point.y
-                                })
-                            }).unwrap();
+                            self.gesture = Box::new(AppMouseGesture::init(aid,win.id));
+                            self.gesture.mouse_down(evt,&mut self.state, &self.tx_out);
                         }
                         self.state.set_focused_window(wid);
                         self.tx_out.send(OutgoingMessage {

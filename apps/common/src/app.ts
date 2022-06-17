@@ -27,6 +27,7 @@ export class App {
                 let msg = JSON.parse(str)
                 if (msg.MouseDown) return this.windows.get(msg.MouseDown.window_id).dispatch(msg)
                 if (msg.MouseUp) return this.windows.get(msg.MouseUp.window_id).dispatch(msg)
+                if (msg.MouseMove) return this.windows.get(msg.MouseMove.window_id).dispatch(msg)
                 if (msg.KeyDown) return this.windows.get(msg.KeyDown.window_id).dispatch(msg)
                 console.log("msg is", msg)
                 if (this.cb) this.cb(msg)
@@ -154,6 +155,7 @@ export class Window {
     dispatch(obj) {
         console.log("window got event", obj)
         if (obj.MouseDown) this.fire('mousedown', obj.MouseDown)
+        if (obj.MouseMove) this.fire('mousemove', obj.MouseUp)
         if (obj.MouseUp) this.fire('mouseup', obj.MouseUp)
         if (obj.KeyDown) this.fire('keydown',obj.KeyDown)
     }
