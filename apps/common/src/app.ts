@@ -1,5 +1,5 @@
 import {Socket} from "net";
-import {Rect} from "thneed-gfx";
+import {Rect, Size} from "thneed-gfx";
 import {BufferImage} from "./surface";
 
 const STD_PORT = 3333
@@ -29,6 +29,7 @@ export class App {
                 if (msg.MouseUp) return this.windows.get(msg.MouseUp.window_id).dispatch(msg)
                 if (msg.MouseMove) return this.windows.get(msg.MouseMove.window_id).dispatch(msg)
                 if (msg.KeyDown) return this.windows.get(msg.KeyDown.window_id).dispatch(msg)
+                if (msg.WindowResized) return this.windows.get(msg.WindowResized.window_id).dispatch(msg)
                 console.log("msg is", msg)
                 if (this.cb) this.cb(msg)
             })
@@ -158,6 +159,7 @@ export class Window {
         if (obj.MouseMove) this.fire('mousemove', obj.MouseUp)
         if (obj.MouseUp) this.fire('mouseup', obj.MouseUp)
         if (obj.KeyDown) this.fire('keydown',obj.KeyDown)
+        if (obj.WindowResized) this.set_size(obj.WindowResized.size)
     }
 
     fire(type, obj) {
@@ -190,5 +192,12 @@ export class Window {
                 }
             })
         }
+    }
+
+    private set_size(size: Size) {
+        this.bounds.w = size.w
+        this.bounds.h = size.h
+        this.buffer = new BufferImage(size.w,size.h)
+        this.fire('resize',this)
     }
 }

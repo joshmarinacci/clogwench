@@ -239,6 +239,7 @@ export class ClogwenchWindowSurface implements SurfaceContext {
             }
             this.keyboard.trigger_key_down(e.key,e.code, mod)
         })
+        this.win.on('resize',() => this.repaint())
         let name = 'base'
         let fnt = basefont_data.fonts.find(ft => ft.name === name)
         this.font = new BufferFont(fnt)
