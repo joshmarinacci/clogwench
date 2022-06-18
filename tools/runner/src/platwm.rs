@@ -9,11 +9,11 @@ use std::thread::{JoinHandle, spawn};
 use std::time::{Duration, Instant};
 use log::info;
 use serde::Deserialize;
-use common::{APICommand, ARGBColor, BLACK, DebugMessage, HelloWindowManager, IncomingMessage, Point, Rect, WHITE, WINDOW_MANAGER_PORT};
+use common::{APICommand, ARGBColor, BLACK, DebugMessage, HelloWindowManager, IncomingMessage, Point, Rect, WHITE, WINDOW_MANAGER_PORT, WindowResized};
 use common::events::{KeyCode, KeyDownEvent, MouseButton, MouseDownEvent, MouseUpEvent};
 use common::font::{FontInfo2, load_font_from_json};
 use common::graphics::{draw_test_pattern, GFXBuffer, PixelLayout};
-use common_wm::{AppMouseGesture, FOCUSED_TITLEBAR_COLOR, FOCUSED_WINDOW_COLOR, InputGesture, NoOpGesture, OutgoingMessage, TITLEBAR_COLOR, WINDOW_BORDER_WIDTH, WINDOW_COLOR, WindowDragGesture, WindowManagerState};
+use common_wm::{AppMouseGesture, FOCUSED_TITLEBAR_COLOR, FOCUSED_WINDOW_COLOR, InputGesture, NoOpGesture, OutgoingMessage, TITLEBAR_COLOR, WINDOW_BORDER_WIDTH, WINDOW_COLOR, WindowDragGesture, WindowManagerState, WindowResizeGesture};
 use plat::{make_plat, Plat};
 
 pub struct PlatformWindowManager {
@@ -192,8 +192,12 @@ impl PlatformWindowManager {
 
                         if win.titlebar_bounds().contains(&point) {
                             info!("inside the titlebar");
-                            self.gesture = Box::new(WindowDragGesture::init(point,win.id));
-                            self.gesture.mouse_down(evt,&mut self.state, &self.tx_out);
+                            self.gesture = Box::new(WindowDragGesture::init(point, win.id));
+                            self.gesture.mouse_down(evt, &mut self.state, &self.tx_out);
+                        } else if win.resize_bounds().contains(&point) {
+                            info!("inside the resize control");
+                            self.gesture = Box::new(WindowResizeGesture::init(point, win.id));
+                            self.gesture.mouse_down(evt, &mut self.state, &self.tx_out);
                         } else {
                             self.gesture = Box::new(AppMouseGesture::init(aid,win.id));
                             self.gesture.mouse_down(evt,&mut self.state, &self.tx_out);
@@ -259,6 +263,28 @@ impl PlatformWindowManager {
             };
         }
 
+        // check for windows that need to be resized
+        for win in self.state.window_list_mut() {
+            // println!("buffer bounds {} {}",win.backbuffer.bounds(), win.content_bounds());
+            if (!win.backbuffer.bounds().size().eq(&win.content_bounds().size())) {
+                println!("not equal");
+                info!("NativeWM: resizing window backbuffer to {}", &win.content_bounds().size());
+                // win.backbuffer.fill_rect_with_image(&dr.rect,&dr.buffer);
+                self.plat.unregister_image2(&win.backbuffer);
+                win.backbuffer = GFXBuffer::new(win.content_size.w as u32, win.content_size.h as u32, &win.backbuffer.layout);
+                self.plat.register_image2(&win.backbuffer);
+                self.tx_out.send(OutgoingMessage {
+                    recipient: win.owner,
+                    command: APICommand::WindowResized(WindowResized {
+                        app_id: win.owner,
+                        window_id: win.id,
+                        size: win.content_size,
+                    })
+                }).unwrap();
+
+            }
+        }
+
 
 
         {
@@ -286,12 +312,17 @@ impl PlatformWindowManager {
                     (WINDOW_COLOR, TITLEBAR_COLOR)
                 };
                 // self.plat.draw_rect(win.external_bounds(), &wc, WINDOW_BORDER_WIDTH);
+                // draw the titlebar
                 self.plat.fill_rect(win.titlebar_bounds(), &tc);
+                //draw the content
                 let bd = win.content_bounds();
                 let MAGENTA = ARGBColor::new_rgb(255, 0, 255);
                 self.plat.fill_rect(bd, &MAGENTA);
                 self.plat.draw_image(&win.content_bounds().position(), &win.backbuffer.bounds(), &win.backbuffer);
+                // draw the resize button
+                self.plat.fill_rect(win.resize_bounds(), &MAGENTA);
             }
+            // draw the cursor
             self.plat.draw_image(&self.cursor,&self.cursor_image.bounds(),&self.cursor_image);
         }
         self.plat.service_loop();

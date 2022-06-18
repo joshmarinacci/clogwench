@@ -163,6 +163,13 @@ pub struct OpenWindowResponse {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct WindowResized {
+    pub app_id:Uuid,
+    pub window_id:Uuid,
+    pub size:Size,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum APICommand {
     AppConnect(HelloApp),
     AppConnectResponse(HelloAppResponse),
@@ -174,6 +181,7 @@ pub enum APICommand {
 
     OpenWindowCommand(OpenWindowCommand),
     OpenWindowResponse(OpenWindowResponse),
+    WindowResized(WindowResized),
 
     DrawRectCommand(DrawRectCommand),
     DrawImageCommand(DrawImageCommand),
@@ -222,7 +230,7 @@ impl Point {
 }
 
 
-#[derive(Serialize, Deserialize, Debug, Copy, Clone)]
+#[derive(Serialize, Deserialize, Debug, Copy, Clone, PartialEq)]
 pub struct Size {
     pub w:i32,
     pub h:i32,
@@ -276,9 +284,6 @@ impl Rect {
             h: size.h
         }
     }
-}
-
-impl Rect {
     pub fn from_pos_size(pos: Point, size: Size) -> Rect {
         Rect {
             x: pos.x,
@@ -298,9 +303,6 @@ impl Rect {
             h: self.h
         }
     }
-}
-
-impl Rect {
     pub fn add(&self, pt: &Point) -> Rect {
         Rect {
             x: self.x + pt.x,
@@ -309,9 +311,6 @@ impl Rect {
             h: self.h
         }
     }
-}
-
-impl Rect {
     pub fn grow(&self, pad: &Padding) -> Rect {
         Rect {
             x: self.x - pad.left,
@@ -342,6 +341,12 @@ impl Rect {
         self.x = pos.x;
         self.y = pos.y;
     }
+    pub fn set_size(&mut self, size: Size) {
+        self.w = size.w;
+        self.h = size.h;
+    }
+
+
     pub fn clamp(&self, pt:&Point) -> Point {
         let mut x = pt.x;
         let mut y = pt.y;
@@ -381,6 +386,11 @@ impl Rect {
 impl std::fmt::Display for Point {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_str(format!("{},{}",self.x,self.y).as_str())
+    }
+}
+impl std::fmt::Display for Size {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(format!("{},{}",self.w,self.h).as_str())
     }
 }
 impl std::fmt::Display for Rect {

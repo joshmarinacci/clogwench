@@ -330,6 +330,9 @@ fn start_router(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, state: Arc
                     state.lock().unwrap().send_to_all_wm(resp.clone());
                     state.lock().unwrap().send_to_debugger(DebugMessage::WindowOpened(String::from("foo")));
                 },
+                APICommand::WindowResized(e) => {
+                    state.lock().unwrap().send_to_app(e.app_id, APICommand::WindowResized(e));
+                }
                 APICommand::WMConnect(cmd) => {
                     let resp = APICommand::WMConnectResponse(HelloWindowManagerResponse{
                         wm_id:msg.source

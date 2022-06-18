@@ -57,7 +57,7 @@ fn main() {
     font.draw_text_at(&mut text_buffer,"Echo Bot Here!",0,10,&ARGBColor::new_rgb(0,255,0));
 
     info!("echo app starting and connecting");
-    let bounds = Rect::from_ints(50,50,300,300);
+    let mut bounds = Rect::from_ints(50,50,300,300);
     let mut px = 50;
     let mut py = 50;
     let mut appid = Uuid::new_v4();
@@ -110,6 +110,11 @@ fn main() {
                 info!("CLIENT app:  system is shutting down. bye!");
                 client.send(APICommand::Debug(DebugMessage::AppLog(String::from("got-shutdown"))));
                 break;
+            }
+            APICommand::WindowResized(evt) => {
+                info!("got a window resize event {:?}", evt);
+                bounds.set_size(evt.size);
+                redraw(&client, appid, winid, bounds, px, py, &pattern_buffer, &text_buffer);
             }
             _ => {}
         }

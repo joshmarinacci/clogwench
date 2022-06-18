@@ -36,7 +36,14 @@ pub struct Window {
     pub backbuffer:GFXBuffer,
     pub position:Point,
     pub content_size: Size,
-    pub window_type:WindowType
+    pub window_type:WindowType,
+}
+
+impl Window {
+    pub(crate) fn set_size(&mut self, size: Size) {
+        self.content_size.w = size.w;
+        self.content_size.h = size.h;
+    }
 }
 
 impl Window {
@@ -62,6 +69,14 @@ impl Window {
             y:self.position.y + WINDOW_BORDER_WIDTH,
             w:self.content_size.w,
             h:TITLE_BAR_HEIGHT,
+        }
+    }
+    pub fn resize_bounds(&self) -> Rect {
+        return Rect {
+            x:self.position.x + WINDOW_BORDER_WIDTH+ self.content_size.w - 20,
+            y:self.position.y + WINDOW_BORDER_WIDTH+TITLE_BAR_HEIGHT + self.content_size.h - 20,
+            w:20,
+            h:20,
         }
     }
 }
@@ -165,6 +180,15 @@ impl WindowManagerState {
         let mut res:Vec<&Window> = vec![];
         for app in &self.apps {
             for win in &app.windows {
+                res.push(win);
+            }
+        }
+        return res;
+    }
+    pub fn window_list_mut(&mut self) -> Vec<&mut Window> {
+        let mut res:Vec<&mut Window> = vec![];
+        for app in &mut self.apps {
+            for win in &mut app.windows {
                 res.push(win);
             }
         }
@@ -392,11 +416,11 @@ pub struct WindowDragGesture {
 }
 
 impl WindowDragGesture {
-    pub fn init(start: Point, win: Uuid) -> WindowDragGesture {
+    pub fn init(start: Point, winid: Uuid) -> WindowDragGesture {
         WindowDragGesture {
             mouse_start:Point::init(0, 0),
             win_start:Point::init(0,0),
-            winid:win
+            winid
         }
     }
 }
@@ -435,6 +459,44 @@ impl InputGesture for WindowDragGesture {
     }
 }
 
+pub struct WindowResizeGesture {
+    mouse_start:Point,
+    winid:Uuid,
+    win_start: Point,
+}
+
+impl WindowResizeGesture {
+    pub fn init(start:Point, winid:Uuid) -> WindowResizeGesture {
+        WindowResizeGesture {
+            mouse_start:Point::init(0, 0),
+            win_start:Point::init(0,0),
+            winid
+        }
+    }
+}
+impl InputGesture for WindowResizeGesture {
+    fn mouse_down(&mut self, evt: MouseDownEvent, state: &mut WindowManagerState, tx_out: &Sender<OutgoingMessage>) {
+        println!("mouse down on resize {},{}", evt.x, evt.y);
+        self.mouse_start.x = evt.x;
+        self.mouse_start.y = evt.y;
+    }
+
+    fn mouse_move(&mut self, evt: MouseMoveEvent, state: &mut WindowManagerState, tx_out: &Sender<OutgoingMessage>) {
+        println!("mouse move on resize {},{}",evt.x,evt.y);
+    }
+
+    fn mouse_up(&mut self, evt: MouseUpEvent, state: &mut WindowManagerState, tx_out: &Sender<OutgoingMessage>) {
+        println!("mouse up on resize {},{}",evt.x,evt.y);
+        if let Some(win) = state.lookup_window(self.winid) {
+            println!("start was {}",self.mouse_start);
+            println!("win pos is {}",win.position);
+            let diff = Point::init(evt.x,evt.y).subtract(&win.position);
+            println!("final size is {}",diff);
+            // win.position.copy_from(&new_pos);
+            win.set_size(Size{ w: diff.x, h: diff.y })
+        }
+    }
+}
 pub struct AppMouseGesture {
     pub winid: Uuid,
     pub app_id: Uuid,
