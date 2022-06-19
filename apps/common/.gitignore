@@ -2,4 +2,5 @@ dist
 .parcel-cache
 node_modules
 *.js
+*.js.map
 
