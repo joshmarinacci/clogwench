@@ -135,7 +135,7 @@ mod tests {
         // println!("value is {}",res);
         // serde_json::to_writer_pretty(file, &res).unwrap();
 
-        let file = File::open("data.json").unwrap();
+        let file = File::open("test_data.json").unwrap();
         let val:Value = serde_json::from_reader(BufReader::new(file)).unwrap();
         println!("value is {}",val);
         let objs = val.as_object().unwrap().get("data").unwrap();

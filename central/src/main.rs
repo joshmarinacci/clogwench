@@ -246,7 +246,7 @@ fn main() {
     let file = if let Some(dbpath) = args.database {
         dbpath
     } else {
-        PathBuf::from("../data.json")
+        PathBuf::from("../db/test_data.json")
     };
     info!("using database at {:?}",file.to_str());
     let state = Arc::new(Mutex::new(CentralState::init(file)));
