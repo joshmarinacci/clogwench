@@ -1,6 +1,8 @@
+use std::collections::HashMap;
 use std::fmt::Formatter;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use db::{JDB, JObj};
 use crate::events::{KeyDownEvent, KeyUpEvent, MouseDownEvent};
 use crate::graphics::{GFXBuffer, PixelLayout};
 
@@ -170,6 +172,18 @@ pub struct WindowResized {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct DBQueryRequest {
+    pub app_id:Uuid,
+    pub query:HashMap<String,String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct DBQueryResponse {
+    pub app_id:Uuid,
+    pub results: Vec<JObj>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum APICommand {
     AppConnect(HelloApp),
     AppConnectResponse(HelloAppResponse),
@@ -191,6 +205,9 @@ pub enum APICommand {
     MouseDown(crate::events::MouseDownEvent),
     MouseMove(crate::events::MouseMoveEvent),
     MouseUp(crate::events::MouseUpEvent),
+
+    DBQueryRequest(DBQueryRequest),
+    DBQueryResponse(DBQueryResponse),
 
     SystemShutdown,
 }

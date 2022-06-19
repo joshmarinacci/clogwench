@@ -174,7 +174,7 @@ export class BufferFont {
     }
 
     private generate_image(gl) {
-        this.log("generate image")
+        // this.log("generate image")
         let w = gl.w-gl.meta.left-gl.meta.right
         gl.img = new BufferImage(w,gl.h)
         // c.fillRect(0,0,gl.img.width,gl.img.height)

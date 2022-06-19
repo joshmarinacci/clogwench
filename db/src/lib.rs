@@ -1,25 +1,11 @@
-/*
-
-track {
-    title: string
-    artist: string
-    album: string
-}
-
-"Catch Me I'm Falling", "Pretty Poison", "Catch Me I'm Falling"
-"Nightime", "Pretty Poison", "Catch Me I'm Falling"
-"Closer", "Pretty Poison", "Catch Me I'm Falling"
-
-
- */
-
-
+use serde::{Deserialize, Serialize};
+use serde_json::{Value, Result};
 use std::collections::HashMap;
 use std::iter::{Filter, Iterator, Map};
 use std::slice::Iter;
 
-struct JDB {
-    data: Vec<JObj>,
+pub struct JDB {
+    pub data: Vec<JObj>,
 }
 
 impl JDB {
@@ -28,22 +14,20 @@ impl JDB {
     }
 }
 
-struct JObj {
-    fields:HashMap<String,String>
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct JObj {
+    pub fields:HashMap<String,String>
 }
 
 impl JObj {
-    pub(crate) fn field(&self, name: &str) -> Option<&String> {
-        self.fields.get(name)
-    }
-}
-
-
-impl JObj {
-    fn make() -> JObj {
+    pub fn make() -> JObj {
         JObj {
             fields: Default::default()
         }
+    }
+
+    pub(crate) fn field(&self, name: &str) -> Option<&String> {
+        self.fields.get(name)
     }
 
     fn has_field(&self, field_name: &str) -> bool {
@@ -63,6 +47,10 @@ impl JObj {
 
 #[cfg(test)]
 mod tests {
+    use std::fs::File;
+    use std::io::BufReader;
+    use serde::de::Error;
+    use serde_json::Value;
     use crate::{JDB, JObj};
 
     #[test]
@@ -84,6 +72,29 @@ mod tests {
         assert_eq!(objs[0].field("artist").unwrap(),"Pretty Poison");
         assert_eq!(objs[0].field("album").unwrap(),"Catch Me I'm Falling");
 
+
+        let str = serde_json::to_string_pretty(&objs[0]).unwrap();
+        println!("generated {}",str);
+
+
+        let data = r#"
+        {
+            "name": "John Doe",
+            "age": 43,
+            "phones": [
+                "+44 1234567",
+                "+44 2345678"
+            ]
+        }"#;
+        // let res:Value = serde_json::from_str(data).unwrap();
+        // println!("value is {}",res);
+        // serde_json::to_writer_pretty(file, &res).unwrap();
+
+        let file = File::open("data.json").unwrap();
+        let val:Value = serde_json::from_reader(BufReader::new(file)).unwrap();
+        println!("value is {}",val);
+        let objs = val.as_object().unwrap().get("data").unwrap();
+        println!("objects are {}",objs);
     }
 
     fn make_test_db() -> JDB {

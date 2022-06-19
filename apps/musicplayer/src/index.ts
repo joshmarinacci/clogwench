@@ -11,7 +11,7 @@ import {
     RadioButton,
     HSpacer,
     randi,
-    TableView, BaseView, Size,
+    TableView, BaseView, Size, ScrollView,
 } from "thneed-gfx";
 
 
@@ -52,7 +52,7 @@ function make_random_words(min,max) {
     return res
 }
 
-function make_song_list(surface: SurfaceContext) {
+function make_song_list() {
     let songs = []
     for(let i=0; i<3; i++) {
         songs.push({
@@ -90,7 +90,7 @@ class LCDView extends BaseView {
     }
 }
 
-function make_toolbar(surface: SurfaceContext) {
+function make_toolbar() {
     let hbox = new HBox()
     hbox.set_fill('#00ffff')
     hbox.set_hflex(true)
@@ -110,28 +110,50 @@ function make_toolbar(surface: SurfaceContext) {
     return hbox
 }
 
-export function make_music_player(surface: SurfaceContext):View {
-    let root = new VBox()
-    root.set_name('root')
-    root.add(make_toolbar(surface))
+export class MusicPlayer extends VBox {
+    private song_list: SelectList;
+    constructor() {
+        super();
+        this.set_name('MusicPlayer')
+        this.add(make_toolbar())
 
-    let middle_layer = new HBox()
-    middle_layer.set_vflex(true)
-    middle_layer.set_name('middle')
-    let source_list = new SelectList(['Library','Playlists','Radio'],(v)=>v)
-    source_list.set_name('source-list')
 
-    // let scroll = new ScrollView()
-    // scroll.set_content(source_list)
-    // scroll.set_pref_width(220)
-    // scroll.set_vflex(true)
-    // middle_layer.add(scroll)
-    middle_layer.add(source_list)
-    //
-    // middle_layer.add(make_song_list(surface))
-    root.add(middle_layer)
-    root.add(make_statusbar());
+        let middle_layer = new HBox()
+        middle_layer.set_vflex(true)
+        middle_layer.set_name('middle')
+        let source_list = new SelectList(['Library','Playlists','Radio'],(v)=>v)
+        source_list.set_name('source-list')
 
+        let scroll = new ScrollView()
+        scroll.set_content(source_list)
+        scroll.set_pref_width(220)
+        scroll.set_vflex(true)
+        middle_layer.add(scroll)
+
+        let test_song = {
+            fields: {
+                album:"foo",
+                title:"bar",
+                artist:"baz"
+            }
+        }
+        let rend = (obj) => {
+            console.log("song is",obj)
+            return `${obj.fields.title} - ${obj.fields.artist}`
+        }
+        this.song_list = new SelectList([test_song],rend)
+        middle_layer.add(this.song_list)
+
+        this.add(middle_layer)
+        this.add(make_statusbar());
+    }
+    set_tracks(tracks) {
+        this.log("got the tracks",tracks)
+        this.song_list.set_data(tracks)
+    }
+}
+export function make_music_player(surface: SurfaceContext):MusicPlayer {
+    let root = new MusicPlayer()
     root.set_hflex(true)
     root.set_vflex(true)
     return root

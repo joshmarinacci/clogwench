@@ -13,9 +13,10 @@ use log4rs::Config;
 use log4rs::config::{Appender, Root};
 use serde::Deserialize;
 use uuid::Uuid;
-use common::{APICommand, APP_MANAGER_PORT, AppDisconnected, DEBUG_PORT, DebugMessage, HelloAppResponse, HelloWindowManagerResponse, IncomingMessage, OpenWindowCommand, OpenWindowResponse, Rect, WINDOW_MANAGER_PORT};
+use common::{APICommand, APP_MANAGER_PORT, AppDisconnected, DBQueryRequest, DBQueryResponse, DEBUG_PORT, DebugMessage, HelloAppResponse, HelloWindowManagerResponse, IncomingMessage, OpenWindowCommand, OpenWindowResponse, Rect, WINDOW_MANAGER_PORT};
 use structopt::StructOpt;
 use cool_logger::CoolLogger;
+use db::{JDB, JObj};
 
 struct Window {
     id:Uuid,
@@ -219,7 +220,22 @@ impl CentralState {
         for dbg in self.debuggers.iter_mut() {
             dbg.stream.write_all(data.as_ref()).expect("CENTRAL: error sending to debugger");
         }
-
+    }
+    fn send_to_database(&mut self, req: DBQueryRequest) {
+        info!("CENTRAL: sending to the database {:?}",req);
+        let mut jdb = JDB {
+            data: vec![]
+        };
+        let mut song = JObj::make();
+        song.fields.insert("title".to_string(), "Catch Me I'm Falling".to_string());
+        song.fields.insert("artist".to_string(), "Pretty Poison".to_string());
+        song.fields.insert("album".to_string(), "Catch Me I'm Falling".to_string());
+        jdb.data.push(song);
+        let msg = DBQueryResponse {
+            app_id: req.app_id,
+            results:jdb.data,
+        };
+        self.send_to_app(msg.app_id,APICommand::DBQueryResponse(msg));
     }
 }
 
@@ -346,6 +362,12 @@ fn start_router(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, state: Arc
                 APICommand::DrawImageCommand(cmd) => {
                     state.lock().unwrap().send_to_all_wm(APICommand::DrawImageCommand(cmd));
                 },
+                APICommand::DBQueryRequest(cmd) => {
+                    state.lock().unwrap().send_to_database(cmd)
+                }
+                APICommand::DBQueryResponse(cmd) => {
+                    state.lock().unwrap().send_to_app(cmd.app_id, APICommand::DBQueryResponse(cmd))
+                }
                 APICommand::KeyDown(e) => {
                     state.lock().unwrap().send_to_app(e.app_id, APICommand::KeyDown(e))
                 }

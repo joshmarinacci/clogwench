@@ -7,11 +7,12 @@ const STD_PORT = 3333
 export class App {
     private client: Socket
     private windows: Map<any, any>;
+    private id: string;
 
     constructor() {
-        console.log("Making a socket")
+        // console.log("Making a socket")
         this.client = new Socket()
-        console.log("made it")
+        // console.log("made it")
         this.windows = new Map()
     }
 
@@ -25,6 +26,11 @@ export class App {
                 let str = data.toString()
                 console.log("raw incoming data", str)
                 let msg = JSON.parse(str)
+                if (msg.AppConnectResponse) {
+                    this.id = msg.AppConnectResponse.app_id
+                    if(this.cb) this.cb(msg)
+                    return
+                }
                 if (msg.MouseDown) return this.windows.get(msg.MouseDown.window_id).dispatch(msg)
                 if (msg.MouseUp) return this.windows.get(msg.MouseUp.window_id).dispatch(msg)
                 if (msg.MouseMove) return this.windows.get(msg.MouseMove.window_id).dispatch(msg)
@@ -38,16 +44,16 @@ export class App {
 
     send(obj) {
         let str = JSON.stringify(obj)
-        // console.log('sending',str)
+        console.log('sending',str)
         this.client.write(str)
     }
 
     async send_and_wait(obj) {
-        console.log("sending", obj)
+        // console.log("sending", obj)
         let prom = new Promise((res, rej) => {
-            console.log('waiting')
+            // console.log('waiting')
             this.cb = (msg) => {
-                console.log("callback completed", msg)
+                // console.log("callback completed", msg)
                 this.cb = null
                 res(msg)
             }
@@ -73,6 +79,13 @@ export class App {
         this.client.end(() => {
             console.log("done ending")
             // process.exit(0)
+        })
+    }
+
+    async db_query(param: any) {
+        return await this.send_and_wait({
+            DBQueryRequest:{ app_id:this.id,
+                query:{"type":"track"}}
         })
     }
 }

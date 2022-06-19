@@ -4,11 +4,20 @@ import {ClogwenchWindowSurface} from "../../common/src/surface";
 import {make_music_player} from "./index";
 
 
-function start(surface: ClogwenchWindowSurface) {
-    let music_root:View = make_music_player(surface) as View;
+function start(app: App, surface: ClogwenchWindowSurface) {
+    let music_root = make_music_player(surface);
     surface.set_root(music_root)
     surface.start()
     surface.repaint()
+
+    setTimeout(async ()=>{
+        // console.log('fetching a database query')
+        let results = await app.db_query({type:'track'})
+        let tracks = results.DBQueryResponse.results
+        // console.log("got the tracks",tracks)
+        music_root.set_tracks(tracks)
+        surface.repaint()
+    },3000)
 }
 
 async function doit() {
@@ -18,7 +27,7 @@ async function doit() {
     await app.send_and_wait({AppConnect: {HelloApp: {}}})
     let win = await app.open_window(new Rect(50, 50, 600, 300))
     let surface = new ClogwenchWindowSurface(win);
-    start(surface)
+    start(app,surface)
 }
 
 doit().then(() => console.log("fully started")).catch((e) => console.error(e))
