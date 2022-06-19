@@ -1,11 +1,56 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, Result};
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::BufReader;
 use std::iter::{Filter, Iterator, Map};
+use std::path::PathBuf;
 use std::slice::Iter;
 
 pub struct JDB {
     pub data: Vec<JObj>,
+}
+
+impl JDB {
+    pub fn process_query(&self, req: HashMap<String,String>) -> &Vec<JObj> {
+        println!("db processing the query {:?}",req);
+        return &self.data
+    }
+}
+
+impl JDB {
+    pub fn load_from_file(filepath: PathBuf) -> JDB {
+        let file = File::open(filepath).unwrap();
+        let val:Value = serde_json::from_reader(BufReader::new(file)).unwrap();
+        // println!("value is {}",val);
+        let objs = val.as_object().unwrap().get("data").unwrap();
+        // println!("objects are {}",objs);
+        let mut jdb = JDB {
+            data: vec![]
+        };
+        for ob in objs.as_array().unwrap() {
+            let mut song = JObj::make();
+            let mp = ob.as_object().unwrap();
+            for (s,v) in mp.iter() {
+                // println!("key {} value {}",s,v);
+                song.fields.insert(s.clone(),v.to_string());
+            }
+            println!("adding a db object {:?}",song);
+            jdb.data.push(song);
+        }
+
+        // let mut song = JObj::make();
+        // song.fields.insert("title".to_string(), "Catch Me I'm Falling".to_string());
+        // song.fields.insert("artist".to_string(), "Pretty Poison".to_string());
+        // song.fields.insert("album".to_string(), "Catch Me I'm Falling".to_string());
+        // jdb.data.push(song);
+        // let msg = DBQueryResponse {
+        //     app_id: req.app_id,
+        //     results:jdb.data,
+        // };
+
+        return jdb
+    }
 }
 
 impl JDB {

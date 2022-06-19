@@ -1,12 +1,13 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Run central" type="CargoCommandRunConfiguration" factoryName="Cargo Command">
-    <option name="command" value="run" />
+    <option name="command" value="run -- --database=../data.json" />
     <option name="workingDirectory" value="file://$PROJECT_DIR$/central" />
     <option name="channel" value="DEFAULT" />
     <option name="requiredFeatures" value="true" />
     <option name="allFeatures" value="false" />
     <option name="emulateTerminal" value="true" />
     <option name="withSudo" value="false" />
+    <option name="buildTarget" value="REMOTE" />
     <option name="backtrace" value="SHORT" />
     <envs />
     <option name="isRedirectInput" value="false" />

@@ -85,6 +85,7 @@ pub fn start_central_server() -> Result<CentralConnection,String> {
         // .stdout(Stdio::null())
         // .stdout(Stdio::inherit())
         .arg("--debug=true")
+        .arg("--database=../../data.json")
         .env_clear()
         // .env("PATH", "/bin")
         .spawn()

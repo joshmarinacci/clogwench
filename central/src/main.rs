@@ -3,7 +3,9 @@ use std::net::{Shutdown, TcpListener, TcpStream};
 use std::sync::{Arc, mpsc, Mutex};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, Sender};
-use std::{io, thread};
+use std::{env, io, thread};
+use std::fs::File;
+use std::path::PathBuf;
 use std::thread::{JoinHandle, sleep};
 use std::time::Duration;
 use env_logger::Env;
@@ -39,14 +41,16 @@ struct CentralState {
     wms:Vec<WM>,
     apps:Vec<App>,
     debuggers:Vec<Debugger>,
+    db:JDB,
 }
 
 impl CentralState {
-    fn init() -> CentralState {
+    fn init(file: PathBuf) -> CentralState {
         CentralState {
             wms: vec![],
             apps: vec![],
-            debuggers: vec![]
+            debuggers: vec![],
+            db:JDB::load_from_file(file),
         }
     }
     fn add_app_from_stream(&mut self, stream:TcpStream, sender: Sender<IncomingMessage>, stop: Arc<AtomicBool>) {
@@ -180,6 +184,8 @@ impl CentralState {
         let data = serde_json::to_string(&resp).unwrap();
         if let Some(app) = self.apps.iter_mut().find(|a|a.id == id){
             app.stream.write_all(data.as_ref()).expect("failed to send rect");
+        } else {
+            info!("didnt send to the app. couldnt find an app for {}",id);
         }
     }
     fn send_to_all_apps(&mut self, resp: APICommand) {
@@ -223,17 +229,10 @@ impl CentralState {
     }
     fn send_to_database(&mut self, req: DBQueryRequest) {
         info!("CENTRAL: sending to the database {:?}",req);
-        let mut jdb = JDB {
-            data: vec![]
-        };
-        let mut song = JObj::make();
-        song.fields.insert("title".to_string(), "Catch Me I'm Falling".to_string());
-        song.fields.insert("artist".to_string(), "Pretty Poison".to_string());
-        song.fields.insert("album".to_string(), "Catch Me I'm Falling".to_string());
-        jdb.data.push(song);
+        let data = self.db.process_query(req.query);
         let msg = DBQueryResponse {
             app_id: req.app_id,
-            results:jdb.data,
+            results: data.clone(),
         };
         self.send_to_app(msg.app_id,APICommand::DBQueryResponse(msg));
     }
@@ -244,7 +243,13 @@ fn main() {
     set_logger(&COOL_LOGGER).map(|()|log::set_max_level(LevelFilter::Info));
     let args:Cli = Cli::from_args();
     info!("central server starting");
-    let state = Arc::new(Mutex::new(CentralState::init()));
+    let file = if let Some(dbpath) = args.database {
+        dbpath
+    } else {
+        PathBuf::from("../data.json")
+    };
+    info!("using database at {:?}",file.to_str());
+    let state = Arc::new(Mutex::new(CentralState::init(file)));
     let stop:Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
     setup_c_handler(stop.clone());
     let (tx, rx) = mpsc::channel::<IncomingMessage>();
@@ -391,6 +396,8 @@ fn start_router(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, state: Arc
 struct Cli {
     #[structopt(short, long)]
     debug:bool,
+    #[structopt(long, parse(from_os_str))]
+    database: Option<PathBuf>,
 }
 
 
