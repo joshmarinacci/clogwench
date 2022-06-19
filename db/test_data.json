@@ -1,19 +1,31 @@
 {
   "data": [
     {
-      "title": "Catch Me I'm Falling",
-      "artist": "Pretty Poison",
-      "album": "Catch Me I'm Falling"
+      "id": "some-unique-id-01",
+      "data": {
+        "type": "song-track",
+        "title": "Catch Me I'm Falling",
+        "artist": "Pretty Poison",
+        "album": "Catch Me I'm Falling"
+      }
     },
     {
-      "title": "Nightime",
-      "artist": "Pretty Poison",
-      "album": "Catch Me I'm Falling"
+      "id": "some-unique-id-02",
+      "data": {
+        "type": "song-track",
+        "title": "Nightime",
+        "artist": "Pretty Poison",
+        "album": "Catch Me I'm Falling"
+      }
     },
     {
-      "title": "Closer",
-      "artist": "Pretty Poison",
-      "album": "Catch Me I'm Falling"
+      "id": "some-unique-id-03",
+      "data": {
+        "type": "song-track",
+        "title": "Closer",
+        "artist": "Pretty Poison",
+        "album": "Catch Me I'm Falling"
+      }
     }
   ]
 }

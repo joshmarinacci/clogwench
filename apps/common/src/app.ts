@@ -44,7 +44,7 @@ export class App {
 
     send(obj) {
         let str = JSON.stringify(obj)
-        console.log('sending',str)
+        // console.log('sending',str)
         this.client.write(str)
     }
 
@@ -83,10 +83,11 @@ export class App {
     }
 
     async db_query(param: any) {
-        return await this.send_and_wait({
+        let results = await this.send_and_wait({
             DBQueryRequest:{ app_id:this.id,
-                query:{"type":"track"}}
+                query:param}
         })
+        return results.DBQueryResponse.results
     }
 }
 
@@ -124,7 +125,7 @@ export class Window {
         if(this.buffered) {
             this.buffer.draw_rect(rect, color)
         } else {
-            console.log("window.draw_rect", rect, color)
+            // console.log("window.draw_rect", rect, color)
             this.app.send({
                 DrawRectCommand: {
                     app_id: this.app_id,

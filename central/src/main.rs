@@ -232,7 +232,7 @@ impl CentralState {
         let data = self.db.process_query(req.query);
         let msg = DBQueryResponse {
             app_id: req.app_id,
-            results: data.clone(),
+            results: data,
         };
         self.send_to_app(msg.app_id,APICommand::DBQueryResponse(msg));
     }

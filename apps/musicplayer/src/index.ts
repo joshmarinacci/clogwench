@@ -131,7 +131,8 @@ export class MusicPlayer extends VBox {
         middle_layer.add(scroll)
 
         let test_song = {
-            fields: {
+            id:"some-bad-id",
+            data: {
                 album:"foo",
                 title:"bar",
                 artist:"baz"
@@ -139,7 +140,7 @@ export class MusicPlayer extends VBox {
         }
         let rend = (obj) => {
             console.log("song is",obj)
-            return `${obj.fields.title} - ${obj.fields.artist}`
+            return `${obj.data.title} - ${obj.data.artist}`
         }
         this.song_list = new SelectList([test_song],rend)
         middle_layer.add(this.song_list)

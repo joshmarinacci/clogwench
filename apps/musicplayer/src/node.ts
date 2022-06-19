@@ -12,11 +12,12 @@ function start(app: App, surface: ClogwenchWindowSurface) {
 
     setTimeout(async ()=>{
         // console.log('fetching a database query')
-        let results = await app.db_query({type:'track'})
-        let tracks = results.DBQueryResponse.results
-        // console.log("got the tracks",tracks)
+        let tracks = await app.db_query({type:'song-track'})
         music_root.set_tracks(tracks)
         surface.repaint()
+
+        let people = await app.db_query({type:"person-contact"})
+        console.log("all people are",people)
     },3000)
 }
 

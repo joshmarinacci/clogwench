@@ -103,7 +103,7 @@ export class BufferFont {
     }
 
     fillText(win: Window, text: string, x: number, y: number, scale?: number) {
-        this.log("filling text",text)
+        // this.log("filling text",text)
         if(!scale) scale = 1
         // ctx.fillStyle = 'red'
         let size = this.measureText(text)
@@ -146,7 +146,7 @@ export class BufferFont {
 
     draw_glpyh(win:Window, cp:number, x:number, y:number, scale?:number) {
         if(!scale) scale = 1
-        this.log("draw_glyph",cp)
+        // this.log("draw_glyph",cp)
         let xoff = 0
         let yoff = 2
         if(this.metas.has(cp)) {
