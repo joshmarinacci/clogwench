@@ -96,6 +96,7 @@ pub struct WindowManagerState {
     apps:Vec<App>,
     focused:Option<Uuid>,
     pub preferred_pixel_layout: PixelLayout,
+    pub window_order:Vec<Uuid>,
 }
 
 impl WindowManagerState {
@@ -104,6 +105,7 @@ impl WindowManagerState {
             apps: Vec::new(),
             focused: None,
             preferred_pixel_layout:ppl.clone(),
+            window_order: vec![]
         }
     }
 
@@ -137,41 +139,54 @@ impl WindowManagerState {
         };
         let bg_color:ARGBColor = ARGBColor::new_rgb(255, 128, 0);
         win.backbuffer.clear(&bg_color);
+        self.window_order.push(win.id.clone());
         if let Some(app) = self.find_app(app_id) {
             app.windows.push(win);
         }
         return win_id;
     }
-    pub fn find_first_window(&self) -> Option<&Window> {
-        if !self.apps.is_empty() {
-            let app = &self.apps[0];
-            if !app.windows.is_empty() {
-                return Some(&app.windows[0])
-            }
-        }
-        return None
-    }
+
     pub fn get_focused_window(&self) -> &Option<Uuid> {
         &self.focused
     }
     pub fn set_focused_window(&mut self, winid:Uuid) {
         self.focused = *&Some(winid);
     }
+    pub fn raise_window(&mut self, win_id: Uuid) {
+        if let Some(n) = self.window_order.iter().position(|w|w.eq(&win_id)) {
+            self.window_order.remove(n);
+            self.window_order.push(win_id);
+        }
 
-    pub fn pick_window_at<'a>(&'a self, pt: Point) -> Option<&'a Window> {
-        for app in &self.apps {
-            for win in (&app.windows).iter().rev() {
-                if win.external_bounds().contains(&pt) {
-                    println!("picked {}",win.title);
+    }
+
+    pub fn pick_window_at<'a>(&'a self, pt:Point) -> Option<&'a Window> {
+        for win_id in self.window_order.iter().rev() {
+            for app in &self.apps {
+                for win in &app.windows {
+                    if win.id.eq(win_id) {
+                        if(win.external_bounds().contains(&pt)) {
+                            return Some(win)
+                        }
+                    }
+                }
+            }
+        }
+        return None
+    }
+    pub fn lookup_window_mut<'a>(&'a mut self, win_id: Uuid) -> Option<&'a mut Window> {
+        for app in &mut self.apps {
+            for win in &mut app.windows {
+                if win.id == win_id {
                     return Some(win)
                 }
             }
         }
         return None
     }
-    pub fn lookup_window<'a>(&'a mut self, win_id: Uuid) -> Option<&'a mut Window> {
-        for app in &mut self.apps {
-            for win in &mut app.windows {
+    pub fn lookup_window<'a>(&'a self, win_id: Uuid) -> Option<&'a Window> {
+        for app in &self.apps {
+            for win in &app.windows {
                 if win.id == win_id {
                     return Some(win)
                 }
@@ -211,6 +226,9 @@ impl WindowManagerState {
             if let Some(n) = app.windows.iter().position(|w| w.id == win_id) {
                 println!("removing window from the app windows list");
                 app.windows.remove(n);
+                if let Some(n) = self.window_order.iter().position(|id|id == &win_id) {
+                    self.window_order.remove(n);
+                }
             }
         }
     }
@@ -462,7 +480,7 @@ impl InputGesture for WindowDragGesture {
         let diff = self.mouse_start.subtract(&self.win_start);
         let new_pos = curr.subtract(&diff);
         // info!("dragging window {} by {:?}",self.winid,diff);
-        if let Some(win) = state.lookup_window(self.winid) {
+        if let Some(win) = state.lookup_window_mut(self.winid) {
             win.position.copy_from(&new_pos);
         }
     }
@@ -473,7 +491,7 @@ impl InputGesture for WindowDragGesture {
         let diff = self.mouse_start.subtract(&self.win_start);
         let new_pos = curr.subtract(&diff);
         // info!("new window position is {} to {:?}",self.winid,curr);
-        if let Some(win) = state.lookup_window(self.winid) {
+        if let Some(win) = state.lookup_window_mut(self.winid) {
             win.position.copy_from(&new_pos);
         }
     }
@@ -507,7 +525,7 @@ impl InputGesture for WindowResizeGesture {
 
     fn mouse_up(&mut self, evt: MouseUpEvent, state: &mut WindowManagerState, tx_out: &Sender<OutgoingMessage>) {
         println!("mouse up on resize {},{}",evt.x,evt.y);
-        if let Some(win) = state.lookup_window(self.winid) {
+        if let Some(win) = state.lookup_window_mut(self.winid) {
             println!("start was {}",self.mouse_start);
             println!("win pos is {}",win.position);
             let diff = Point::init(evt.x,evt.y).subtract(&win.position);

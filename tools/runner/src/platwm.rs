@@ -193,14 +193,14 @@ impl PlatformWindowManager {
                     }
                 },
                 APICommand::DrawRectCommand(dr) => {
-                    if let Some(mut win) = self.state.lookup_window(dr.window_id) {
+                    if let Some(mut win) = self.state.lookup_window_mut(dr.window_id) {
                         // info!("NativeWM: draw rect to window {:?} {:?}", &dr.rect, &dr.color);
                         win.backbuffer.fill_rect(dr.rect, &dr.color);
                         // buf.copy_from(win.position.x, win.position.y, &win.backbuffer);
                     }
                 },
                 APICommand::DrawImageCommand(dr) => {
-                    if let Some(mut win) = self.state.lookup_window(dr.window_id) {
+                    if let Some(mut win) = self.state.lookup_window_mut(dr.window_id) {
                         // info!("NativeWM: draw image to window {:?}", &dr.rect);
                         win.backbuffer.fill_rect_with_image(&dr.rect,&dr.buffer);
                     }
@@ -237,6 +237,7 @@ impl PlatformWindowManager {
                             self.gesture.mouse_down(evt,&mut self.state, &self.tx_out);
                         }
                         self.state.set_focused_window(wid);
+                        self.state.raise_window(wid);
                         self.tx_out.send(OutgoingMessage {
                             recipient: Default::default(),
                             command: APICommand::Debug(DebugMessage::WindowFocusChanged(String::from("foo")))
@@ -338,7 +339,8 @@ impl PlatformWindowManager {
             self.plat.draw_image(&Point::init(0, 0), &self.background.bounds(), &self.background);
             // self.background.to_png(&PathBuf::from("output.png"));
             // panic!();
-            for win in self.state.window_list() {
+        for win_id in &self.state.window_order {
+            if let Some(win) = self.state.lookup_window(*win_id) {
                 let (wc, tc) = if self.state.is_focused_window(win) {
                     (FOCUSED_WINDOW_COLOR, FOCUSED_TITLEBAR_COLOR)
                 } else {
@@ -356,6 +358,7 @@ impl PlatformWindowManager {
                 // draw the resize button
                 self.plat.fill_rect(win.resize_bounds(), &MAGENTA);
             }
+        }
             // draw the cursor
             self.plat.draw_image(&self.cursor,&self.cursor_image.bounds(),&self.cursor_image);
 
