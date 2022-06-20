@@ -187,7 +187,7 @@ impl PlatformWindowManager {
                     self.state.remove_app(dis.app_id);
                 }
                 APICommand::OpenWindowResponse(ow) => {
-                    let win_id = self.state.add_window(ow.app_id, ow.window_id, &ow.bounds);
+                    let win_id = self.state.add_window(ow.app_id, ow.window_id, &ow.bounds, &ow.window_title);
                     if let Some(win) = self.state.lookup_window(win_id) {
                         self.plat.register_image2(&win.backbuffer);
                     }

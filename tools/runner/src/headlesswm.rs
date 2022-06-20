@@ -97,7 +97,7 @@ impl HeadlessWindowManager {
                                         state.add_app(res.app_id);
                                     },
                                     APICommand::OpenWindowResponse(ow) => {
-                                        state.add_window(ow.app_id, ow.window_id, &ow.bounds);
+                                        state.add_window(ow.app_id, ow.window_id, &ow.bounds,&ow.window_title );
                                     },
                                     APICommand::DrawRectCommand(dr) => {
                                         if let Some(mut win) = state.lookup_window(dr.window_id) {

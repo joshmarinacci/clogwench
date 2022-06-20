@@ -162,6 +162,7 @@ pub struct OpenWindowResponse {
     pub app_id:Uuid,
     pub window_id:Uuid,
     pub window_type:String,
+    pub window_title:String,
     pub bounds:Rect,
 }
 

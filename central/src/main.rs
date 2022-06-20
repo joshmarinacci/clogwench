@@ -348,6 +348,7 @@ fn start_router(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, state: Arc
                         window_id: winid,
                         window_type: ow.window_type.clone(),
                         bounds: ow.bounds.clone(),
+                        window_title: ow.window_title,
                     });
                     state.lock().unwrap().send_to_app(msg.source, resp.clone());
                     state.lock().unwrap().send_to_all_wm(resp.clone());

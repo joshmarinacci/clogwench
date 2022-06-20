@@ -38,6 +38,7 @@ pub struct Window {
     pub position:Point,
     pub content_size: Size,
     pub window_type:WindowType,
+    pub title:String,
 }
 
 impl Window {
@@ -124,14 +125,15 @@ impl WindowManagerState {
     pub fn find_app(&mut self, app_id: Uuid) -> Option<&mut App> {
         self.apps.iter_mut().find(|a|a.id == app_id)
     }
-    pub fn add_window(&mut self, app_id: Uuid, win_id:Uuid, bounds:&Rect) -> Uuid {
+    pub fn add_window(&mut self, app_id: Uuid, win_id:Uuid, bounds:&Rect, title: &String) -> Uuid {
         let mut win = Window {
             id: win_id,
             position:bounds.position(),
             content_size:bounds.size(),
             owner: app_id,
             backbuffer: GFXBuffer::new(bounds.w as u32, bounds.h as u32, &self.preferred_pixel_layout),
-            window_type: WindowType::Plain()
+            window_type: WindowType::Plain(),
+            title: title.clone(),
         };
         let bg_color:ARGBColor = ARGBColor::new_rgb(255, 128, 0);
         win.backbuffer.clear(&bg_color);
@@ -158,8 +160,9 @@ impl WindowManagerState {
 
     pub fn pick_window_at<'a>(&'a self, pt: Point) -> Option<&'a Window> {
         for app in &self.apps {
-            for win in &app.windows {
+            for win in (&app.windows).iter().rev() {
                 if win.external_bounds().contains(&pt) {
+                    println!("picked {}",win.title);
                     return Some(win)
                 }
             }

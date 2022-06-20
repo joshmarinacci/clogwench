@@ -66,6 +66,7 @@ export class App {
         let opened_window = await this.send_and_wait({
             OpenWindowCommand: {
                 window_type: "plain",
+                window_title: "some-window",
                 bounds: rect,
             }
         })
