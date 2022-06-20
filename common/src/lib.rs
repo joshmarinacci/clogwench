@@ -154,6 +154,7 @@ pub struct DrawImageCommand {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct OpenWindowCommand {
     pub window_type:String,
+    pub window_title:String,
     pub bounds:Rect,
 }
 #[derive(Serialize, Deserialize, Debug, Clone)]

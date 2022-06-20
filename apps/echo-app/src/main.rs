@@ -76,6 +76,7 @@ fn main() {
     let resp2: Result<APICommand, RecvError> = client.send_and_wait(APICommand::OpenWindowCommand(OpenWindowCommand{
         window_type: String::from("plain"),
         bounds: bounds,
+        window_title: String::from("Echo")
         }));
     let mut winid = Uuid::new_v4();
     match resp2 {

@@ -28,6 +28,7 @@ fn main()  {
     let bounds = Rect::from_ints(50,50,300,300);
     let resp2: Result<APICommand, RecvError> = client.send_and_wait(APICommand::OpenWindowCommand(OpenWindowCommand{
         window_type: String::from("plain"),
+        window_title: String::from("Digital Clock"),
         bounds: bounds,
     }));
     let mut winid = Uuid::new_v4();

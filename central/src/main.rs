@@ -23,6 +23,7 @@ use db::{JDB, JObj};
 struct Window {
     id:Uuid,
     bounds:Rect,
+    title:String,
 }
 struct WM {
     id:Uuid,
@@ -65,6 +66,7 @@ impl CentralState {
         let win = Window {
             id: winid,
             bounds: ow.bounds.clone(),
+            title: ow.window_title.clone(),
         };
         let mut app = self.apps.iter_mut().find(|a|a.id == appid).unwrap();
         app.windows.push(win);
