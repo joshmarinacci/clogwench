@@ -137,6 +137,36 @@ impl PlatformWindowManager {
         let start = Instant::now();
             // println!("Native WM service loop");
         self.plat.service_input();
+        let cont = self.process_input();
+        if !cont {
+            return false
+        }
+
+        // check for windows that need to be resized
+        self.check_window_sizes();
+
+
+
+        self.draw_screen();
+        self.plat.service_loop();
+        self.fps.push(start.elapsed().as_millis());
+
+        if self.fps.len() > 60 {
+            self.fps.remove(0);
+        }
+        if self.tick % 30 == 0 {
+            let mut total = 0;
+            for dur in &self.fps {
+                total += dur;
+            }
+            // println!("calculated avg frame time {}", (total as f64)/(self.fps.len() as f64));
+        }
+        self.tick += 1;
+        //thread::sleep(Duration::from_millis(100));
+        true
+    }
+
+    fn process_input(&mut self) -> bool {
         for cmd in self.rx_in.try_iter() {
             // pt(&format!("received {:?}", cmd));
             match cmd.command {
@@ -262,8 +292,9 @@ impl PlatformWindowManager {
                 }
             };
         }
-
-        // check for windows that need to be resized
+        return true
+    }
+    fn check_window_sizes(&mut self) {
         for win in self.state.window_list_mut() {
             // println!("buffer bounds {} {}",win.backbuffer.bounds(), win.content_bounds());
             if (!win.backbuffer.bounds().size().eq(&win.content_bounds().size())) {
@@ -284,10 +315,8 @@ impl PlatformWindowManager {
 
             }
         }
-
-
-
-        {
+    }
+    fn draw_screen(&mut self) {
             self.plat.clear();
 
             self.background.clear(&ARGBColor::new_rgb(120,128,128));
@@ -324,22 +353,6 @@ impl PlatformWindowManager {
             }
             // draw the cursor
             self.plat.draw_image(&self.cursor,&self.cursor_image.bounds(),&self.cursor_image);
-        }
-        self.plat.service_loop();
-        self.fps.push(start.elapsed().as_millis());
 
-        if self.fps.len() > 60 {
-            self.fps.remove(0);
-        }
-        if self.tick % 30 == 0 {
-            let mut total = 0;
-            for dur in &self.fps {
-                total += dur;
-            }
-            // println!("calculated avg frame time {}", (total as f64)/(self.fps.len() as f64));
-        }
-        self.tick += 1;
-        //thread::sleep(Duration::from_millis(100));
-        true
     }
 }
