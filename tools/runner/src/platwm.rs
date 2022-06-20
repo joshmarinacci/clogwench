@@ -13,7 +13,7 @@ use common::{APICommand, ARGBColor, BLACK, DebugMessage, HelloWindowManager, Inc
 use common::events::{KeyCode, KeyDownEvent, MouseButton, MouseDownEvent, MouseUpEvent};
 use common::font::{FontInfo2, load_font_from_json};
 use common::graphics::{draw_test_pattern, GFXBuffer, PixelLayout};
-use common_wm::{AppMouseGesture, FOCUSED_TITLEBAR_COLOR, FOCUSED_WINDOW_COLOR, InputGesture, NoOpGesture, OutgoingMessage, TITLEBAR_COLOR, WINDOW_BORDER_WIDTH, WINDOW_COLOR, WindowDragGesture, WindowManagerState, WindowResizeGesture};
+use common_wm::{AppMouseGesture, FOCUSED_TITLEBAR_COLOR, FOCUSED_WINDOW_COLOR, InputGesture, NoOpGesture, OutgoingMessage, TITLEBAR_COLOR, WINDOW_BORDER_WIDTH, WINDOW_BUTTON_COLOR, WINDOW_COLOR, WindowCloseButtonGesture, WindowDragGesture, WindowManagerState, WindowResizeGesture};
 use plat::{make_plat, Plat};
 
 pub struct PlatformWindowManager {
@@ -220,12 +220,16 @@ impl PlatformWindowManager {
                         let wid = win.id.clone();
                         let aid = win.owner.clone();
 
-                        if win.titlebar_bounds().contains(&point) {
-                            info!("inside the titlebar");
+                        if win.close_button_bounds().contains(&point) {
+                            // info!("inside the close button");
+                            self.gesture = Box::new(WindowCloseButtonGesture::init(point, win.id));
+                            self.gesture.mouse_down(evt, &mut self.state, &self.tx_out);
+                        } else if win.titlebar_bounds().contains(&point) {
+                            // info!("inside the titlebar");
                             self.gesture = Box::new(WindowDragGesture::init(point, win.id));
                             self.gesture.mouse_down(evt, &mut self.state, &self.tx_out);
                         } else if win.resize_bounds().contains(&point) {
-                            info!("inside the resize control");
+                            // info!("inside the resize control");
                             self.gesture = Box::new(WindowResizeGesture::init(point, win.id));
                             self.gesture.mouse_down(evt, &mut self.state, &self.tx_out);
                         } else {
@@ -343,6 +347,7 @@ impl PlatformWindowManager {
                 // self.plat.draw_rect(win.external_bounds(), &wc, WINDOW_BORDER_WIDTH);
                 // draw the titlebar
                 self.plat.fill_rect(win.titlebar_bounds(), &tc);
+                self.plat.fill_rect(win.close_button_bounds(), &WINDOW_BUTTON_COLOR);
                 //draw the content
                 let bd = win.content_bounds();
                 let MAGENTA = ARGBColor::new_rgb(255, 0, 255);

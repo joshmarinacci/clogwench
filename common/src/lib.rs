@@ -165,6 +165,12 @@ pub struct OpenWindowResponse {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct CloseWindowResponse {
+    pub app_id:Uuid,
+    pub window_id:Uuid,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct WindowResized {
     pub app_id:Uuid,
     pub window_id:Uuid,
@@ -195,6 +201,7 @@ pub enum APICommand {
 
     OpenWindowCommand(OpenWindowCommand),
     OpenWindowResponse(OpenWindowResponse),
+    CloseWindowResponse(CloseWindowResponse),
     WindowResized(WindowResized),
 
     DrawRectCommand(DrawRectCommand),

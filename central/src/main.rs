@@ -351,6 +351,9 @@ fn start_router(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, state: Arc
                     state.lock().unwrap().send_to_all_wm(resp.clone());
                     state.lock().unwrap().send_to_debugger(DebugMessage::WindowOpened(String::from("foo")));
                 },
+                APICommand::CloseWindowResponse(e) => {
+                    state.lock().unwrap().send_to_app(e.app_id, APICommand::CloseWindowResponse(e))
+                },
                 APICommand::WindowResized(e) => {
                     state.lock().unwrap().send_to_app(e.app_id, APICommand::WindowResized(e));
                 }

@@ -8,7 +8,7 @@ use std::thread;
 use std::thread::JoinHandle;
 use log::{error, info};
 use uuid::Uuid;
-use common::{APICommand, ARGBColor, BLACK, HelloWindowManager, IncomingMessage, Padding, Point, Rect, Size};
+use common::{APICommand, ARGBColor, BLACK, CloseWindowResponse, HelloWindowManager, IncomingMessage, Padding, Point, Rect, Size};
 use serde::{Deserialize, Serialize};
 use common::events::{MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent};
 use common::graphics::{GFXBuffer, PixelLayout};
@@ -19,10 +19,11 @@ pub struct App {
     pub windows:Vec<Window>,
 }
 
-pub const TITLE_BAR_HEIGHT:i32 = 10;
-pub const WINDOW_BORDER_WIDTH:i32 = 5;
+pub const TITLE_BAR_HEIGHT:i32 = 20;
+pub const WINDOW_BORDER_WIDTH:i32 = 2;
 pub const WINDOW_COLOR:ARGBColor           = ARGBColor { r: 255, g: 0,   b: 0,   a: 255 };
 pub const TITLEBAR_COLOR:ARGBColor         = ARGBColor { r: 0,   g: 255, b: 0,   a: 255 };
+pub const WINDOW_BUTTON_COLOR:ARGBColor    = ARGBColor { r: 255, g: 255,   b: 0,   a: 255 };
 pub const FOCUSED_WINDOW_COLOR:ARGBColor   = ARGBColor { r: 255, g: 200, b: 200, a: 255 };
 pub const FOCUSED_TITLEBAR_COLOR:ARGBColor = ARGBColor { r: 200, g: 255, b: 200, a: 255 };
 
@@ -77,6 +78,14 @@ impl Window {
             y:self.position.y + WINDOW_BORDER_WIDTH+TITLE_BAR_HEIGHT + self.content_size.h - 20,
             w:20,
             h:20,
+        }
+    }
+    pub fn close_button_bounds(&self) -> Rect {
+        return Rect {
+            x:self.position.x + WINDOW_BORDER_WIDTH+1,
+            y:self.position.y + WINDOW_BORDER_WIDTH+1,
+            w: TITLE_BAR_HEIGHT-2,
+            h: TITLE_BAR_HEIGHT-2,
         }
     }
 }
@@ -193,6 +202,14 @@ impl WindowManagerState {
             }
         }
         return res;
+    }
+    pub fn remove_window(&mut self, app_id: Uuid, win_id:Uuid) {
+        if let Some(app) = self.find_app(app_id) {
+            if let Some(n) = app.windows.iter().position(|w| w.id == win_id) {
+                println!("removing window from the app windows list");
+                app.windows.remove(n);
+            }
+        }
     }
     pub fn remove_app(&mut self, app_id: Uuid) {
         if let Some(app) = self.find_app(app_id) {
@@ -494,6 +511,45 @@ impl InputGesture for WindowResizeGesture {
             println!("final size is {}",diff);
             // win.position.copy_from(&new_pos);
             win.set_size(Size{ w: diff.x, h: diff.y })
+        }
+    }
+}
+
+pub struct WindowCloseButtonGesture {
+    pub winid: Uuid,
+}
+impl WindowCloseButtonGesture {
+    pub fn init(start:Point, winid:Uuid) -> WindowCloseButtonGesture {
+        WindowCloseButtonGesture {
+            // mouse_start:Point::init(0, 0),
+            // win_start:Point::init(0,0),
+            winid
+        }
+    }
+}
+impl InputGesture for WindowCloseButtonGesture {
+    fn mouse_down(&mut self, evt: MouseDownEvent, state: &mut WindowManagerState, tx_out: &Sender<OutgoingMessage>) {
+    }
+
+    fn mouse_move(&mut self, evt: MouseMoveEvent, state: &mut WindowManagerState, tx_out: &Sender<OutgoingMessage>) {
+    }
+
+    fn mouse_up(&mut self, evt: MouseUpEvent, state: &mut WindowManagerState, tx_out: &Sender<OutgoingMessage>) {
+        println!("mouse up. send the window close event");
+        // let point = Point::init(evt.x, evt.y);
+        if let Some(win) = state.lookup_window(self.winid) {
+            info!("picked a window for mouse up");
+            let wid = win.id.clone();
+            let aid = win.owner.clone();
+            // let app_point = point.subtract(&win.content_bounds().position());
+            state.remove_window(aid,wid);
+            tx_out.send(OutgoingMessage {
+                recipient: aid,
+                command: APICommand::CloseWindowResponse(CloseWindowResponse {
+                    app_id: aid,
+                    window_id: wid,
+                })
+            }).unwrap();
         }
     }
 }

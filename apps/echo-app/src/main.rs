@@ -106,6 +106,10 @@ fn main() {
             APICommand::MouseDown(md) => {
                 client.send(APICommand::Debug(DebugMessage::AppLog(String::from("got-mouse-event"))));
             }
+            APICommand::CloseWindowResponse(cmd) => {
+                info!("onlyhave one window. shutting down the whole app");
+                break;
+            }
             APICommand::SystemShutdown => {
                 info!("CLIENT app:  system is shutting down. bye!");
                 client.send(APICommand::Debug(DebugMessage::AppLog(String::from("got-shutdown"))));
