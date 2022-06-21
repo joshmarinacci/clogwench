@@ -111,10 +111,12 @@ impl GFXBuffer {
         // println!("filling rect with image {:?} {}x{}",rect, buf.width, buf.height);
         for j in rect.y .. rect.y + rect.h {
             for i in rect.x .. rect.x + rect.w {
-                let v = buf.get_pixel_vec_argb(
+                let mut v = buf.get_pixel_vec_argb(
                     ( (i - rect.x) as u32 % buf.width) as i32,
                     ( (j - rect.y) as u32 % buf.height) as i32);
-                self.set_pixel_vec_argb(i as i32,j as i32,&v);
+                if v[0] > 0 {
+                    self.set_pixel_vec_argb(i as i32, j as i32, &v);
+                }
             }
         }
     }
