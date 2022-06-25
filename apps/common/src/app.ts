@@ -1,5 +1,5 @@
 import {Socket} from "net";
-import {Rect, Size} from "thneed-gfx";
+import {Rect, Size, Callback} from "thneed-gfx";
 import {BufferImage} from "./surface";
 
 const STD_PORT = 3333
@@ -8,6 +8,8 @@ export class App {
     private client: Socket
     private windows: Map<any, any>;
     private id: string;
+    private _on_close_window_cb: Callback;
+    private cb:Callback
 
     constructor() {
         // console.log("Making a socket")
@@ -36,6 +38,10 @@ export class App {
                 if (msg.MouseMove) return this.windows.get(msg.MouseMove.window_id).dispatch(msg)
                 if (msg.KeyDown) return this.windows.get(msg.KeyDown.window_id).dispatch(msg)
                 if (msg.WindowResized) return this.windows.get(msg.WindowResized.window_id).dispatch(msg)
+                if (msg.CloseWindowResponse) {
+                    if(this._on_close_window_cb) this._on_close_window_cb()
+                    return
+                }
                 console.log("msg is", msg)
                 if (this.cb) this.cb(msg)
             })
@@ -89,6 +95,10 @@ export class App {
                 query:param}
         })
         return results.DBQueryResponse.results
+    }
+
+    on_close_window(cb:Callback) {
+        this._on_close_window_cb = cb
     }
 }
 

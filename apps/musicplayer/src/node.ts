@@ -7,7 +7,7 @@ import {make_music_player} from "./index";
 function start(app: App, surface: ClogwenchWindowSurface) {
     let music_root = make_music_player(surface);
     surface.set_root(music_root)
-    surface.start()
+    surface.start_input()
     surface.repaint()
 
     setTimeout(async ()=>{
@@ -29,6 +29,10 @@ async function doit() {
     let win = await app.open_window(new Rect(50, 50, 600, 300))
     let surface = new ClogwenchWindowSurface(win);
     start(app,surface)
+    app.on_close_window(() => {
+        console.log("window closed. quitting")
+        process.exit(0)
+    })
 }
 
 doit().then(() => console.log("fully started")).catch((e) => console.error(e))

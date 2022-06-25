@@ -9,6 +9,7 @@ import {
     View,
     ParentView,
     Modifiers,
+    Callback,
 } from "thneed-gfx";
 import {Window} from "./app";
 // @ts-ignore
@@ -204,6 +205,7 @@ export class ClogwenchWindowSurface implements SurfaceContext {
     private translation: Point;
     private font: BufferFont;
     private _keyboard_focus: View;
+    protected _input_callback: Callback;
 
     constructor(win) {
         this.win = win
@@ -321,7 +323,13 @@ export class ClogwenchWindowSurface implements SurfaceContext {
     }
 
     start() {
-        // console.log("surface starting")
+        console.log("clogwench surface starting")
+    }
+    start_input() {
+        this._input_callback = () => {
+            console.log("repainting on input")
+            this.repaint()
+        }
     }
 
     repaint() {
