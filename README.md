@@ -2,6 +2,15 @@
 
 # new instructions June 2022
 
+pre-install homebrew and rust
+Install pkg-config and sdl2
+
+### macos
+```shell
+brew install pkg-config
+brew install sdl2
+```
+
 ```shell
 cd central
 cargo build
