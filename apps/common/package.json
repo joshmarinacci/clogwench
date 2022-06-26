@@ -9,7 +9,7 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
-    "thneed-gfx": "^0.1.35"
+    "thneed-gfx": "^0.1.36"
   },
   "devDependencies": {
     "@types/node": "^17.0.44"

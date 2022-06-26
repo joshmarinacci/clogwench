@@ -6,7 +6,7 @@
   "dependencies": {
     "parcel": "^2.6.0",
     "typescript": "^4.7.2",
-    "thneed-gfx": "^0.1.35"
+    "thneed-gfx": "^0.1.36"
   },
   "devDependencies": {
     "@types/node": "^17.0.44"
