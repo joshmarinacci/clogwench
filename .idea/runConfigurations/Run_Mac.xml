@@ -1,6 +1,6 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Run Mac" type="CargoCommandRunConfiguration" factoryName="Cargo Command">
-    <option name="command" value="run -- --wmtype=native --start-echo=true" />
+    <option name="command" value="run -- --wmtype=native --start-dock=true" />
     <option name="workingDirectory" value="file://$PROJECT_DIR$/tools/runner" />
     <option name="channel" value="DEFAULT" />
     <option name="requiredFeatures" value="true" />

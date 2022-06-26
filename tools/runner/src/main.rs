@@ -53,6 +53,8 @@ struct Cli {
     start_clock:bool,
     #[structopt(long)]
     start_echo:bool,
+    #[structopt(long)]
+    start_dock:bool,
 }
 
 fn init_setup() -> Cli {
@@ -137,6 +139,9 @@ fn main() -> Result<(),String> {
     if args.start_echo {
         start_app_with_delay(5000, String::from("../../apps/echo-app"));
     }
+    if args.start_dock {
+        start_nodeapp_with_delay(2000, String::from("../../apps/dock"));
+    }
     match args.wmtype {
         WMType::Native => {
             info!("creating a native window manager");
@@ -204,6 +209,27 @@ fn start_app_with_delay(delay: u64, path: String) {
             // .stdout(Stdio::null())
             // .stdout(Stdio::inherit())
             .arg("run")
+            // .arg("--debug=true")
+            // .env_clear()
+            // .env("PATH", "/bin")
+            .spawn()
+            .expect("child process failed to start")
+            ;
+        info!("child at {} is launched",path);
+    });
+}
+
+fn start_nodeapp_with_delay(delay: u64, path: String) {
+    thread::spawn(move||{
+        thread::sleep(Duration::from_millis(delay));
+        info!("launching {}",path);
+        let mut child = Command::new("npm")
+            .current_dir(&path)
+            // .stdin(Stdio::null())
+            // .stdout(Stdio::null())
+            // .stdout(Stdio::inherit())
+            .arg("run")
+            .arg("dev")
             // .arg("--debug=true")
             // .env_clear()
             // .env("PATH", "/bin")

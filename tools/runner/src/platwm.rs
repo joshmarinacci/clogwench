@@ -30,6 +30,8 @@ pub struct PlatformWindowManager {
     pub gesture: Box<dyn InputGesture>,
     pub cursor: Point,
     pub cursor_image: GFXBuffer,
+    pub exit_button_bounds:Rect,
+
     tick:u128,
     fps:Vec<u128>,
 }
@@ -124,6 +126,7 @@ impl PlatformWindowManager {
                     cursor_image,
                     tick: 0,
                     fps: vec![],
+                    exit_button_bounds: Rect::from_ints(bds.w-40,bds.h-20,40,20),
                 })
             }
             _ => {
@@ -216,6 +219,15 @@ impl PlatformWindowManager {
                 }
                 APICommand::MouseDown(evt) => {
                     let point = Point::init(evt.x, evt.y);
+                    if self.exit_button_bounds.contains(&point) {
+                        info!("clicked the exit button!");
+                        self.tx_out.send(OutgoingMessage {
+                            recipient: Default::default(),
+                            command: APICommand::Debug(DebugMessage::RequestServerShutdown)
+                        }).unwrap();
+                        thread::sleep(Duration::from_millis(500));
+                        return false;
+                    }
                     if let Some(win) = self.state.pick_window_at(point) {
                         info!("picked a window");
                         let wid = win.id.clone();
@@ -326,20 +338,21 @@ impl PlatformWindowManager {
             self.plat.clear();
 
             self.background.clear(&ARGBColor::new_rgb(120,128,128));
-            self.background.fill_rect(Rect::from_ints(0,0,25,25), &ARGBColor::new_rgb(0,0,0));
-            self.background.fill_rect(Rect::from_ints(0,25,25,25), &ARGBColor::new_rgb(255,0,0));
-            self.background.fill_rect(Rect::from_ints(0,50,25,25), &ARGBColor::new_rgb(0,255,0));
-            self.background.fill_rect(Rect::from_ints(0,75,25,25), &ARGBColor::new_rgb(0,0,255));
-            self.background.fill_rect(Rect::from_ints(0,100,25,25), &ARGBColor::new_rgb(255,255,0));
-            self.background.fill_rect(Rect::from_ints(0,125,25,25), &ARGBColor::new_rgb(0,255,255));
-            self.background.fill_rect(Rect::from_ints(0,150,25,25), &ARGBColor::new_rgb(255,0,255));
-            self.background.fill_rect(Rect::from_ints(0,175,25,25), &ARGBColor::new_rgb(255,255,255));
+            // self.background.fill_rect(Rect::from_ints(0,0,25,25), &ARGBColor::new_rgb(0,0,0));
+            // self.background.fill_rect(Rect::from_ints(0,25,25,25), &ARGBColor::new_rgb(255,0,0));
+            // self.background.fill_rect(Rect::from_ints(0,50,25,25), &ARGBColor::new_rgb(0,255,0));
+            // self.background.fill_rect(Rect::from_ints(0,75,25,25), &ARGBColor::new_rgb(0,0,255));
+            // self.background.fill_rect(Rect::from_ints(0,100,25,25), &ARGBColor::new_rgb(255,255,0));
+            // self.background.fill_rect(Rect::from_ints(0,125,25,25), &ARGBColor::new_rgb(0,255,255));
+            // self.background.fill_rect(Rect::from_ints(0,150,25,25), &ARGBColor::new_rgb(255,0,255));
+            // self.background.fill_rect(Rect::from_ints(0,175,25,25), &ARGBColor::new_rgb(255,255,255));
 
             // draw_test_pattern(&mut self.background);
             // self.font.draw_text_at(&mut self.background,"Greetings Earthling",40,40,&ARGBColor::new_rgb(0,255,0));
             self.plat.draw_image(&Point::init(0, 0), &self.background.bounds(), &self.background);
             // self.background.to_png(&PathBuf::from("output.png"));
             // panic!();
+        let MAGENTA:ARGBColor = ARGBColor::new_rgb(255, 0, 255);
         for win_id in &self.state.window_order {
             if let Some(win) = self.state.lookup_window(*win_id) {
                 let (wc, tc) = if self.state.is_focused_window(win) {
@@ -353,13 +366,14 @@ impl PlatformWindowManager {
                 self.plat.fill_rect(win.close_button_bounds(), &WINDOW_BUTTON_COLOR);
                 //draw the content
                 let bd = win.content_bounds();
-                let MAGENTA = ARGBColor::new_rgb(255, 0, 255);
                 self.plat.fill_rect(bd, &MAGENTA);
                 self.plat.draw_image(&win.content_bounds().position(), &win.backbuffer.bounds(), &win.backbuffer);
                 // draw the resize button
                 self.plat.fill_rect(win.resize_bounds(), &MAGENTA);
             }
         }
+            //draw the exit button
+        self.plat.fill_rect(self.exit_button_bounds, &MAGENTA);
             // draw the cursor
             self.plat.draw_image(&self.cursor,&self.cursor_image.bounds(),&self.cursor_image);
 
