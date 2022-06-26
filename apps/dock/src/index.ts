@@ -26,6 +26,16 @@ function start(surface: ClogwenchWindowSurface) {
     })
     vbox.add(music_button)
 
+    let clock_button = new ActionButton()
+    clock_button.set_caption('Clock')
+    clock_button.on(COMMAND_ACTION, () => {
+        console.log("launching the clock app")
+        child_process.spawn('cargo',['run'],{
+            cwd:'../digital-clock/',
+            detached:true,
+        })
+    })
+    vbox.add(clock_button)
 
 
     let quit_button = new ActionButton()
