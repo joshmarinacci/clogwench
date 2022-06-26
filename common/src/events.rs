@@ -1,24 +1,7 @@
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub enum KeyCode {
-    RESERVED,
-    ESC,
-    UNKNOWN,
-    ARROW_LEFT,
-    ARROW_RIGHT,
-    ARROW_UP,
-    ARROW_DOWN,
-    SPACE,
-    ENTER,
-    LETTER_A,
-    LETTER_P,
-    LETTER_Q,
-
-    MOUSE_PRIMARY,
-}
+use crate::generated::KeyCode;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct KeyDownEvent {

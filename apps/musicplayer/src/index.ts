@@ -139,7 +139,6 @@ export class MusicPlayer extends VBox {
             }
         }
         let rend = (obj) => {
-            console.log("song is",obj)
             return `${obj.data.title} - ${obj.data.artist}`
         }
         this.song_list = new SelectList([test_song],rend)
@@ -149,7 +148,7 @@ export class MusicPlayer extends VBox {
         this.add(make_statusbar());
     }
     set_tracks(tracks) {
-        this.log("got the tracks",tracks)
+        // this.log("got the tracks",tracks)
         this.song_list.set_data(tracks)
     }
 }

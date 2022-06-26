@@ -116,7 +116,7 @@ export class Window {
     private app_id: string;
     private window_type: string;
     private app: App;
-    private listeners: Map<string, any>;
+    private listeners: Map<string, Callback>;
     private buffer: BufferImage;
     private buffered: boolean;
 
@@ -126,7 +126,7 @@ export class Window {
         this.window_id = info.window_id
         this.window_type = info.window_type
         this.bounds = info.bounds
-        this.listeners = new Map<string, any>();
+        this.listeners = new Map<string, Callback>();
         this.buffer = new BufferImage(this.bounds.w,this.bounds.h)
         this.buffered = false
     }
@@ -173,7 +173,7 @@ export class Window {
         }
     }
 
-    on(type, cb) {
+    on(type:string, cb:Callback) {
         if (!this.listeners[type]) this.listeners[type] = []
         this.listeners[type].push(cb)
     }
@@ -187,7 +187,7 @@ export class Window {
         if (obj.WindowResized) this.set_size(obj.WindowResized.size)
     }
 
-    fire(type, obj) {
+    fire(type:string, obj) {
         // console.log("firing", type)
         if (!this.listeners[type]) this.listeners[type] = []
         this.listeners[type].forEach(cb => cb(obj))

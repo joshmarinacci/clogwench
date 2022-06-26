@@ -10,8 +10,9 @@ use std::time::{Duration, Instant};
 use log::info;
 use serde::Deserialize;
 use common::{APICommand, ARGBColor, BLACK, DebugMessage, HelloWindowManager, IncomingMessage, Point, Rect, WHITE, WINDOW_MANAGER_PORT, WindowResized};
-use common::events::{KeyCode, KeyDownEvent, MouseButton, MouseDownEvent, MouseUpEvent};
+use common::events::{KeyDownEvent, MouseButton, MouseDownEvent, MouseUpEvent};
 use common::font::{FontInfo2, load_font_from_json};
+use common::generated::KeyCode;
 use common::graphics::{draw_test_pattern, GFXBuffer, PixelLayout};
 use common_wm::{AppMouseGesture, FOCUSED_TITLEBAR_COLOR, FOCUSED_WINDOW_COLOR, InputGesture, NoOpGesture, OutgoingMessage, TITLEBAR_COLOR, WINDOW_BORDER_WIDTH, WINDOW_BUTTON_COLOR, WINDOW_COLOR, WindowCloseButtonGesture, WindowDragGesture, WindowManagerState, WindowResizeGesture};
 use plat::{make_plat, Plat};
@@ -252,7 +253,7 @@ impl PlatformWindowManager {
                 }
                 APICommand::KeyDown(evt) => {
                     match evt.key {
-                        KeyCode::ESC => {
+                        KeyCode::ESCAPE => {
                             self.tx_out.send(OutgoingMessage {
                                 recipient: Default::default(),
                                 command: APICommand::Debug(DebugMessage::RequestServerShutdown)

@@ -3,7 +3,7 @@ use log::{info, LevelFilter, set_logger};
 use std::sync::mpsc::RecvError;
 use common::{APICommand, ARGBColor, BLACK, DebugMessage, DrawImageCommand, DrawRectCommand, HelloApp, OpenWindowCommand, Rect, WHITE};
 use common::client::ClientConnection;
-use common::events::KeyCode;
+use common::generated::KeyCode;
 use uuid::Uuid;
 use common::font::load_font_from_json;
 use common::graphics::{GFXBuffer, PixelLayout};

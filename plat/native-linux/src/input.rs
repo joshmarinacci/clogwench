@@ -8,7 +8,8 @@ use common::events::*;
 
 use std::thread;
 use log::{info, warn};
-use common::events::{KeyCode, MouseButton, MouseMoveEvent};
+use common::events::{MouseButton, MouseMoveEvent};
+use common::generated::KeyCode;
 
 pub fn find_keyboard() -> Option<evdev::Device> {
     let mut devices = evdev::enumerate().collect::<Vec<_>>();

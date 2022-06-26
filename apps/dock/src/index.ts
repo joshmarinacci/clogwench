@@ -9,7 +9,7 @@ import {ClogwenchWindowSurface} from "../../common/src/surface";
 
 function start(surface: ClogwenchWindowSurface) {
     let button = new ActionButton()
-    button.set_caption("foobutton")
+    button.set_caption("quit")
     button.on(COMMAND_ACTION, async () => {
         process.exit(0)
     })
@@ -17,22 +17,21 @@ function start(surface: ClogwenchWindowSurface) {
     let vbox = new VBox()
     vbox.add(button)
     let label = new Label()
-    label.set_caption('foolabel')
+    label.set_caption('text label')
     vbox.add(label)
 
     let button2 = new ActionButton()
-    button2.set_caption('barbutton')
+    button2.set_caption('action button')
     vbox.add(button2)
 
     let text = new TextLine()
-    text.set_text('some text')
+    text.set_text('some text to edit')
     vbox.add(text)
 
     let root = new LayerView('root-layer')
     root.add(vbox)
     surface.set_root(root)
-    surface.start()
-    surface.repaint()
+    surface.start_input()
 }
 
 async function doit() {

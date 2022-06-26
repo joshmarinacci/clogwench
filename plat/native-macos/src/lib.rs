@@ -7,7 +7,7 @@ use std::time::Duration;
 
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
-use sdl2::render::{Texture, WindowCanvas, TextureCreator, TextureAccess};
+use sdl2::render::{Texture, TextureAccess, TextureCreator, WindowCanvas};
 use sdl2::video::{Window, WindowContext};
 use sdl2::{EventPump, Sdl};
 use sdl2::keyboard::Keycode::D;
@@ -16,8 +16,11 @@ use sdl2::rect::Rect as SDLRect;
 
 use uuid::Uuid;
 use common::{APICommand, ARGBColor, IncomingMessage, Point, Rect as CommonRect, Rect};
-use common::events::{KeyCode, KeyDownEvent, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent};
+use common::events::{KeyDownEvent, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent};
+use common::generated::KeyCode;
 use common::graphics::{GFXBuffer, PixelLayout};
+
+mod sdl_to_common;
 
 
 pub struct Plat {
@@ -85,7 +88,7 @@ impl Plat {
                                 app_id: Default::default(),
                                 window_id: Default::default(),
                                 original_timestamp: 0,
-                                key: sdl_to_common(kk),
+                                key: sdl_to_common::sdl_to_common(kk),
                             })
                         };
                         if let Err(e) = self.sender.send(cmd) {
@@ -195,22 +198,6 @@ impl Plat {
     }
     pub fn unregister_image2(&mut self, img:&GFXBuffer) {
         self.textures.remove(&img.id);
-    }
-}
-
-fn sdl_to_common(kc: Keycode) -> KeyCode {
-    match kc {
-        Keycode::Escape => KeyCode::ESC,
-        Keycode::Left => KeyCode::ARROW_LEFT,
-        Keycode::Right => KeyCode::ARROW_RIGHT,
-        Keycode::Up => KeyCode::ARROW_UP,
-        Keycode::Down => KeyCode::ARROW_DOWN,
-        Keycode::P => KeyCode::LETTER_P,
-        Keycode::Q => KeyCode::LETTER_Q,
-        Keycode::A => KeyCode::LETTER_A,
-        _ => {
-            KeyCode::UNKNOWN
-        }
     }
 }
 

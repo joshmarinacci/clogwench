@@ -10,6 +10,7 @@ pub mod client;
 pub mod events;
 pub mod graphics;
 pub mod font;
+pub mod generated;
 
 
 #[cfg(test)]

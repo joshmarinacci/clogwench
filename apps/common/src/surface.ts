@@ -15,6 +15,7 @@ import {Window} from "./app";
 // @ts-ignore
 import basefont_data from "../../dock/src/base_font.json";
 import {SpriteGlyph, StandardTextHeight} from "../../../../thneed-gfx/src";
+import {IDEALOS_KEYBOARD_CODE, IDEALOS_KEYBOARD_KEY} from "./generated";
 
 type Color = {
     r:number,
@@ -30,6 +31,27 @@ const BLACK:Color = {r:0, g:0, b:0, a:255}
 const GREEN = {r:0, g:255, b:0, a:255}
 const BLUE = {r:255, g:0, b:0, a:255}
 const TRANSPARENT:Color = {r:255, g:0, b:255, a:0}
+
+export type IdealosKeyEvent = {
+    key:string
+    code:string
+}
+
+export function ideal_os_key_to_thneed_code(inp:IdealosKeyEvent):IdealosKeyEvent {
+    console.log("converting idealos key event",inp)
+    let out:IdealosKeyEvent = {
+        code: "",
+        key: ""
+    }
+    if(IDEALOS_KEYBOARD_CODE[inp.key]) {
+        out.code = IDEALOS_KEYBOARD_CODE[inp.key]
+    }
+    if(IDEALOS_KEYBOARD_KEY[out.code]) {
+        out.key = IDEALOS_KEYBOARD_KEY[out.code]
+    }
+    console.log("to thneed event:",out)
+    return out
+}
 
 console.log("surface loaded font",basefont_data)
 export class BufferImage {
@@ -212,33 +234,27 @@ export class ClogwenchWindowSurface implements SurfaceContext {
         this.translation = new Point(0,0)
         this.mouse = new MouseInputService(this)
         this.keyboard = new KeyboardInputService(this)
-        this.win.on('mousedown', async (e) => {
+        this.win.on('mousedown', (e) => {
             console.log("got a mouse up event", e)
             let position = new Point(e.x, e.y)
             this.mouse.trigger_mouse_down(position, 0)
         })
-        this.win.on('mousemove', async (e) => {
+        this.win.on('mousemove', (e) => {
             console.log("got a mouse move event", e)
             let position = new Point(e.x, e.y)
             this.mouse.trigger_mouse_move(position, 0)
         })
-        this.win.on('mouseup', async (e) => {
+        this.win.on('mouseup', (e) => {
             console.log("got a mouse up event", e)
             let position = new Point(e.x, e.y)
             this.mouse.trigger_mouse_up(position, 0)
         })
-        this.win.on('keydown',async (e) => {
-            console.log("got a keyboard event",e)
+        this.win.on('keydown',(evt) => {
             let mod:Modifiers = {
                 alt: false, ctrl: false, meta: false, shift: false
             }
             //ArrowRight
-            if(e.key === 'ARROW_RIGHT') e.code = 'ArrowRight'
-            if(e.key === 'ARROW_LEFT') e.code = 'ArrowLeft'
-            if(e.key === 'LETTER_A') {
-                e.code = 'KeyA'
-                e.key = 'a'
-            }
+            let e = ideal_os_key_to_thneed_code(evt);
             this.keyboard.trigger_key_down(e.key,e.code, mod)
         })
         this.win.on('resize',() => this.repaint())
@@ -330,6 +346,7 @@ export class ClogwenchWindowSurface implements SurfaceContext {
             console.log("repainting on input")
             this.repaint()
         }
+        this.repaint()
     }
 
     repaint() {
