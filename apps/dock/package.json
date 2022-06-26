@@ -6,7 +6,7 @@
   "type": "module",
   "dependencies": {
     "parcel": "^2.6.0",
-    "thneed-gfx": "0.1.34",
+    "thneed-gfx": "0.1.36",
     "typescript": "^4.7.2"
   },
   "devDependencies": {
