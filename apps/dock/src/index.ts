@@ -26,6 +26,17 @@ function start(surface: ClogwenchWindowSurface) {
     })
     vbox.add(music_button)
 
+    let texteditor = new ActionButton()
+    texteditor.set_caption('TextEdit')
+    texteditor.on(COMMAND_ACTION, () => {
+        console.log("launching the text editor app")
+        child_process.spawn('npm',['run','dev'],{
+            cwd:'../textedit/',
+            detached:true,
+        })
+    })
+    vbox.add(texteditor)
+
     let clock_button = new ActionButton()
     clock_button.set_caption('Clock')
     clock_button.on(COMMAND_ACTION, () => {
