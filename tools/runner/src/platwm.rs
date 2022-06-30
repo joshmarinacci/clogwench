@@ -264,7 +264,7 @@ impl PlatformWindowManager {
                     }
                 }
                 APICommand::KeyDown(evt) => {
-                    match evt.key {
+                    match evt.code {
                         KeyCode::ESCAPE => {
                             self.tx_out.send(OutgoingMessage {
                                 recipient: Default::default(),
@@ -274,7 +274,7 @@ impl PlatformWindowManager {
                             return false;
                         }
                         _ => {
-                            info!("got a key down event");
+                            info!("got a key down event {:?}",evt);
                             if let Some(id) = self.state.get_focused_window() {
                                 if let Some(win) = self.state.lookup_window(*id) {
                                     let wid = win.id.clone();
@@ -285,7 +285,8 @@ impl PlatformWindowManager {
                                             app_id: aid,
                                             window_id: wid,
                                             original_timestamp: evt.original_timestamp,
-                                            key: evt.key
+                                            key: evt.key,
+                                            code: evt.code,
                                         })
                                     }).unwrap();
                                 }

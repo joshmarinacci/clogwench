@@ -43,11 +43,14 @@ export function ideal_os_key_to_thneed_code(inp:IdealosKeyEvent):IdealosKeyEvent
         code: "",
         key: ""
     }
-    if(IDEALOS_KEYBOARD_CODE[inp.key]) {
-        out.code = IDEALOS_KEYBOARD_CODE[inp.key]
+    if(IDEALOS_KEYBOARD_CODE[inp.code]) {
+        out.code = IDEALOS_KEYBOARD_CODE[inp.code]
     }
     if(IDEALOS_KEYBOARD_KEY[out.code]) {
         out.key = IDEALOS_KEYBOARD_KEY[out.code]
+    }
+    if(inp.key && inp.key !== '') {
+        out.key = inp.key
     }
     console.log("to thneed event:",out)
     return out

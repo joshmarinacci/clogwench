@@ -80,15 +80,19 @@ impl Plat {
                 //     self.stop.store(true, Ordering::Relaxed);
                 //     break;
                 // },
-                Event::KeyDown {keycode,keymod,..} => {
+                Event::KeyDown {keycode,keymod,scancode,..} => {
                     if let Some(kk) = keycode {
+                        // println!("keycode is {}",kk);
+                        // println!("scancode is {:?}",scancode);
+                        // println!("mod is {}",keymod);
                         let cmd = IncomingMessage {
                             source: Default::default(),
                             command: APICommand::KeyDown(KeyDownEvent{
                                 app_id: Default::default(),
                                 window_id: Default::default(),
                                 original_timestamp: 0,
-                                key: sdl_to_common::sdl_to_common(kk),
+                                code: sdl_to_common::sdl_to_common(kk,keymod),
+                                key: sdl_to_common::sdl_to_common_letter(kk,keymod),
                             })
                         };
                         if let Err(e) = self.sender.send(cmd) {

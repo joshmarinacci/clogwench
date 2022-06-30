@@ -8,7 +8,8 @@ pub struct KeyDownEvent {
     pub app_id:Uuid,
     pub window_id:Uuid,
     pub original_timestamp:i64,
-    pub key:KeyCode
+    pub code:KeyCode,
+    pub key:String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
