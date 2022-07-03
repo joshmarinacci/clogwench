@@ -26,6 +26,23 @@
         "artist": "Pretty Poison",
         "album": "Catch Me I'm Falling"
       }
+    },
+    {
+      "id": "some-unique-id-04",
+      "data": {
+        "type": "person-contact",
+        "first": "Josh",
+        "last": "Marinacci",
+        "email": "josh@josh.earth"
+      }
+    },
+    {
+      "id": "some-unique-id-05",
+      "data": {
+        "type": "person-contact",
+        "first": "Jesse",
+        "last": "Marinacci"
+      }
     }
   ]
 }

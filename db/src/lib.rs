@@ -12,16 +12,24 @@ pub struct JDB {
     pub data: Vec<JObj>,
 }
 
+fn check_match(item: &JObj, query: &HashMap<String, String>) -> bool {
+    for (key,value) in query {
+        // println!("searching for the key '{}'",key);
+        if !item.field_matches(&key, &value) {
+            return false;
+        }
+    }
+    return true
+}
+
+
 impl JDB {
-    pub fn process_query(&self, req: HashMap<String,String>) -> Vec<JObj> {
-        println!("db processing the query {:?}",req);
+    pub fn process_query(&self, query: &HashMap<String,String>) -> Vec<JObj> {
+        println!("db processing the query {:?}", query);
         let mut results:Vec<JObj> = vec![];
         for item in &self.data {
-            for (key,value) in &req {
-                println!("searching for the key '{}'",key);
-                if item.field_matches(&key, &value) {
-                    results.push(item.clone())
-                }
+            if check_match(item, query) {
+                results.push(item.clone())
             }
         }
         return results;
@@ -145,10 +153,10 @@ mod tests {
     fn load_file_test() {
         println!("working dir is {:?}", env::current_dir());
         let jdb = JDB::load_from_file(PathBuf::from("./test_data.json"));
-        assert_eq!(jdb.data.len(),3);
+        assert_eq!(jdb.data.len(),5);
         let mut query:HashMap<String,String> = HashMap::new();
         query.insert(String::from("type"), String::from("song-track"));
-        let res = jdb.process_query(query);
+        let res = jdb.process_query(&query);
         assert_eq!(res.len(),3);
     }
 
@@ -175,6 +183,25 @@ mod tests {
         jdb.data.push(song);
 
        return jdb
+    }
+
+    #[test]
+    fn query_test() {
+        let jdb = JDB::load_from_file(PathBuf::from("./test_data.json"));
+        assert_eq!(jdb.data.len(),5);
+        {
+            let mut query: HashMap<String, String> = HashMap::new();
+            query.insert(String::from("type"), String::from("person-contact"));
+            let res = jdb.process_query(&query);
+            assert_eq!(res.len(), 2);
+        }
+        {
+            let mut query: HashMap<String, String> = HashMap::new();
+            query.insert(String::from("type"), String::from("person-contact"));
+            query.insert(String::from("first"), String::from("Josh"));
+            let res = jdb.process_query(&query);
+            assert_eq!(res.len(), 1);
+        }
     }
 }
 
