@@ -37,11 +37,39 @@
       }
     },
     {
-      "id": "josh-one",
+      "id": "addr-id-01",
       "data": {
         "type": "person-contact",
-        "first": "Joshua",
-        "last": "Marinacci"
+        "first": "Josh",
+        "last": "Marinacci",
+        "email": "josh@josh.earth"
+      }
+    },
+    {
+      "id": "addr-id-02",
+      "data": {
+        "type": "person-contact",
+        "first": "Jesse",
+        "last": "Marinacci",
+        "email": "dont@email.me"
+      }
+    },
+    {
+      "id": "addr-id-03",
+      "data": {
+        "type": "person-contact",
+        "first": "Billy",
+        "last": "Bob",
+        "email": "billybob@billybob.com"
+      }
+    },
+    {
+      "id": "addr-id-04",
+      "data": {
+        "type": "person-contact",
+        "first": "Tony",
+        "last": "Stark",
+        "email": "tony@stark.com"
       }
     }
   ]
