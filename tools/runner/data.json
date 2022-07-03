@@ -42,7 +42,8 @@
         "type": "person-contact",
         "first": "Josh",
         "last": "Marinacci",
-        "email": "josh@josh.earth"
+        "email": "josh@josh.earth",
+        "phone": "707-555-5555"
       }
     },
     {

@@ -27,23 +27,27 @@ export class App {
             this.client.on('data', (data: Buffer) => {
                 let str = data.toString()
                 console.log("raw incoming data", str)
-                let msg = JSON.parse(str)
-                if (msg.AppConnectResponse) {
-                    this.id = msg.AppConnectResponse.app_id
-                    if(this.cb) this.cb(msg)
-                    return
+                try {
+                    let msg = JSON.parse(str)
+                    if (msg.AppConnectResponse) {
+                        this.id = msg.AppConnectResponse.app_id
+                        if (this.cb) this.cb(msg)
+                        return
+                    }
+                    if (msg.MouseDown) return this.windows.get(msg.MouseDown.window_id).dispatch(msg)
+                    if (msg.MouseUp) return this.windows.get(msg.MouseUp.window_id).dispatch(msg)
+                    if (msg.MouseMove) return this.windows.get(msg.MouseMove.window_id).dispatch(msg)
+                    if (msg.KeyDown) return this.windows.get(msg.KeyDown.window_id).dispatch(msg)
+                    if (msg.WindowResized) return this.windows.get(msg.WindowResized.window_id).dispatch(msg)
+                    if (msg.CloseWindowResponse) {
+                        if (this._on_close_window_cb) this._on_close_window_cb()
+                        return
+                    }
+                    console.log("msg is", msg)
+                    if (this.cb) this.cb(msg)
+                } catch (e) {
+                    console.log("error JSON parsing",e)
                 }
-                if (msg.MouseDown) return this.windows.get(msg.MouseDown.window_id).dispatch(msg)
-                if (msg.MouseUp) return this.windows.get(msg.MouseUp.window_id).dispatch(msg)
-                if (msg.MouseMove) return this.windows.get(msg.MouseMove.window_id).dispatch(msg)
-                if (msg.KeyDown) return this.windows.get(msg.KeyDown.window_id).dispatch(msg)
-                if (msg.WindowResized) return this.windows.get(msg.WindowResized.window_id).dispatch(msg)
-                if (msg.CloseWindowResponse) {
-                    if(this._on_close_window_cb) this._on_close_window_cb()
-                    return
-                }
-                console.log("msg is", msg)
-                if (this.cb) this.cb(msg)
             })
         })
     }

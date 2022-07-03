@@ -229,7 +229,7 @@ export class ClogwenchWindowSurface implements SurfaceContext {
     private _root: View
     private translation: Point;
     private font: BufferFont;
-    private _keyboard_focus: View;
+    private _keyboard_focus: View|null;
     protected _input_callback: Callback;
 
     constructor(win) {
@@ -267,7 +267,7 @@ export class ClogwenchWindowSurface implements SurfaceContext {
     }
 
     size(): Size {
-        throw new Error("Method not implemented.");
+        throw new Error("Method size() not implemented.");
     }
 
     fill(rect: Rect, color: string) {
@@ -298,15 +298,15 @@ export class ClogwenchWindowSurface implements SurfaceContext {
     }
 
     set_sprite_scale(scale: number) {
-        throw new Error("Method not implemented.");
+        throw new Error("Method set_sprite_scale() not implemented.");
     }
 
     set_smooth_sprites(sprite_smoothing: boolean) {
-        throw new Error("Method not implemented.");
+        throw new Error("Method set_smooth_sprites() not implemented.");
     }
 
     draw_sprite(pt: Point, sprite: Sprite) {
-        throw new Error("Method not implemented.");
+        throw new Error("Method draw_sprite() not implemented.");
     }
 
     keyboard_focus(): View {
@@ -322,15 +322,16 @@ export class ClogwenchWindowSurface implements SurfaceContext {
     }
 
     release_keyboard_focus(view: View) {
-        throw new Error("Method not implemented.");
+        this._keyboard_focus = null
+        // throw new Error("Method release_keyboard_focus() not implemented.");
     }
 
     view_to_local(pt: Point, view: View): Point {
-        throw new Error("Method not implemented.");
+        throw new Error("Method view_to_local() not implemented.");
     }
 
     find_by_name(name: string): View {
-        throw new Error("Method not implemented.");
+        throw new Error("Method find_by_name() not implemented.");
     }
 
     root() {

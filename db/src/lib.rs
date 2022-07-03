@@ -32,6 +32,7 @@ impl JDB {
                 results.push(item.clone())
             }
         }
+        println!("final results are {:?}",results);
         return results;
     }
     pub fn load_from_file(filepath: PathBuf) -> JDB {

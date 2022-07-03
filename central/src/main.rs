@@ -231,7 +231,7 @@ impl CentralState {
     }
     fn send_to_database(&mut self, req: DBQueryRequest) {
         info!("CENTRAL: sending to the database {:?}",req);
-        let data = self.db.process_query(req.query);
+        let data = self.db.process_query(&req.query);
         let msg = DBQueryResponse {
             app_id: req.app_id,
             results: data,
