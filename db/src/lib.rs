@@ -1,3 +1,5 @@
+extern crate core;
+
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, Result};
 use std::collections::HashMap;
@@ -10,6 +12,17 @@ use std::slice::Iter;
 
 pub struct JDB {
     pub data: Vec<JObj>,
+}
+
+
+impl JDB {
+    pub(crate) fn find_by_id(&self, id: &str) -> Option<&JObj> {
+        self.data.iter().find(|obj|obj.id == id)
+    }
+    pub(crate) fn update_object(&mut self, obj: JObj) {
+        self.data.retain(|ob| ob.id != obj.id);
+        self.data.push(obj);
+    }
 }
 
 impl JDB {
@@ -93,6 +106,12 @@ impl JObj {
 
     fn add_field(&mut self, key:&str, value:&str) {
         self.data.insert(String::from(key), String::from(value));
+    }
+    pub(crate) fn set_field(&mut self, key: &str, value: &str) {
+        self.data.insert(String::from(key), String::from(value));
+    }
+    pub(crate) fn remove_field(&mut self, key: &str) {
+        self.data.remove(key);
     }
 }
 
@@ -324,6 +343,41 @@ mod tests {
             assert_eq!(res.len(), 3);
         }
 
+    }
+
+    #[test]
+    fn edit_object_test() {
+        let mut jdb = JDB::load_from_file(PathBuf::from("./test_data.json"));
+        {
+
+            // confirm contact exists
+            if let Some(obj) = jdb.find_by_id("some-unique-id-05") {
+                let mut obj: JObj = obj.clone();
+                //edit the contact
+                obj.set_field("first", "Bart");
+                obj.set_field("last", "Simpson");
+                obj.add_field("animated", "true");
+                obj.remove_field("email");
+                jdb.update_object(obj)
+            } else {
+                assert!(false,"couldnt find it anymore");
+            }
+        }
+
+        // get object again
+        {
+            if let Some(obj) = jdb.find_by_id("some-unique-id-05") {
+                // println!("the object is {:?}",obj);
+                assert_eq!(obj.id,"some-unique-id-05");
+                assert!(obj.has_field("first"));
+                assert!(obj.field_matches("first","Bart"));
+                assert!(obj.field_matches("last","Simpson"));
+                assert!(obj.field_matches("animated","true"));
+                assert!(!obj.has_field("email"));
+            } else {
+                assert!(false,"couldnt find it anymore");
+            }
+        }
     }
 }
 
