@@ -12,27 +12,16 @@ pub struct JDB {
     pub data: Vec<JObj>,
 }
 
-fn check_match(item: &JObj, query: &HashMap<String, String>) -> bool {
-    for (key,value) in query {
-        // println!("searching for the key '{}'",key);
-        if !item.field_matches(&key, &value) {
-            return false;
-        }
-    }
-    return true
-}
-
-
 impl JDB {
     pub fn process_query(&self, query: &JQuery) -> Vec<JObj> {
-        println!("db processing the query");
+        // println!("db processing the query");
         let mut results:Vec<JObj> = vec![];
         for item in &self.data {
             if query.matches(item) {
                 results.push(item.clone());
             }
         }
-        println!("final results are {:?}",results);
+        // println!("final results are {:?}",results);
         return results;
     }
     pub fn load_from_file(filepath: PathBuf) -> JDB {
@@ -56,10 +45,13 @@ impl JDB {
                 // println!("key {} value {}",s,v);
                 song.data.insert(s.clone(), v.as_str().unwrap().to_string());
             }
-            println!("adding a db object {:?}",song);
+            // println!("adding a db object {:?}",song);
             jdb.data.push(song);
         }
         return jdb
+    }
+    pub fn add_object(&mut self, obj:JObj) {
+        self.data.push(obj);
     }
 
     pub(crate) fn find_by_field(&self, name: &str, value: &str) -> Vec<&JObj> {
@@ -91,12 +83,16 @@ impl JObj {
 
     fn field_matches(&self, name:&str, value:&str) -> bool {
         if let Some(val) = self.data.get(name) {
-            println!("comparing {} and {}",&val,value.to_string());
+            // println!("comparing {} and {}",&val,value.to_string());
             return val.eq(value)
         } else {
             return false;
         }
 
+    }
+
+    fn add_field(&mut self, key:&str, value:&str) {
+        self.data.insert(String::from(key), String::from(value));
     }
 }
 
@@ -207,7 +203,7 @@ mod tests {
 
 
         let str = serde_json::to_string_pretty(&objs[0]).unwrap();
-        println!("generated {}",str);
+        // println!("generated {}",str);
 
 
         let data = r#"
@@ -299,6 +295,35 @@ mod tests {
             let res = jdb.process_query(&query);
             assert_eq!(res.len(), 1);
         }
+    }
+
+    #[test]
+    fn create_object_test() {
+        let mut jdb = JDB::load_from_file(PathBuf::from("./test_data.json"));
+        // confirm only 2 contacts
+        {
+
+            let mut query = JQuery::new();
+            query.add_equal("type","person-contact");
+            let res = jdb.process_query(&query);
+            assert_eq!(res.len(), 2);
+        }
+        // insert a new contact
+        {
+            let mut obj = JObj::make();
+            obj.add_field("type","person-contact");
+            obj.add_field("first","Waylon");
+            obj.add_field("last","Smithers");
+            jdb.add_object(obj)
+        }
+        // confirm now we have 3 contacts
+        {
+            let mut query = JQuery::new();
+            query.add_equal("type","person-contact");
+            let res = jdb.process_query(&query);
+            assert_eq!(res.len(), 3);
+        }
+
     }
 }
 
