@@ -11,7 +11,7 @@ use std::path::PathBuf;
 use std::slice::Iter;
 
 pub struct JDB {
-    pub data: Vec<JObj>,
+    data: Vec<JObj>,
 }
 
 
@@ -22,6 +22,11 @@ impl JDB {
     pub(crate) fn update_object(&mut self, obj: JObj) {
         self.data.retain(|ob| ob.id != obj.id);
         self.data.push(obj);
+    }
+    pub(crate) fn delete(&mut self, obj: &JObj) {
+        if let Some(ob) = self.data.iter_mut().find(|ob|ob.id == obj.id) {
+            ob.deleted = true;
+        }
     }
 }
 
@@ -75,6 +80,7 @@ impl JDB {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct JObj {
     pub id:String,
+    deleted:bool,
     pub data:HashMap<String,String>
 }
 
@@ -82,7 +88,8 @@ impl JObj {
     pub fn make() -> JObj {
         JObj {
             id:String::default(),
-            data: Default::default()
+            data: Default::default(),
+            deleted:false,
         }
     }
 
@@ -376,6 +383,30 @@ mod tests {
                 assert!(!obj.has_field("email"));
             } else {
                 assert!(false,"couldnt find it anymore");
+            }
+        }
+    }
+
+    #[test]
+    fn delete_object_test() {
+        let mut jdb = JDB::load_from_file(PathBuf::from("./test_data.json"));
+        {
+            // confirm contact exists
+            if let Some(obj) = jdb.find_by_id("some-unique-id-05") {
+                let mut obj: JObj = obj.clone();
+                jdb.delete(&obj);
+            } else {
+                assert!(false,"couldnt find it anymore");
+            }
+        }
+
+        // get object again
+        {
+            if let Some(obj) = jdb.find_by_id("some-unique-id-05") {
+                println!("the object is {:?}",obj);
+                assert!(false,"wasn't deleted!");
+            } else {
+                assert!(true,"fully deleted");
             }
         }
     }
