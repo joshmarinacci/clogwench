@@ -24,12 +24,12 @@ fn check_match(item: &JObj, query: &HashMap<String, String>) -> bool {
 
 
 impl JDB {
-    pub fn process_query(&self, query: &HashMap<String,String>) -> Vec<JObj> {
-        println!("db processing the query {:?}", query);
+    pub fn process_query(&self, query: &JQuery) -> Vec<JObj> {
+        println!("db processing the query");
         let mut results:Vec<JObj> = vec![];
         for item in &self.data {
-            if check_match(item, query) {
-                results.push(item.clone())
+            if query.matches(item) {
+                results.push(item.clone());
             }
         }
         println!("final results are {:?}",results);
@@ -100,6 +100,81 @@ impl JObj {
     }
 }
 
+#[derive(Debug)]
+pub enum JClause {
+    equal(String),
+    equal_ci(String),
+    substring(String),
+}
+
+pub struct JQuery {
+    clauses:HashMap<String,JClause>
+}
+
+
+impl JQuery {
+    fn new() -> JQuery {
+        JQuery {
+            clauses: Default::default()
+        }
+    }
+}
+
+impl JQuery {
+    fn matches(&self, item:&JObj) -> bool {
+        // println!("trying to match item {:?}",item);
+        for (key,value) in self.clauses.iter() {
+            // println!("testing key {} == {:?}",key, value);
+            if !item.has_field(key) {
+                return false;
+            }
+            if let Some(val) = item.field(key) {
+                match value {
+                    JClause::equal(t) => {
+                        // println!("equal: comparing {} and {}",t,val);
+                        if t == val {
+                            // println!("is true");
+                            continue;
+                        } else {
+                            // println!("is not true");
+                            return false;
+                        }
+                    }
+                    JClause::equal_ci(t) => {
+                        // println!("fuzzy: comparing {} and {}",t,val);
+                        if t.to_lowercase() == val.to_lowercase() {
+                            // println!("is true");
+                            continue;
+                        } else {
+                            // println!("is not true");
+                            return false;
+                        }
+                    }
+                    JClause::substring(t) => {
+                        if val.contains(t) {
+                            continue;
+                        } else {
+                            return false
+                        }
+                    }
+                }
+            } else {
+                return false;
+            }
+        }
+        return true
+    }
+    pub(crate) fn add_equal(&mut self, key: &str, value: &str) {
+        self.clauses.insert(String::from(key), JClause::equal(String::from(value)));
+    }
+    pub(crate) fn add_equal_ci(&mut self, key: &str, value: &str) {
+        self.clauses.insert(String::from(key), JClause::equal_ci(String::from(value)));
+    }
+    pub(crate) fn add_substring(&mut self, key: &str, value: &str) {
+        self.clauses.insert(String::from(key), JClause::substring(String::from(value)));
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
@@ -109,7 +184,7 @@ mod tests {
     use std::path::PathBuf;
     use serde::de::Error;
     use serde_json::Value;
-    use crate::{JDB, JObj};
+    use crate::{JDB, JObj, JQuery};
 
     #[test]
     fn it_works() {
@@ -155,8 +230,10 @@ mod tests {
         println!("working dir is {:?}", env::current_dir());
         let jdb = JDB::load_from_file(PathBuf::from("./test_data.json"));
         assert_eq!(jdb.data.len(),5);
-        let mut query:HashMap<String,String> = HashMap::new();
-        query.insert(String::from("type"), String::from("song-track"));
+        let mut query:JQuery = JQuery::new();
+        query.add_equal("type","song-track");
+        // let mut query:HashMap<String,String> = HashMap::new();
+        // query.insert(String::from("type"), String::from("song-track"));
         let res = jdb.process_query(&query);
         assert_eq!(res.len(),3);
     }
@@ -191,15 +268,34 @@ mod tests {
         let jdb = JDB::load_from_file(PathBuf::from("./test_data.json"));
         assert_eq!(jdb.data.len(),5);
         {
-            let mut query: HashMap<String, String> = HashMap::new();
-            query.insert(String::from("type"), String::from("person-contact"));
+            // search for all contacts
+            let mut query = JQuery::new();
+            query.add_equal("type","person-contact");
             let res = jdb.process_query(&query);
             assert_eq!(res.len(), 2);
         }
         {
-            let mut query: HashMap<String, String> = HashMap::new();
-            query.insert(String::from("type"), String::from("person-contact"));
-            query.insert(String::from("first"), String::from("Josh"));
+            // search for person contacts with first equal to Josh
+            let mut query = JQuery::new();
+            query.add_equal("type","person-contact");
+            query.add_equal("first","Josh");
+            let res = jdb.process_query(&query);
+            assert_eq!(res.len(), 1);
+        }
+        {
+            // search for person contacts with case insensitive first == josh
+            let mut query = JQuery::new();
+            query.add_equal("type","person-contact");
+            query.add_equal_ci("first", "josh");
+            let res = jdb.process_query(&query);
+            assert_eq!(res.len(), 1);
+        }
+
+        {
+            // search for person contacts with case insensitive first contains jo
+            let mut query = JQuery::new();
+            query.add_equal("type","person-contact");
+            query.add_substring("first", "osh");
             let res = jdb.process_query(&query);
             assert_eq!(res.len(), 1);
         }
