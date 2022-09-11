@@ -124,9 +124,10 @@ impl JObj {
 
 #[derive(Debug)]
 pub enum JClause {
-    equal(String),
-    equal_ci(String),
+    equals(String),
+    equalsi(String),
     substring(String),
+    substringi(String),
 }
 
 pub struct JQuery {
@@ -135,7 +136,7 @@ pub struct JQuery {
 
 
 impl JQuery {
-    fn new() -> JQuery {
+    pub fn new() -> JQuery {
         JQuery {
             clauses: Default::default()
         }
@@ -152,7 +153,7 @@ impl JQuery {
             }
             if let Some(val) = item.field(key) {
                 match value {
-                    JClause::equal(t) => {
+                    JClause::equals(t) => {
                         // println!("equal: comparing {} and {}",t,val);
                         if t == val {
                             // println!("is true");
@@ -162,7 +163,7 @@ impl JQuery {
                             return false;
                         }
                     }
-                    JClause::equal_ci(t) => {
+                    JClause::equalsi(t) => {
                         // println!("fuzzy: comparing {} and {}",t,val);
                         if t.to_lowercase() == val.to_lowercase() {
                             // println!("is true");
@@ -179,6 +180,15 @@ impl JQuery {
                             return false
                         }
                     }
+                    JClause::substringi(t) => {
+                        let val = &val.to_lowercase();
+                        let t = &t.to_lowercase();
+                        if val.contains(t) {
+                            continue;
+                        } else {
+                            return false
+                        }
+                    }
                 }
             } else {
                 return false;
@@ -186,14 +196,17 @@ impl JQuery {
         }
         return true
     }
-    pub(crate) fn add_equal(&mut self, key: &str, value: &str) {
-        self.clauses.insert(String::from(key), JClause::equal(String::from(value)));
+    pub fn add_equal(&mut self, key: &str, value: &str) {
+        self.clauses.insert(String::from(key), JClause::equals(String::from(value)));
     }
-    pub(crate) fn add_equal_ci(&mut self, key: &str, value: &str) {
-        self.clauses.insert(String::from(key), JClause::equal_ci(String::from(value)));
+    pub fn add_equal_ci(&mut self, key: &str, value: &str) {
+        self.clauses.insert(String::from(key), JClause::equalsi(String::from(value)));
     }
-    pub(crate) fn add_substring(&mut self, key: &str, value: &str) {
+    pub fn add_substring(&mut self, key: &str, value: &str) {
         self.clauses.insert(String::from(key), JClause::substring(String::from(value)));
+    }
+    pub fn add_substringi(&mut self, key: &str, value: &str) {
+        self.clauses.insert(String::from(key), JClause::substringi(String::from(value)));
     }
 }
 

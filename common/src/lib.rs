@@ -181,9 +181,23 @@ pub struct WindowResized {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub enum DBQueryClauseKind {
+    equals,
+    equalsi,
+    substring,
+    substringi,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct DBQueryClause {
+    pub kind:DBQueryClauseKind,
+    pub key:String,
+    pub value:String,
+}
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DBQueryRequest {
     pub app_id:Uuid,
-    pub query:HashMap<String,String>,
+    pub query:Vec<DBQueryClause>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

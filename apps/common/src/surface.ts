@@ -10,11 +10,12 @@ import {
     ParentView,
     Modifiers,
     Callback,
+    SpriteGlyph,
+    StandardTextHeight
 } from "thneed-gfx";
 import {Window} from "./app";
 // @ts-ignore
 import basefont_data from "../../dock/src/base_font.json";
-import {SpriteGlyph, StandardTextHeight} from "../../../../thneed-gfx/src";
 import {IDEALOS_KEYBOARD_CODE, IDEALOS_KEYBOARD_KEY} from "./generated";
 
 type Color = {
@@ -354,12 +355,12 @@ export class ClogwenchWindowSurface implements SurfaceContext {
     }
 
     repaint() {
-        console.log("repainting")
+        // console.log("repainting")
         this.layout_stack();
         this.clear()
         this.draw_stack()
         this.win.flush()
-        console.log("flushed")
+        // console.log("flushed")
     }
 
     clear() {

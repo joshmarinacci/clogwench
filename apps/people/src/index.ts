@@ -1,7 +1,7 @@
 import {
     ActionButton, LayerView, Rect,
     VBox,
-    HBox, TextLine, Label, SelectList, COMMAND_ACTION,
+    HBox, TextLine, Label, SelectList, COMMAND_ACTION, COMMAND_CHANGE,
 } from "thneed-gfx";
 import {App} from "../../common/src/app";
 import {ClogwenchWindowSurface} from "../../common/src/surface";
@@ -30,7 +30,7 @@ class ContactView extends VBox {
     }
 
     set_contact(item) {
-        this.log("item is",item)
+        // this.log("item is",item)
         this.first.set_caption(item.data.first)
         this.last.set_caption(item.data.last)
         this.email.set_caption(item.data.email)
@@ -89,7 +89,11 @@ function start(surface: ClogwenchWindowSurface, app:App) {
     search_line.on(COMMAND_ACTION,async ()=>{
         console.log("enter in the search",search_line.text)
         let query = search_line.text
-        let results = await app.db_query({type:'person-contact', first:query})
+        let results = await app.db_query([
+            {kind:'equals',key:'type',value:'person-contact'},
+            {kind:'substringi',key:'first',value:query},
+            ]);
+
         console.log("results are",results)
         list.set_data(results)
         surface.repaint()
@@ -100,10 +104,10 @@ function start(surface: ClogwenchWindowSurface, app:App) {
     add_button.set_caption('add')
     toolbar.add(add_button)
     let edit_button = new ActionButton()
-    edit_button.set_name('edit')
+    edit_button.set_caption('edit')
     toolbar.add(edit_button)
     let delete_button = new ActionButton()
-    delete_button.set_name('delete')
+    delete_button.set_caption('delete')
     toolbar.add(delete_button)
 
     let middle = new HBox()
@@ -112,8 +116,7 @@ function start(surface: ClogwenchWindowSurface, app:App) {
     let contact_view = make_contact_view()
     middle.add(contact_view)
     vbox.add(middle)
-    list.on('change',(e)=>{
-        console.log("list changed to",e.item)
+    list.on(COMMAND_CHANGE,(e)=>{
         contact_view.set_contact(e.item)
     })
 
@@ -124,7 +127,13 @@ function start(surface: ClogwenchWindowSurface, app:App) {
     surface.start_input()
 
     setTimeout(async () => {
-        let results = await app.db_query({type:'person-contact'})
+        let results = await app.db_query(
+            [{
+                kind:'equals',
+                key:'type',
+                value:'person-contact',
+            }]
+        )
         list.set_data(results)
         surface.repaint()
     },500)

@@ -40,7 +40,7 @@ export class App {
                     if (msg.KeyDown) return this.windows.get(msg.KeyDown.window_id).dispatch(msg)
                     if (msg.WindowResized) return this.windows.get(msg.WindowResized.window_id).dispatch(msg)
                     if (msg.CloseWindowResponse) {
-                        if (this._on_close_window_cb) this._on_close_window_cb()
+                        if (this._on_close_window_cb) this._on_close_window_cb({})
                         return
                     }
                     console.log("msg is", msg)
@@ -80,6 +80,7 @@ export class App {
                 bounds: rect,
             }
         })
+        // @ts-ignore
         let win = new Window(this, opened_window.OpenWindowResponse)
         this.windows.set(win.window_id, win)
         return win
@@ -98,6 +99,7 @@ export class App {
             DBQueryRequest:{ app_id:this.id,
                 query:param}
         })
+        // @ts-ignore
         return results.DBQueryResponse.results
     }
 
@@ -183,7 +185,7 @@ export class Window {
     }
 
     dispatch(obj) {
-        console.log("window got event", obj)
+        // console.log("window got event", obj)
         if (obj.MouseDown) this.fire('mousedown', obj.MouseDown)
         if (obj.MouseMove) this.fire('mousemove', obj.MouseUp)
         if (obj.MouseUp) this.fire('mouseup', obj.MouseUp)

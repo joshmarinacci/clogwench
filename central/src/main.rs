@@ -15,10 +15,10 @@ use log4rs::Config;
 use log4rs::config::{Appender, Root};
 use serde::Deserialize;
 use uuid::Uuid;
-use common::{APICommand, APP_MANAGER_PORT, AppDisconnected, DBQueryRequest, DBQueryResponse, DEBUG_PORT, DebugMessage, HelloAppResponse, HelloWindowManagerResponse, IncomingMessage, OpenWindowCommand, OpenWindowResponse, Rect, WINDOW_MANAGER_PORT};
+use common::{APICommand, APP_MANAGER_PORT, AppDisconnected, DBQueryClause, DBQueryClauseKind, DBQueryRequest, DBQueryResponse, DEBUG_PORT, DebugMessage, HelloAppResponse, HelloWindowManagerResponse, IncomingMessage, OpenWindowCommand, OpenWindowResponse, Rect, WINDOW_MANAGER_PORT};
 use structopt::StructOpt;
 use cool_logger::CoolLogger;
-use db::{JDB, JObj};
+use db::{JDB, JObj, JQuery};
 
 struct Window {
     id:Uuid,
@@ -231,13 +231,27 @@ impl CentralState {
     }
     fn send_to_database(&mut self, req: DBQueryRequest) {
         info!("CENTRAL: sending to the database {:?}",req);
-        let data = self.db.process_query(&req.query);
+        let query:JQuery = to_query(req.query);
+        let data = self.db.process_query(&query);
         let msg = DBQueryResponse {
             app_id: req.app_id,
             results: data,
         };
         self.send_to_app(msg.app_id,APICommand::DBQueryResponse(msg));
     }
+}
+
+fn to_query(clauses: Vec<DBQueryClause>) -> JQuery {
+    let mut q = JQuery::new();
+    for cl in clauses {
+        match cl.kind {
+            DBQueryClauseKind::equals => q.add_equal(&cl.key,&cl.value),
+            DBQueryClauseKind::equalsi => q.add_equal_ci(&cl.key,&cl.value),
+            DBQueryClauseKind::substring => q.add_substring(&cl.key, &cl.value),
+            DBQueryClauseKind::substringi => q.add_substringi(&cl.key, &cl.value),
+        }
+    }
+    return q;
 }
 
 static COOL_LOGGER:CoolLogger = CoolLogger;
