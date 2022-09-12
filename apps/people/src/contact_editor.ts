@@ -45,22 +45,20 @@ export class ContactEditor extends VBox {
     }
     async save_item(e) {
         this.sync()
-        this.log("saving the contact",this.item)
         let ret = await this.app.db_update(this.item)
         this.hide_editing(e)
-        this.log("returned",ret)
+        this.fire("DB-CHANGED",{})
     }
     async add_item(e) {
         this.sync()
-        this.log("adding the contact",this.item)
         let ret = await this.app.db_add(this.item)
         this.hide_editing(e)
-        this.log("returned",ret)
+        this.fire("DB-CHANGED",{})
     }
 
     hide_editing(e) {
-        e.ctx.repaint()
         this._visible = false
+        e.ctx.repaint()
     }
 
     set_contact(item:DBObj) {

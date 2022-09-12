@@ -15,7 +15,7 @@ use log4rs::Config;
 use log4rs::config::{Appender, Root};
 use serde::Deserialize;
 use uuid::Uuid;
-use common::{APICommand, APP_MANAGER_PORT, AppDisconnected, DBAddResponse, DBQueryClause, DBQueryClauseKind, DBQueryRequest, DBQueryResponse, DBUpdateResponse, DEBUG_PORT, DebugMessage, HelloAppResponse, HelloWindowManagerResponse, IncomingMessage, OpenWindowCommand, OpenWindowResponse, Rect, WINDOW_MANAGER_PORT};
+use common::{APICommand, APP_MANAGER_PORT, AppDisconnected, DBAddResponse, DBDeleteResponse, DBQueryClause, DBQueryClauseKind, DBQueryRequest, DBQueryResponse, DBUpdateResponse, DEBUG_PORT, DebugMessage, HelloAppResponse, HelloWindowManagerResponse, IncomingMessage, OpenWindowCommand, OpenWindowResponse, Rect, WINDOW_MANAGER_PORT};
 use structopt::StructOpt;
 use cool_logger::CoolLogger;
 use db::{JDB, JObj, JQuery};
@@ -242,7 +242,7 @@ impl CentralState {
                 self.send_to_app(msg.app_id,APICommand::DBQueryResponse(msg));
             }
             APICommand::DBUpdateRequest(req) => {
-                let data :JObj = self.db.process_update(req.replacement);
+                let data :JObj = self.db.process_update(req.object);
                 let msg = DBUpdateResponse {
                     app_id: req.app_id,
                     success: true,
@@ -258,6 +258,15 @@ impl CentralState {
                     object:data,
                 };
                 self.send_to_app(msg.app_id,APICommand::DBAddResponse(msg));
+            }
+            APICommand::DBDeleteRequest(req) => {
+                let data:JObj = self.db.process_delete(req.object);
+                let msg = DBDeleteResponse {
+                    app_id: req.app_id,
+                    success: true,
+                    object:data,
+                };
+                self.send_to_app(msg.app_id,APICommand::DBDeleteResponse(msg));
             }
             _ => {
                 info!("invalid command sent to database! {:?}",cmd)
@@ -430,6 +439,12 @@ fn start_router(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, state: Arc
                 }
                 APICommand::DBUpdateResponse(cmd) => {
                     state.lock().unwrap().send_to_app(cmd.app_id, APICommand::DBUpdateResponse(cmd))
+                }
+                APICommand::DBDeleteRequest(cmd) => {
+                    state.lock().unwrap().send_to_database(APICommand::DBDeleteRequest(cmd))
+                }
+                APICommand::DBDeleteResponse(cmd) => {
+                    state.lock().unwrap().send_to_app(cmd.app_id, APICommand::DBDeleteResponse(cmd))
                 }
 
                 APICommand::KeyDown(e) => {

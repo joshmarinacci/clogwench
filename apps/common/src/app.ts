@@ -120,11 +120,22 @@ export class App {
         let results = await this.send_and_wait({
             DBUpdateRequest: {
                 app_id:this.id,
-                replacement:item,
+                object:item,
             }
         })
         // @ts-ignore
         return results.DBUpdateResponse.results
+    }
+
+    async db_delete(item: DBObj) {
+        let results = await this.send_and_wait({
+            DBDeleteRequest: {
+                app_id:this.id,
+                object:item,
+            }
+        })
+        // @ts-ignore
+        return results.DBDeleteResponse.results
     }
 
     on_close_window(cb:Callback) {

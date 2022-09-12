@@ -222,10 +222,22 @@ pub struct DBAddResponse {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DBUpdateRequest {
     pub app_id:Uuid,
-    pub replacement:JObj,
+    pub object:JObj,
 }
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DBUpdateResponse {
+    pub app_id:Uuid,
+    pub success:bool,
+    pub object:JObj,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct DBDeleteRequest {
+    pub app_id:Uuid,
+    pub object:JObj,
+}
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct DBDeleteResponse {
     pub app_id:Uuid,
     pub success:bool,
     pub object:JObj,
@@ -261,6 +273,8 @@ pub enum APICommand {
     DBAddResponse(DBAddResponse),
     DBUpdateRequest(DBUpdateRequest),
     DBUpdateResponse(DBUpdateResponse),
+    DBDeleteRequest(DBDeleteRequest),
+    DBDeleteResponse(DBDeleteResponse),
 
     SystemShutdown,
 }

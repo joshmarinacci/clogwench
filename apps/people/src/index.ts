@@ -171,24 +171,7 @@ function start(surface: ClogwenchWindowSurface, app:App) {
         contact_view.set_contact(e.item)
     })
 
-    add_button.on(COMMAND_ACTION, async () => {
-        let contact_editor = new ContactEditor(app)
-        contact_editor.set_contact(make_empty_contact())
-        current_view.set_content(contact_editor)
-    })
-
-    edit_button.on(COMMAND_ACTION, async () => {
-        let contact_editor = new ContactEditor(app)
-        contact_editor.set_contact(selected_contact)
-        current_view.set_content(contact_editor)
-    })
-
-    let root = new LayerView('root-layer')
-    root.add(vbox)
-    surface.set_root(root)
-    surface.start_input()
-
-    setTimeout(async () => {
+    const refresh_list = async () => {
         let results = await app.db_query(
             [{
                 kind:'equals',
@@ -198,6 +181,35 @@ function start(surface: ClogwenchWindowSurface, app:App) {
         )
         list.set_data(results)
         surface.repaint()
+    }
+    add_button.on(COMMAND_ACTION, async () => {
+        let contact_editor = new ContactEditor(app)
+        contact_editor.on("DB-CHANGED",refresh_list)
+        contact_editor.set_contact(make_empty_contact())
+        current_view.set_content(contact_editor)
+    })
+
+    edit_button.on(COMMAND_ACTION, async () => {
+        let contact_editor = new ContactEditor(app)
+        contact_editor.on("DB-CHANGED",refresh_list)
+        contact_editor.set_contact(selected_contact)
+        current_view.set_content(contact_editor)
+    })
+
+    delete_button.on(COMMAND_ACTION, async () => {
+        if(selected_contact) {
+            let res = await app.db_delete(selected_contact)
+            refresh_list()
+        }
+    })
+
+    let root = new LayerView('root-layer')
+    root.add(vbox)
+    surface.set_root(root)
+    surface.start_input()
+
+    setTimeout(async () => {
+        refresh_list()
     },500)
 
 }

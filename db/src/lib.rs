@@ -19,7 +19,7 @@ pub struct JDB {
 
 impl JDB {
     pub(crate) fn find_by_id(&self, id: &str) -> Option<&JObj> {
-        self.data.iter().find(|obj|obj.id == id)
+        self.data.iter().find(|obj|obj.id == id && obj.deleted==false)
     }
     pub(crate) fn update_object(&mut self, obj: JObj) {
         self.data.retain(|ob| ob.id != obj.id);
@@ -37,7 +37,7 @@ impl JDB {
         // println!("db processing the query");
         let mut results:Vec<JObj> = vec![];
         for item in &self.data {
-            if query.matches(item) {
+            if item.deleted == false && query.matches(item) {
                 results.push(item.clone());
             }
         }
@@ -88,6 +88,14 @@ impl JDB {
         self.add_object(cl.clone());
         return cl
     }
+
+    pub fn process_delete(&mut self, obj:JObj) -> JObj {
+        let mut cl = obj.clone();
+        self.delete(&obj);
+        println!("deleting object {:?}",cl);
+        return cl
+    }
+
     pub fn add_object(&mut self, obj:JObj) {
         self.data.push(obj);
     }
