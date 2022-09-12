@@ -42,9 +42,10 @@ impl JDB {
         // println!("final results are {:?}",results);
         return results;
     }
-    pub fn process_update(&mut self, opb: JObj) -> bool {
+    pub fn process_update(&mut self, opb: JObj) -> JObj {
+        let cl = opb.clone();
         self.update_object(opb);
-        return true
+        return cl
     }
     pub fn load_from_file(filepath: PathBuf) -> JDB {
         println!("Loading {:?}",filepath.canonicalize().unwrap());
@@ -71,6 +72,13 @@ impl JDB {
             jdb.data.push(song);
         }
         return jdb
+    }
+    pub fn process_add(&mut self, obj:JObj) -> JObj {
+        let mut cl = obj.clone();
+        cl.id = String::from("cool-new-id");
+        println!("adding object {:?}",cl);
+        self.add_object(cl.clone());
+        return cl
     }
     pub fn add_object(&mut self, obj:JObj) {
         self.data.push(obj);

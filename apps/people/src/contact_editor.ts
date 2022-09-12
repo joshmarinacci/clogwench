@@ -5,6 +5,7 @@ export class ContactEditor extends VBox {
     private first: TextLine;
     private first_label: Label;
     private save_button: ActionButton;
+    private cancel_button: ActionButton;
     private item: DBObj;
     private app: App;
 
@@ -21,21 +22,55 @@ export class ContactEditor extends VBox {
         this.first.set_text("-----")
 
         this.save_button = new ActionButton()
-        this.save_button.set_caption("save")
+        this.save_button.set_caption("Save")
         this.add(this.save_button)
 
+        this.cancel_button = new ActionButton()
+        this.cancel_button.set_caption("Cancel")
+        this.add(this.cancel_button)
+        this.cancel_button.on(COMMAND_ACTION, (e) => this.hide_editing(e))
+
         this.save_button.on(COMMAND_ACTION,async (e) => {
-            this.log("saving the contact",this.item)
-            this.log("first is",this.first.text)
-            this.item.data.first = this.first.text
-            this.log("final item is",this.item)
-            this.app.db_update(this.item)
+            if("id" in this.item) {
+                this.save_item(e)
+            } else {
+                this.add_item(e)
+            }
         })
+    }
+
+    sync() {
+        this.item.data.first = this.first.text
+        this.log("final item is",this.item)
+    }
+    async save_item(e) {
+        this.sync()
+        this.log("saving the contact",this.item)
+        let ret = await this.app.db_update(this.item)
+        this.hide_editing(e)
+        this.log("returned",ret)
+    }
+    async add_item(e) {
+        this.sync()
+        this.log("adding the contact",this.item)
+        let ret = await this.app.db_add(this.item)
+        this.hide_editing(e)
+        this.log("returned",ret)
+    }
+
+    hide_editing(e) {
+        e.ctx.repaint()
+        this._visible = false
     }
 
     set_contact(item:DBObj) {
         this.item = item
         this.first.set_text(item.data.first)
+        if("id" in this.item) {
+            this.save_button.set_caption("Save")
+        } else {
+            this.save_button.set_caption("Add")
+        }
         // this.last.set_caption(item.data.last)
         // this.email.set_caption(item.data.email)
         // this.phone.set_caption( item.data.phone?item.data.phone:"")

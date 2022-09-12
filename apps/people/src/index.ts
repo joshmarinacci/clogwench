@@ -62,22 +62,22 @@ class SwapView extends BaseParentView {
         this.set_name("swap-view")
     }
     draw(g: SurfaceContext) {
-        // this.log('drawing swap view',this.size())
     }
     layout(g: SurfaceContext, available: Size): Size {
         this.set_size(available)
         this._children.forEach(ch => ch.layout(g,available))
         return this.size()
     }
-
     set_content(view:View) {
-        // this.log("setting view",view)
         this._children = []
         this.add(view)
     }
+    clear() {
+        this._children = []
+    }
 }
 
-const TEST_CONTACT = {
+const TEST_CONTACT:DBObj = {
     "id": "addr-id-03xxx",
     "deleted":false,
     "data": {
@@ -87,6 +87,19 @@ const TEST_CONTACT = {
         "email": "billybob@billybob.com"
     }
 }
+
+function make_empty_contact():DBObj {
+    return {
+        "deleted":false,
+        "data": {
+            type:"person-contact",
+            first:"",
+            last:"",
+            email:""
+        }
+    }
+}
+
 function make_contacts_list() {
     let data = [TEST_CONTACT]
     let list = new SelectList(data,(item)=>{
@@ -156,6 +169,12 @@ function start(surface: ClogwenchWindowSurface, app:App) {
         let contact_view = make_contact_view()
         current_view.set_content(contact_view)
         contact_view.set_contact(e.item)
+    })
+
+    add_button.on(COMMAND_ACTION, async () => {
+        let contact_editor = new ContactEditor(app)
+        contact_editor.set_contact(make_empty_contact())
+        current_view.set_content(contact_editor)
     })
 
     edit_button.on(COMMAND_ACTION, async () => {

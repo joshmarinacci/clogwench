@@ -4,7 +4,7 @@ use common::generated::KeyCode;
 
 //hi. cool!
 pub fn sdl_to_common(kc: Keycode, keymod: Mod) -> KeyCode {
-    println!("converting SDL {}",kc);
+    // println!("converting SDL {}",kc);
     let code = match kc {
         Keycode::A => KeyCode::LETTER_A,
         Keycode::B => KeyCode::LETTER_B,
@@ -31,7 +31,7 @@ pub fn sdl_to_common(kc: Keycode, keymod: Mod) -> KeyCode {
         Keycode::W => KeyCode::LETTER_W,
         Keycode::X => KeyCode::LETTER_X,
         Keycode::Y => KeyCode::LETTER_Y,
-        Keycode::Z => KeyCode::LETTER_Z,   
+        Keycode::Z => KeyCode::LETTER_Z,
         Keycode::Num0 => KeyCode::DIGIT_0,
         Keycode::Num1 => KeyCode::DIGIT_1,
         Keycode::Num2 => KeyCode::DIGIT_2,
@@ -41,7 +41,7 @@ pub fn sdl_to_common(kc: Keycode, keymod: Mod) -> KeyCode {
         Keycode::Num6 => KeyCode::DIGIT_6,
         Keycode::Num7 => KeyCode::DIGIT_7,
         Keycode::Num8 => KeyCode::DIGIT_8,
-        Keycode::Num9 => KeyCode::DIGIT_9,   
+        Keycode::Num9 => KeyCode::DIGIT_9,
         Keycode::Left => KeyCode::ARROW_LEFT,
         Keycode::Right => KeyCode::ARROW_RIGHT,
         Keycode::Up => KeyCode::ARROW_UP,
@@ -58,7 +58,7 @@ pub fn sdl_to_common(kc: Keycode, keymod: Mod) -> KeyCode {
         Keycode::Delete => KeyCode::DELETE,
         Keycode::Return => KeyCode::ENTER,
         Keycode::Escape => KeyCode::ESCAPE,
-        Keycode::Tab => KeyCode::TAB,   
+        Keycode::Tab => KeyCode::TAB,
         Keycode::Comma => KeyCode::COMMA,
         Keycode::Less => KeyCode::LESS_THAN,
         Keycode::Period => KeyCode::PERIOD,
@@ -95,7 +95,7 @@ pub fn sdl_to_common(kc: Keycode, keymod: Mod) -> KeyCode {
             KeyCode::UNKNOWN
         }
     };
-    println!("to code {:?}",code);
+    // println!("to code {:?}",code);
     return code
 }
 pub fn sdl_to_common_letter(kc: Keycode, keymod: Mod) -> String {
@@ -126,7 +126,7 @@ pub fn sdl_to_common_letter(kc: Keycode, keymod: Mod) -> String {
         Keycode::W => "W".to_string(),
         Keycode::X => "X".to_string(),
         Keycode::Y => "Y".to_string(),
-        Keycode::Z => "Z".to_string(),   
+        Keycode::Z => "Z".to_string(),
         Keycode::Num0 => ")".to_string(),
         Keycode::Num1 => "!".to_string(),
         Keycode::Num2 => "@".to_string(),
@@ -136,7 +136,7 @@ pub fn sdl_to_common_letter(kc: Keycode, keymod: Mod) -> String {
         Keycode::Num6 => "^".to_string(),
         Keycode::Num7 => "&".to_string(),
         Keycode::Num8 => "*".to_string(),
-        Keycode::Num9 => "(".to_string(),   
+        Keycode::Num9 => "(".to_string(),
         Keycode::Comma => "<".to_string(),
         Keycode::Less => "<".to_string(),
         Keycode::Period => ">".to_string(),
@@ -208,7 +208,7 @@ pub fn sdl_to_common_letter(kc: Keycode, keymod: Mod) -> String {
         Keycode::Num6 => "6".to_string(),
         Keycode::Num7 => "7".to_string(),
         Keycode::Num8 => "8".to_string(),
-        Keycode::Num9 => "9".to_string(),   
+        Keycode::Num9 => "9".to_string(),
         Keycode::Comma => ",".to_string(),
         Keycode::Less => "<".to_string(),
         Keycode::Period => ".".to_string(),
@@ -242,6 +242,6 @@ pub fn sdl_to_common_letter(kc: Keycode, keymod: Mod) -> String {
         Keycode::Equals => "=".to_string(),
         Keycode::Space => " ".to_string(),
             _ => "".to_string()
-        }   
+        }
     }
 }

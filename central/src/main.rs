@@ -15,7 +15,7 @@ use log4rs::Config;
 use log4rs::config::{Appender, Root};
 use serde::Deserialize;
 use uuid::Uuid;
-use common::{APICommand, APP_MANAGER_PORT, AppDisconnected, DBQueryClause, DBQueryClauseKind, DBQueryRequest, DBQueryResponse, DBUpdateResponse, DEBUG_PORT, DebugMessage, HelloAppResponse, HelloWindowManagerResponse, IncomingMessage, OpenWindowCommand, OpenWindowResponse, Rect, WINDOW_MANAGER_PORT};
+use common::{APICommand, APP_MANAGER_PORT, AppDisconnected, DBAddResponse, DBQueryClause, DBQueryClauseKind, DBQueryRequest, DBQueryResponse, DBUpdateResponse, DEBUG_PORT, DebugMessage, HelloAppResponse, HelloWindowManagerResponse, IncomingMessage, OpenWindowCommand, OpenWindowResponse, Rect, WINDOW_MANAGER_PORT};
 use structopt::StructOpt;
 use cool_logger::CoolLogger;
 use db::{JDB, JObj, JQuery};
@@ -137,7 +137,7 @@ impl CentralState {
                 }
                 match IncomingMessage::deserialize(&mut de) {
                     Ok(cmd) => {
-                        info!("central received wm command {:?}",cmd);
+                        // info!("central received wm command {:?}",cmd);
                         sender.send(IncomingMessage{ source: wm_id, command: cmd.command }).unwrap();
                     }
                     Err(e) => {
@@ -182,7 +182,7 @@ impl CentralState {
     }
 
     fn send_to_app(&mut self, id:Uuid, resp: APICommand) {
-        info!("sending to app {:?}",resp);
+        // info!("sending to app {:?}",resp);
         let data = serde_json::to_string(&resp).unwrap();
         if let Some(app) = self.apps.iter_mut().find(|a|a.id == id){
             app.stream.write_all(data.as_ref()).expect("failed to send rect");
@@ -236,17 +236,28 @@ impl CentralState {
                 let data = self.db.process_query(&query);
                 let msg = DBQueryResponse {
                     app_id: req.app_id,
+                    success: true,
                     results: data,
                 };
                 self.send_to_app(msg.app_id,APICommand::DBQueryResponse(msg));
             }
             APICommand::DBUpdateRequest(req) => {
-                let new_obj = self.db.process_update(req.replacement);
+                let data :JObj = self.db.process_update(req.replacement);
                 let msg = DBUpdateResponse {
                     app_id: req.app_id,
                     success: true,
+                    object:data,
                 };
                 self.send_to_app(msg.app_id,APICommand::DBUpdateResponse(msg));
+            }
+            APICommand::DBAddRequest(req) => {
+                let data:JObj = self.db.process_add(req.object);
+                let msg = DBAddResponse {
+                    app_id: req.app_id,
+                    success: true,
+                    object:data,
+                };
+                self.send_to_app(msg.app_id,APICommand::DBAddResponse(msg));
             }
             _ => {
                 info!("invalid command sent to database! {:?}",cmd)
@@ -407,6 +418,12 @@ fn start_router(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, state: Arc
                 }
                 APICommand::DBQueryResponse(cmd) => {
                     state.lock().unwrap().send_to_app(cmd.app_id, APICommand::DBQueryResponse(cmd))
+                }
+                APICommand::DBAddRequest(cmd) => {
+                    state.lock().unwrap().send_to_database(APICommand::DBAddRequest(cmd))
+                }
+                APICommand::DBAddResponse(cmd) => {
+                    state.lock().unwrap().send_to_app(cmd.app_id, APICommand::DBAddResponse(cmd))
                 }
                 APICommand::DBUpdateRequest(cmd) => {
                     state.lock().unwrap().send_to_database(APICommand::DBUpdateRequest(cmd))

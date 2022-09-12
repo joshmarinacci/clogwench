@@ -203,7 +203,20 @@ pub struct DBQueryRequest {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DBQueryResponse {
     pub app_id:Uuid,
+    pub success:bool,
     pub results: Vec<JObj>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct DBAddRequest {
+    pub app_id:Uuid,
+    pub object:JObj,
+}
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct DBAddResponse {
+    pub app_id:Uuid,
+    pub success:bool,
+    pub object:JObj,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -215,6 +228,7 @@ pub struct DBUpdateRequest {
 pub struct DBUpdateResponse {
     pub app_id:Uuid,
     pub success:bool,
+    pub object:JObj,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -243,6 +257,8 @@ pub enum APICommand {
 
     DBQueryRequest(DBQueryRequest),
     DBQueryResponse(DBQueryResponse),
+    DBAddRequest(DBAddRequest),
+    DBAddResponse(DBAddResponse),
     DBUpdateRequest(DBUpdateRequest),
     DBUpdateResponse(DBUpdateResponse),
 

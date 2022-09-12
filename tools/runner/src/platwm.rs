@@ -274,7 +274,7 @@ impl PlatformWindowManager {
                             return false;
                         }
                         _ => {
-                            info!("got a key down event {:?}",evt);
+                            // info!("got a key down event {:?}",evt);
                             if let Some(id) = self.state.get_focused_window() {
                                 if let Some(win) = self.state.lookup_window(*id) {
                                     let wid = win.id.clone();

@@ -103,6 +103,19 @@ export class App {
         return results.DBQueryResponse.results
     }
 
+    async db_add(item: DBObj) {
+        item.id = "unknown-random-id"
+        let results = await this.send_and_wait({
+            DBAddRequest: {
+                app_id:this.id,
+                object:item,
+            }
+        })
+        // console.log("got back",results.DBAddResponse)
+        // @ts-ignore
+        return results.DBAddResponse
+    }
+
     async db_update(item: DBObj) {
         let results = await this.send_and_wait({
             DBUpdateRequest: {
