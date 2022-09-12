@@ -207,6 +207,17 @@ pub struct DBQueryResponse {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct DBUpdateRequest {
+    pub app_id:Uuid,
+    pub replacement:JObj,
+}
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct DBUpdateResponse {
+    pub app_id:Uuid,
+    pub success:bool,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum APICommand {
     AppConnect(HelloApp),
     AppConnectResponse(HelloAppResponse),
@@ -232,6 +243,8 @@ pub enum APICommand {
 
     DBQueryRequest(DBQueryRequest),
     DBQueryResponse(DBQueryResponse),
+    DBUpdateRequest(DBUpdateRequest),
+    DBUpdateResponse(DBUpdateResponse),
 
     SystemShutdown,
 }

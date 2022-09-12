@@ -42,6 +42,10 @@ impl JDB {
         // println!("final results are {:?}",results);
         return results;
     }
+    pub fn process_update(&mut self, opb: JObj) -> bool {
+        self.update_object(opb);
+        return true
+    }
     pub fn load_from_file(filepath: PathBuf) -> JDB {
         println!("Loading {:?}",filepath.canonicalize().unwrap());
         let file = File::open(filepath).unwrap();

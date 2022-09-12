@@ -1,10 +1,22 @@
 import {
-    ActionButton, LayerView, Rect,
+    ActionButton,
+    BaseParentView,
+    COMMAND_ACTION,
+    COMMAND_CHANGE,
+    HBox,
+    Label,
+    LayerView,
+    Rect,
+    SelectList,
+    Size,
+    SurfaceContext,
+    TextLine,
     VBox,
-    HBox, TextLine, Label, SelectList, COMMAND_ACTION, COMMAND_CHANGE,
+    View,
 } from "thneed-gfx";
-import {App} from "../../common/src/app";
+import {App, DBObj} from "../../common/src/app";
 import {ClogwenchWindowSurface} from "../../common/src/surface";
+import {ContactEditor} from "./contact_editor";
 
 class ContactView extends VBox {
     private first: Label;
@@ -37,15 +49,37 @@ class ContactView extends VBox {
         this.phone.set_caption( item.data.phone?item.data.phone:"")
     }
 }
-function make_contact_view() {
+function make_contact_view():ContactView {
     let view = new ContactView()
     view.set_hflex(true)
     view.set_vflex(true)
     return view
 }
 
+class SwapView extends BaseParentView {
+    constructor() {
+        super("swap-view")
+        this.set_name("swap-view")
+    }
+    draw(g: SurfaceContext) {
+        // this.log('drawing swap view',this.size())
+    }
+    layout(g: SurfaceContext, available: Size): Size {
+        this.set_size(available)
+        this._children.forEach(ch => ch.layout(g,available))
+        return this.size()
+    }
+
+    set_content(view:View) {
+        // this.log("setting view",view)
+        this._children = []
+        this.add(view)
+    }
+}
+
 const TEST_CONTACT = {
     "id": "addr-id-03xxx",
+    "deleted":false,
     "data": {
         "type": "person-contact",
         "first": "Billy",
@@ -83,18 +117,16 @@ function start(surface: ClogwenchWindowSurface, app:App) {
     vbox.add(toolbar)
 
     let search_line = new TextLine()
-    search_line.set_text('search')
+    search_line.set_text("")
     toolbar.add(search_line)
     search_line.set_pref_width(150)
     search_line.on(COMMAND_ACTION,async ()=>{
-        console.log("enter in the search",search_line.text)
+        // console.log("enter in the search",search_line.text)
         let query = search_line.text
-        let results = await app.db_query([
+        let results:DBObj[] = await app.db_query([
             {kind:'equals',key:'type',value:'person-contact'},
             {kind:'substringi',key:'first',value:query},
             ]);
-
-        console.log("results are",results)
         list.set_data(results)
         surface.repaint()
     })
@@ -113,13 +145,24 @@ function start(surface: ClogwenchWindowSurface, app:App) {
     let middle = new HBox()
     let list = make_contacts_list()
     middle.add(list)
-    let contact_view = make_contact_view()
-    middle.add(contact_view)
+    let current_view = new SwapView()
+    middle.add(current_view)
     vbox.add(middle)
+
+    let selected_contact:DBObj = TEST_CONTACT
+    current_view.set_content(make_contact_view())
     list.on(COMMAND_CHANGE,(e)=>{
+        selected_contact = e.item
+        let contact_view = make_contact_view()
+        current_view.set_content(contact_view)
         contact_view.set_contact(e.item)
     })
 
+    edit_button.on(COMMAND_ACTION, async () => {
+        let contact_editor = new ContactEditor(app)
+        contact_editor.set_contact(selected_contact)
+        current_view.set_content(contact_editor)
+    })
 
     let root = new LayerView('root-layer')
     root.add(vbox)

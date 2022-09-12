@@ -21,12 +21,12 @@ export class App {
     async connect() {
         return new Promise<void>((res, rej) => {
             this.client.connect(STD_PORT, '127.0.0.1', (): void => {
-                console.log('connected event')
+                // console.log('connected event')
                 res()
             })
             this.client.on('data', (data: Buffer) => {
                 let str = data.toString()
-                console.log("raw incoming data", str)
+                // console.log("raw incoming data", str)
                 try {
                     let msg = JSON.parse(str)
                     if (msg.AppConnectResponse) {
@@ -43,7 +43,7 @@ export class App {
                         if (this._on_close_window_cb) this._on_close_window_cb({})
                         return
                     }
-                    console.log("msg is", msg)
+                    console.warn("msg is", msg)
                     if (this.cb) this.cb(msg)
                 } catch (e) {
                     console.log("error JSON parsing",e)
@@ -101,6 +101,17 @@ export class App {
         })
         // @ts-ignore
         return results.DBQueryResponse.results
+    }
+
+    async db_update(item: DBObj) {
+        let results = await this.send_and_wait({
+            DBUpdateRequest: {
+                app_id:this.id,
+                replacement:item,
+            }
+        })
+        // @ts-ignore
+        return results.DBUpdateResponse.results
     }
 
     on_close_window(cb:Callback) {
@@ -231,4 +242,10 @@ export class Window {
         this.buffer = new BufferImage(size.w,size.h)
         this.fire('resize',this)
     }
+}
+
+export type DBObj = {
+    id:string,
+    deleted:boolean,
+    data: any
 }

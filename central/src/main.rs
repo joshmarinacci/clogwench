@@ -15,7 +15,7 @@ use log4rs::Config;
 use log4rs::config::{Appender, Root};
 use serde::Deserialize;
 use uuid::Uuid;
-use common::{APICommand, APP_MANAGER_PORT, AppDisconnected, DBQueryClause, DBQueryClauseKind, DBQueryRequest, DBQueryResponse, DEBUG_PORT, DebugMessage, HelloAppResponse, HelloWindowManagerResponse, IncomingMessage, OpenWindowCommand, OpenWindowResponse, Rect, WINDOW_MANAGER_PORT};
+use common::{APICommand, APP_MANAGER_PORT, AppDisconnected, DBQueryClause, DBQueryClauseKind, DBQueryRequest, DBQueryResponse, DBUpdateResponse, DEBUG_PORT, DebugMessage, HelloAppResponse, HelloWindowManagerResponse, IncomingMessage, OpenWindowCommand, OpenWindowResponse, Rect, WINDOW_MANAGER_PORT};
 use structopt::StructOpt;
 use cool_logger::CoolLogger;
 use db::{JDB, JObj, JQuery};
@@ -229,15 +229,29 @@ impl CentralState {
             dbg.stream.write_all(data.as_ref()).expect("CENTRAL: error sending to debugger");
         }
     }
-    fn send_to_database(&mut self, req: DBQueryRequest) {
-        info!("CENTRAL: sending to the database {:?}",req);
-        let query:JQuery = to_query(req.query);
-        let data = self.db.process_query(&query);
-        let msg = DBQueryResponse {
-            app_id: req.app_id,
-            results: data,
-        };
-        self.send_to_app(msg.app_id,APICommand::DBQueryResponse(msg));
+    fn send_to_database(&mut self, cmd: APICommand) {
+        match cmd {
+            APICommand::DBQueryRequest(req) => {
+                let query:JQuery = to_query(req.query);
+                let data = self.db.process_query(&query);
+                let msg = DBQueryResponse {
+                    app_id: req.app_id,
+                    results: data,
+                };
+                self.send_to_app(msg.app_id,APICommand::DBQueryResponse(msg));
+            }
+            APICommand::DBUpdateRequest(req) => {
+                let new_obj = self.db.process_update(req.replacement);
+                let msg = DBUpdateResponse {
+                    app_id: req.app_id,
+                    success: true,
+                };
+                self.send_to_app(msg.app_id,APICommand::DBUpdateResponse(msg));
+            }
+            _ => {
+                info!("invalid command sent to database! {:?}",cmd)
+            }
+        }
     }
 }
 
@@ -387,12 +401,20 @@ fn start_router(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, state: Arc
                 APICommand::DrawImageCommand(cmd) => {
                     state.lock().unwrap().send_to_all_wm(APICommand::DrawImageCommand(cmd));
                 },
+
                 APICommand::DBQueryRequest(cmd) => {
-                    state.lock().unwrap().send_to_database(cmd)
+                    state.lock().unwrap().send_to_database(APICommand::DBQueryRequest(cmd))
                 }
                 APICommand::DBQueryResponse(cmd) => {
                     state.lock().unwrap().send_to_app(cmd.app_id, APICommand::DBQueryResponse(cmd))
                 }
+                APICommand::DBUpdateRequest(cmd) => {
+                    state.lock().unwrap().send_to_database(APICommand::DBUpdateRequest(cmd))
+                }
+                APICommand::DBUpdateResponse(cmd) => {
+                    state.lock().unwrap().send_to_app(cmd.app_id, APICommand::DBUpdateResponse(cmd))
+                }
+
                 APICommand::KeyDown(e) => {
                     state.lock().unwrap().send_to_app(e.app_id, APICommand::KeyDown(e))
                 }

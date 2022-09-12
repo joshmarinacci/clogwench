@@ -39,7 +39,7 @@ export type IdealosKeyEvent = {
 }
 
 export function ideal_os_key_to_thneed_code(inp:IdealosKeyEvent):IdealosKeyEvent {
-    console.log("converting idealos key event",inp)
+    // console.log("converting idealos key event",inp)
     let out:IdealosKeyEvent = {
         code: "",
         key: ""
@@ -53,11 +53,11 @@ export function ideal_os_key_to_thneed_code(inp:IdealosKeyEvent):IdealosKeyEvent
     if(inp.key && inp.key !== '') {
         out.key = inp.key
     }
-    console.log("to thneed event:",out)
+    // console.log("to thneed event:",out)
     return out
 }
 
-console.log("surface loaded font",basefont_data)
+// console.log("surface loaded font",basefont_data)
 export class BufferImage {
     width: number;
     height: number;
@@ -239,17 +239,17 @@ export class ClogwenchWindowSurface implements SurfaceContext {
         this.mouse = new MouseInputService(this)
         this.keyboard = new KeyboardInputService(this)
         this.win.on('mousedown', (e) => {
-            console.log("got a mouse up event", e)
+            // console.log("got a mouse up event", e)
             let position = new Point(e.x, e.y)
             this.mouse.trigger_mouse_down(position, 0)
         })
         this.win.on('mousemove', (e) => {
-            console.log("got a mouse move event", e)
+            // console.log("got a mouse move event", e)
             let position = new Point(e.x, e.y)
             this.mouse.trigger_mouse_move(position, 0)
         })
         this.win.on('mouseup', (e) => {
-            console.log("got a mouse up event", e)
+            // console.log("got a mouse up event", e)
             let position = new Point(e.x, e.y)
             this.mouse.trigger_mouse_up(position, 0)
         })
@@ -344,11 +344,11 @@ export class ClogwenchWindowSurface implements SurfaceContext {
     }
 
     start() {
-        console.log("clogwench surface starting")
+        // console.log("clogwench surface starting")
     }
     start_input() {
         this._input_callback = () => {
-            console.log("repainting on input")
+            // console.log("repainting on input")
             this.repaint()
         }
         this.repaint()
@@ -372,9 +372,9 @@ export class ClogwenchWindowSurface implements SurfaceContext {
             console.warn("root is null")
         } else {
             let available_size = new Size(this.win.bounds.w, this.win.bounds.h)
-            this.log("layout_stack with size", available_size)
+            // this.log("layout_stack with size", available_size)
             let size = this._root.layout(this, available_size)
-            console.log("canvas, root requested", size)
+            // console.log("canvas, root requested", size)
         }
     }
 
