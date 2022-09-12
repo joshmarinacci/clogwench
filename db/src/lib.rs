@@ -9,6 +9,8 @@ use std::io::BufReader;
 use std::iter::{Filter, Iterator, Map};
 use std::path::PathBuf;
 use std::slice::Iter;
+use rand::{Rng, thread_rng};
+use rand::distributions::Alphanumeric;
 
 pub struct JDB {
     data: Vec<JObj>,
@@ -75,7 +77,13 @@ impl JDB {
     }
     pub fn process_add(&mut self, obj:JObj) -> JObj {
         let mut cl = obj.clone();
-        cl.id = String::from("cool-new-id");
+        let rand_string: String = thread_rng()
+            .sample_iter(&Alphanumeric)
+            .take(30)
+            .map(char::from)
+            .collect();
+
+        cl.id = format!("obj_${}",rand_string);
         println!("adding object {:?}",cl);
         self.add_object(cl.clone());
         return cl
