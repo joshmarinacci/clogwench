@@ -40,7 +40,9 @@ pub fn make_plat<'a>(stop:Arc<AtomicBool>, sender: Sender<IncomingMessage>, w:u3
         .opengl()
         .build()
         .map_err(|e| e.to_string())?;
-    let canvas:WindowCanvas = window.into_canvas().software().build().map_err(|e| e.to_string())?;
+    let mut canvas:WindowCanvas = window.into_canvas().software().build().map_err(|e| e.to_string())?;
+    println!("using scale {}x{} scale={}",w,h, (scale as f32)*1.0);
+    canvas.set_scale((scale as f32)*1.0,(scale as f32)*1.0)?;
 
     return Ok(Plat {
         stop:stop,
@@ -101,6 +103,7 @@ impl Plat {
                     }
                 },
                 Event::MouseButtonDown { x, y,mouse_btn, .. } => {
+                    let (x, y) = scale_mouse_to_canvas(&self.canvas,x,y);
                     let cmd = IncomingMessage {
                         source: Default::default(),
                         command: APICommand::MouseDown(MouseDownEvent{
@@ -117,6 +120,7 @@ impl Plat {
                     }
                 },
                 Event::MouseButtonUp {x,y,mouse_btn,..} =>  {
+                    let (x, y) = scale_mouse_to_canvas(&self.canvas,x,y);
                     let cmd = IncomingMessage {
                         source: Default::default(),
                         command: APICommand::MouseUp(MouseUpEvent{
@@ -135,6 +139,7 @@ impl Plat {
                 Event::MouseMotion {
                     timestamp, window_id, which, mousestate, x, y, xrel, yrel
                 } => {
+                    let (x, y) = scale_mouse_to_canvas(&self.canvas,x,y);
                     let cmd = IncomingMessage {
                         source: Default::default(),
                         command: APICommand::MouseMove(MouseMoveEvent {
@@ -142,8 +147,8 @@ impl Plat {
                             window_id: Default::default(),
                             original_timestamp: 0,
                             button: MouseButton::Primary,
-                            x: x as i32,
-                            y: y as i32
+                            x,
+                            y,
                         })
                     };
                     // info!("about to send out {:?}",cmd);
@@ -203,6 +208,13 @@ impl Plat {
     pub fn unregister_image2(&mut self, img:&GFXBuffer) {
         self.textures.remove(&img.id);
     }
+}
+
+fn scale_mouse_to_canvas(canvas:&WindowCanvas, x: i32, y: i32) -> (i32,i32) {
+    let (scx, scy) = canvas.scale();
+    let x = ((x as f32)/scx) as i32;
+    let y = ((y as f32)/scy) as i32;
+    return (x,y)
 }
 
 fn sync_texture(can: &mut WindowCanvas, tx: &mut Texture, img: &GFXBuffer) {
