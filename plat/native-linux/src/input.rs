@@ -95,6 +95,8 @@ pub fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender
                                     })
                                 } else {
                                     APICommand::MouseUp(MouseUpEvent {
+                                        app_id: Default::default(),
+                                        window_id: Default::default(),
                                         original_timestamp: 0,
                                         button: MouseButton::Primary,
                                         x: cx as i32,
@@ -146,6 +148,8 @@ pub fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender
                         let cmd = IncomingMessage {
                             source: Default::default(),
                             command: APICommand::MouseMove(MouseMoveEvent{
+                                app_id: Default::default(),
+                                window_id: Default::default(),
                                 original_timestamp: 0,
                                 button: MouseButton::Primary,
                                 x:cx as i32,
@@ -175,6 +179,8 @@ pub fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender
                         let cmd = IncomingMessage {
                             source: Default::default(),
                             command: APICommand::MouseMove(MouseMoveEvent {
+                                app_id: Default::default(),
+                                window_id: Default::default(),
                                 original_timestamp: 0,
                                 button: MouseButton::Primary,
                                 x: cx as i32,
