@@ -19,7 +19,8 @@ pub struct Plat {
     layout:PixelLayout,
 }
 
-pub fn make_plat<'a>(stop:Arc<AtomicBool>, sender: Sender<IncomingMessage>) -> Result<Plat, String> {
+pub fn make_plat<'a>(stop:Arc<AtomicBool>, sender: Sender<IncomingMessage>, width:u32, height:u32, scale:u32) -> Result<Plat, String> {
+    println!("linux ignores width, height, and scale settings");
 
     let pth = "/dev/fb0";
     let mut fb = Framebuffer::new(pth).unwrap();

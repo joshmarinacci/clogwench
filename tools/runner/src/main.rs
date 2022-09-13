@@ -55,6 +55,12 @@ struct Cli {
     start_echo:bool,
     #[structopt(long)]
     start_dock:bool,
+    #[structopt(long, default_value="1")]
+    scale:u32,
+    #[structopt(long, default_value="640")]
+    width:u32,
+    #[structopt(long, default_value="480")]
+    height:u32,
 }
 
 fn init_setup() -> Cli {
@@ -145,7 +151,7 @@ fn main() -> Result<(),String> {
     match args.wmtype {
         WMType::Native => {
             info!("creating a native window manager");
-            let mut wm = PlatformWindowManager::init(800, 800).unwrap();
+            let mut wm = PlatformWindowManager::init(args.width, args.height, args.scale).unwrap();
             //send the initial hello message
             let im = OutgoingMessage {
                 recipient: Default::default(),

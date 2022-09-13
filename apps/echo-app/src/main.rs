@@ -94,7 +94,7 @@ fn main() {
         match cmd {
             APICommand::KeyDown(kd) => {
                 info!("got a keydown event");
-                match kd.key {
+                match kd.code {
                     KeyCode::ARROW_RIGHT => px += 1,
                     KeyCode::ARROW_LEFT => px -= 1,
                     KeyCode::ARROW_UP => py -= 1,

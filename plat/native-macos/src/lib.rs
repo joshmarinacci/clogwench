@@ -32,10 +32,10 @@ pub struct Plat {
     pub stop: Arc<AtomicBool>,
 }
 
-pub fn make_plat<'a>(stop:Arc<AtomicBool>, sender: Sender<IncomingMessage>) -> Result<Plat, String> {
+pub fn make_plat<'a>(stop:Arc<AtomicBool>, sender: Sender<IncomingMessage>, w:u32, h:u32, scale:u32) -> Result<Plat, String> {
     let sdl_context = sdl2::init().unwrap();
     let window = sdl_context.video()?
-        .window("rust-sdl2 demo: Video", 512 * 2, 320 * 2)
+        .window("rust-sdl2 demo: Video", w * scale, h* scale)
         .position_centered()
         .opengl()
         .build()

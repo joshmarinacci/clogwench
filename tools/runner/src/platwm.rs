@@ -43,7 +43,7 @@ impl PlatformWindowManager {
 }
 
 impl PlatformWindowManager {
-    pub(crate) fn init(w: i32, h: i32) -> Option<PlatformWindowManager> {
+    pub(crate) fn init(w: u32, h: u32, scale:u32) -> Option<PlatformWindowManager> {
         let conn_string = format!("localhost:{}", WINDOW_MANAGER_PORT);
 
         match TcpStream::connect(conn_string) {
@@ -104,7 +104,7 @@ impl PlatformWindowManager {
                     }
                 });
 
-                let mut plat = make_plat(stop.clone(), tx_in.clone()).unwrap();
+                let mut plat = make_plat(stop.clone(), tx_in.clone(), w, h,scale).unwrap();
                 let bds = plat.get_screen_bounds();
                 let mut background = GFXBuffer::new(bds.w as u32, bds.h as u32, &plat.get_preferred_pixel_layout());
                 plat.register_image2(&background);
