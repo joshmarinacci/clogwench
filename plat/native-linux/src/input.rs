@@ -50,7 +50,7 @@ fn linuxkernel_to_KeyCode(code:u16) -> KeyCode {
     let key = Key::new(code);
     match key {
         Key::KEY_RESERVED => KeyCode::RESERVED,
-        Key::KEY_ESC => KeyCode::ESC,
+        Key::KEY_ESC => KeyCode::ESCAPE,
         Key::KEY_LEFT => KeyCode::ARROW_LEFT,
         Key::KEY_RIGHT => KeyCode::ARROW_RIGHT,
         Key::KEY_UP => KeyCode::ARROW_UP,
@@ -110,7 +110,8 @@ pub fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender
                                         app_id: Default::default(),
                                         window_id: Default::default(),
                                         original_timestamp: 0,
-                                        key: keycode,
+                                        code: keycode,
+                                        key: "".to_string()
                                     })
                                 } else {
                                     APICommand::KeyUp(KeyUpEvent {
