@@ -20,9 +20,6 @@ pub struct Plat {
 }
 
 pub fn make_plat<'a>(stop:Arc<AtomicBool>, sender: Sender<IncomingMessage>) -> Result<Plat, String> {
-    let mut keyboard = input::find_keyboard().expect("Couldn't find the keyboard");
-    let mut mouse = input::find_mouse().expect("Couldn't find the mouse");
-
 
     let pth = "/dev/fb0";
     let mut fb = Framebuffer::new(pth).unwrap();
@@ -34,8 +31,16 @@ pub fn make_plat<'a>(stop:Arc<AtomicBool>, sender: Sender<IncomingMessage>) -> R
     surf.sync();
     let layout = surf.buf.layout.clone();
 
-    input::setup_evdev_watcher(keyboard, stop.clone(), sender.clone(), screen_size);
-    input::setup_evdev_watcher(mouse, stop.clone(), sender.clone(), screen_size);
+    if let Some(mut keyboard) = input::find_keyboard() {
+        input::setup_evdev_watcher(keyboard, stop.clone(), sender.clone(), screen_size);
+    } else {
+        println!("Couldn't find the keyboard. skipping!");
+    }
+    if let Some(mut mouse) = input::find_mouse() {
+        input::setup_evdev_watcher(mouse, stop.clone(), sender.clone(), screen_size);
+    } else {
+        println!("Couldn't find the mouse. skipping!");
+    }
 
 
     return Ok(Plat {
