@@ -18,12 +18,40 @@ cd ..
 cd apps/digital-clock
 cargo build
 cd ../..
+cd ../apps/dock
+npm install
+npm run build
+cd ../..
 cd tools/runner
-cargo run -- --wmtype native --start-clock
+cargo run -- --wmtype native --start-dock=true
 ```
 
 An SDL window will open with a dock and a clock app running
 
+
+### linux
+
+* install rust and gcc and git and node
+  * [follow these instructions](https://www.rust-lang.org/tools/install)
+  * `sudo apt-get install build-essential`
+  * [install nodejs v16](https://github.com/nodesource/distributions/blob/master/README.md) 
+
+```shell
+git clone repo
+cargo check
+cd central
+cargo build
+cd ..
+cd apps/digital-clock
+cargo build
+cd ../..
+cd ../apps/dock
+npm install
+npm run build
+cd ../..
+cd tools/runner
+cargo run -- --wmtype=native --start-dock=true
+```
 
 
 
