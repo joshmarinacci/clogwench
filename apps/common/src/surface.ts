@@ -11,12 +11,13 @@ import {
     Modifiers,
     Callback,
     SpriteGlyph,
-    StandardTextHeight
+    StandardTextHeight,
+    BASE_FONT,
 } from "thneed-gfx";
-import {Window} from "./app";
-// @ts-ignore
-import basefont_data from "../../dock/src/base_font.json";
-import {IDEALOS_KEYBOARD_CODE, IDEALOS_KEYBOARD_KEY} from "./generated";
+import {Window} from "./app.js";
+
+
+import {IDEALOS_KEYBOARD_CODE, IDEALOS_KEYBOARD_KEY} from "./generated.js";
 
 type Color = {
     r:number,
@@ -263,7 +264,7 @@ export class ClogwenchWindowSurface implements SurfaceContext {
         })
         this.win.on('resize',() => this.repaint())
         let name = 'base'
-        let fnt = basefont_data.fonts.find(ft => ft.name === name)
+        let fnt = BASE_FONT.fonts.find(ft => ft.name === name)
         this.font = new BufferFont(fnt)
     }
 
