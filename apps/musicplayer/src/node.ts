@@ -11,12 +11,13 @@ function start(app: App, surface: ClogwenchWindowSurface) {
 
     setTimeout(async ()=>{
         // console.log('fetching a database query')
-        let tracks = await app.db_query({type:'song-track'})
-        music_root.set_tracks(tracks)
-        surface.repaint()
-
-        let people = await app.db_query({type:"person-contact"})
-        console.log("all people are",people)
+        try {
+            let tracks = await app.db_query([{kind:'equals',key:'type', value:'song-track'}])
+            music_root.set_tracks(tracks)
+            surface.repaint()
+        } catch (e) {
+            console.error(e)
+        }
     },3000)
 }
 
@@ -28,10 +29,10 @@ async function doit() {
     let win = await app.open_window(new Rect(50, 50, 600, 300))
     let surface = new ClogwenchWindowSurface(win);
     start(app,surface)
-    app.on_close_window(() => {
-        console.log("window closed. quitting")
-        process.exit(0)
-    })
+    // app.on_close_window(() => {
+    //     console.log("window closed. quitting")
+    //     process.exit(0)
+    // })
 }
 
 doit().then(() => console.log("fully started")).catch((e) => console.error(e))
