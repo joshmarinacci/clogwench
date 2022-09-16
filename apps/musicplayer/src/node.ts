@@ -1,7 +1,6 @@
 import {Rect, View} from "thneed-gfx";
-import {App} from "../../common/src/app";
-import {ClogwenchWindowSurface} from "../../common/src/surface";
-import {make_music_player} from "./index";
+import {App,ClogwenchWindowSurface} from "../../common";
+import {make_music_player} from "./index.js";
 
 
 function start(app: App, surface: ClogwenchWindowSurface) {

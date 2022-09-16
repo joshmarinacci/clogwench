@@ -3,8 +3,7 @@ import {
     VBox,
     Label, TextLine,
 } from "thneed-gfx";
-import {App} from "../../common/src/app";
-import {ClogwenchWindowSurface} from "../../common/src/surface";
+import {App,ClogwenchWindowSurface} from "../../common/build/index";
 import * as child_process from "child_process";
 
 

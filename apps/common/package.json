@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "description": "",
   "type": "module",
+  "main": "build/index.js",
   "scripts": {
     "build": "rm -rf build; tsc"
   },

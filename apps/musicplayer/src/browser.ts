@@ -1,7 +1,7 @@
 import {
     TableView, BaseView, Size, CanvasSurface, View,
 } from "thneed-gfx";
-import {make_music_player} from "./index";
+import {make_music_player} from "./index.js";
 
 export function start_browser() {
     console.log("starting browser")
