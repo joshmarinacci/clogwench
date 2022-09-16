@@ -18,7 +18,7 @@ function start(surface: ClogwenchWindowSurface) {
     music_button.set_caption('Music')
     music_button.on(COMMAND_ACTION, () => {
         console.log("launching the music app")
-        child_process.spawn('npm',['run','dev-node'],{
+        child_process.spawn('npm',['run','start'],{
             cwd:'../musicplayer/',
             detached:true,
         })
@@ -29,7 +29,7 @@ function start(surface: ClogwenchWindowSurface) {
     texteditor.set_caption('TextEdit')
     texteditor.on(COMMAND_ACTION, () => {
         console.log("launching the text editor app")
-        child_process.spawn('npm',['run','dev'],{
+        child_process.spawn('npm',['run','start'],{
             cwd:'../textedit/',
             detached:true,
         })

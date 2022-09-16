@@ -235,7 +235,7 @@ fn start_nodeapp_with_delay(delay: u64, path: String) {
             // .stdout(Stdio::null())
             // .stdout(Stdio::inherit())
             .arg("run")
-            .arg("dev")
+            .arg("start")
             // .arg("--debug=true")
             // .env_clear()
             // .env("PATH", "/bin")

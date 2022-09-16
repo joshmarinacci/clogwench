@@ -1,12 +1,11 @@
 import {
-    ActionButton, COMMAND_ACTION, LayerView, Rect,
+    ActionButton, LayerView, Rect,
     VBox,
     Label, TextBox, HBox,
 } from "thneed-gfx";
-import {App} from "../../common/src/app";
-import {ClogwenchWindowSurface} from "../../common/src/surface";
-import * as child_process from "child_process";
-import {stat} from "fs";
+import {App, ClogwenchWindowSurface} from "../../common/build";
+// import * as child_process from "child_process";
+// import {stat} from "fs";
 
 
 function start(surface: ClogwenchWindowSurface) {
