@@ -36,6 +36,17 @@ function start(surface: ClogwenchWindowSurface) {
     })
     vbox.add(texteditor)
 
+    let people = new ActionButton()
+    people.set_caption('People')
+    people.on(COMMAND_ACTION, () => {
+        console.log("launching the people app")
+        child_process.spawn('npm',['run','start'],{
+            cwd:'../people/',
+            detached:true,
+        })
+    })
+    vbox.add(people)
+
     let clock_button = new ActionButton()
     clock_button.set_caption('Clock')
     clock_button.on(COMMAND_ACTION, () => {

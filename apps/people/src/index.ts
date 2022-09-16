@@ -14,8 +14,7 @@ import {
     VBox,
     View,
 } from "thneed-gfx";
-import {App, DBObj} from "../../common/src/app";
-import {ClogwenchWindowSurface} from "../../common/src/surface";
+import {App,ClogwenchWindowSurface, DBObj} from "../../common/build/index";
 import {ContactEditor} from "./contact_editor";
 
 class ContactView extends VBox {
@@ -89,6 +88,7 @@ const TEST_CONTACT:DBObj = {
 }
 
 function make_empty_contact():DBObj {
+    //@ts-ignore
     return {
         "deleted":false,
         "data": {
