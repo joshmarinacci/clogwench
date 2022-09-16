@@ -3,7 +3,8 @@
   "version": "0.0.1",
   "type": "module",
   "dependencies": {
-    "thneed-gfx": "^0.1.42"
+    "thneed-gfx": "^0.1.42",
+    "thneed-idealos-common": "^0.0.3"
   },
   "devDependencies": {
     "@types/node": "^17.0.44",

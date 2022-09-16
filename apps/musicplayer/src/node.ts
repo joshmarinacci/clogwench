@@ -1,5 +1,5 @@
 import {Rect, View} from "thneed-gfx";
-import {App,ClogwenchWindowSurface} from "../../common/build/index";
+import {App,ClogwenchWindowSurface} from "thneed-idealos-common"
 import {make_music_player} from "./index.js";
 
 

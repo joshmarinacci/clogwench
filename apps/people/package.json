@@ -10,10 +10,10 @@
   },
   "devDependencies": {
     "@types/node": "^17.0.44",
-    "process": "^0.11.10"
+    "thneed-idealos-common": "^0.0.3"
   },
   "scripts": {
-    "start": "node --experimental-specifier-resolution=node build/index.js",
-    "build": "rm -rf build; tsc"
+    "build": "rm -rf build; tsc",
+    "start": "node --experimental-specifier-resolution=node build/index.js"
   }
 }

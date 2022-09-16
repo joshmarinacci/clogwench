@@ -14,7 +14,7 @@ import {
     VBox,
     View,
 } from "thneed-gfx";
-import {App,ClogwenchWindowSurface, DBObj} from "../../common/build/index";
+import {App,ClogwenchWindowSurface, DBObj} from "thneed-idealos-common"
 import {ContactEditor} from "./contact_editor";
 
 class ContactView extends VBox {

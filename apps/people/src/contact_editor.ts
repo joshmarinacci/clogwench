@@ -1,5 +1,5 @@
 import {ActionButton, COMMAND_ACTION, Label, TextLine, VBox} from "thneed-gfx";
-import {App, DBObj} from "../../common/build/index";
+import {App, DBObj} from "thneed-idealos-common";
 
 export class ContactEditor extends VBox {
     private first: TextLine;

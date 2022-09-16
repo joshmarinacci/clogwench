@@ -3,7 +3,7 @@ import {
     VBox,
     Label, TextBox, HBox,
 } from "thneed-gfx";
-import {App, ClogwenchWindowSurface} from "../../common/build";
+import {App,ClogwenchWindowSurface} from "thneed-idealos-common"
 // import * as child_process from "child_process";
 // import {stat} from "fs";
 
