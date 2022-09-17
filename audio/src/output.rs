@@ -71,7 +71,7 @@ mod cpal {
             let config = match device.default_output_config() {
                 Ok(config) => config,
                 Err(err) => {
-                    error!("failed to get default audio output device config: {}", err);
+                    error!("failed to get default audio output device config: {:?}", err);
                     return Err(AudioOutputError::OpenStreamError);
                 }
             };
@@ -126,11 +126,11 @@ mod cpal {
                     // Mute any remaining samples.
                     data[written..].iter_mut().for_each(|s| *s = T::MID);
                 },
-                move |err| error!("audio output error: {}", err),
+                move |err| error!("audio output error: {:?}", err),
             );
 
             if let Err(err) = stream_result {
-                error!("audio output stream open error: {}", err);
+                error!("audio output stream open error: {:?}", err);
 
                 return Err(AudioOutputError::OpenStreamError);
             }
@@ -139,7 +139,7 @@ mod cpal {
 
             // Start the output stream.
             if let Err(err) = stream.play() {
-                error!("audio output stream play error: {}", err);
+                error!("audio output stream play error: {:?}", err);
 
                 return Err(AudioOutputError::PlayStreamError);
             }
