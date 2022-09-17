@@ -74,7 +74,7 @@ mod tests {
         song.data.insert("title".to_string(), "Catch Me I'm Falling".to_string());
         song.data.insert("artist".to_string(), "Pretty Poison".to_string());
         song.data.insert("album".to_string(), "Catch Me I'm Falling".to_string());
-        song.data.insert("filepath".to_string(), "./in_your_eyes.mp3".to_string());
+        song.data.insert("filepath".to_string(), "./masses.mp3".to_string());
         let song = jdb.process_add(song);
 
 
