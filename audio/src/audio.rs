@@ -12,9 +12,16 @@ use symphonia::core::io::MediaSourceStream;
 use symphonia::core::probe::Hint;
 use symphonia::core::meta::MetadataOptions;
 use symphonia::core::errors::Error;
-use crate::output;
+use crate::{output};
 
 use crate::output::{AudioOutput};
+
+pub enum AudioCommand {
+    Play(),
+    TogglePlayPause,
+    Quit
+}
+
 
 pub struct AudioPlayer {
     path:String,
@@ -63,9 +70,29 @@ impl AudioPlayer {
 
 
 impl AudioPlayer {
-    pub fn play(&mut self, audio_output: &mut Option<Box<dyn AudioOutput>>, ) {
-        self.running = true;
+    pub fn start(&mut self, audio_output: &mut Option<Box<dyn AudioOutput>>,rec: Receiver<AudioCommand> ) {
+        self.running = false;
         loop {
+            if let Ok(msg) = rec.try_recv() {
+                println!("audio thread received a command");
+                match msg {
+                    AudioCommand::Play() => {
+                        self.running = true
+                    }
+                    AudioCommand::TogglePlayPause => self.running = !self.running,
+                    AudioCommand::Quit => {
+                        self.running = false;
+                        break;
+                    }
+                }
+            }
+
+            if !self.running {
+                //sleep for 10th of a second then continue;
+                thread::sleep(Duration::from_millis(100));
+                continue;
+            }
+
             let packet = match self.probe_result.format.next_packet() {
                 Ok(packet) => packet,
                 Err(Error::ResetRequired) => {
