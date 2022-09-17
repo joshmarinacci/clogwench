@@ -11,107 +11,21 @@ use symphonia::core::probe::ProbeResult;
 use symphonia::core::io::MediaSourceStream;
 use symphonia::core::probe::Hint;
 use symphonia::core::meta::MetadataOptions;
+use symphonia::core::errors::Error;
+use crate::output;
 
-use crate::AudioPlayer;
+use crate::output::{AudioOutput};
 
-
-// pub enum AudioCommand {
-//     Play(TrackData),
-//     TogglePlayPause,
-//     Quit
-// }
-
-
-
-pub struct AudioContext {
-    pub(crate) decoder: Box<dyn Decoder>,
+pub struct AudioPlayer {
+    path:String,
+    running:bool,
+    decoder: Box<dyn Decoder>,
     track_id: u32,
-    pub(crate) probe_result: ProbeResult,
+    probe_result: ProbeResult,
 }
-// pub fn play_audio(track: &TrackData, audio_output: &mut Option<Box<dyn AudioOutput>>, rec: Receiver<AudioCommand>) -> crate::Result<()>{
-//     let mut ctx = open_audio_track(track);
-//     let mut running = true;
-//     loop {
-//         if let Ok(msg) = rec.try_recv() {
-//             // println!("got the play pause over here");
-//             match msg {
-//                 AudioCommand::Play(track) => {
-//                     ctx = open_audio_track(&track);
-//                 }
-//                 AudioCommand::TogglePlayPause => running = !running,
-//                 AudioCommand::Quit => {
-//                     running = false;
-//                     break;
-//                 }
-//             }
-//         }
-//         if !running {
-//             //sleep for 10th of a second then continue;
-//             thread::sleep(Duration::from_millis(100));
-//             continue;
-//         }
-//         let packet = match ctx.probe_result.format.next_packet() {
-//             Ok(packet) => packet,
-//             Err(Error::ResetRequired) => {
-//                 println!("reset required");
-//                 unimplemented!()
-//             }
-//             Err(err) => {
-//                 println!("error . end of stream?");
-//                 break;
-//             }
-//         };
-//         if packet.track_id() != ctx.track_id {
-//             println!("continuing");
-//             continue;
-//         }
-//         match ctx.decoder.decode(&packet) {
-//             Ok(decoded) => {
-//                 // Consume the decoded audio samples (see below).
-//                 // println!("got some samples {}", decoded.frames());
-//                 if audio_output.is_none() {
-//                     // println!("trying to open a device");
-//                     // Get the audio buffer specification. This is a description of the decoded
-//                     // audio buffer's sample format and sample rate.
-//                     let spec = *decoded.spec();
-//                     // println!("spec is {:?}",spec);
-//
-//                     // Get the capacity of the decoded buffer. Note that this is capacity, not
-//                     // length! The capacity of the decoded buffer is constant for the life of the
-//                     // decoder, but the length is not.
-//                     let duration = decoded.capacity() as u64;
-//                     // println!("duraction is {}",duration);
-//
-//                     // Try to open the audio output.
-//                     audio_output.replace(output::try_open(spec, duration).unwrap());
-//
-//                 } else {
-//                     // println!("still open");
-//                 }
-//                 if let Some(audio_output) = audio_output {
-//                     audio_output.write(decoded).unwrap()
-//                 }
-//             }
-//             Err(Error::IoError(_)) => {
-//                 println!("io error");
-//                 // The packet failed to decode due to an IO error, skip the packet.
-//                 continue;
-//             }
-//             Err(Error::DecodeError(_)) => {
-//                 println!("decode error");
-//                 // The packet failed to decode due to invalid data, skip the packet.
-//                 continue;
-//             }
-//             Err(err) => {
-//                 // An unrecoverable error occured, halt decoding.
-//                 println!("{}", err);
-//             }
-//         }
-//     }
-//     Ok(())
-// }
 
-pub fn open_audio_track(path: &str) -> AudioContext {
+impl AudioPlayer {
+    pub fn load(path: &str) -> AudioPlayer {
     println!("opening the file {}",path);
     println!("CWD = {:?}",env::current_dir().unwrap());
 
@@ -136,9 +50,74 @@ pub fn open_audio_track(path: &str) -> AudioContext {
     let dec_opts: DecoderOptions = Default::default();
     // Create a decoder for the track.
     let decoder = get_codecs().make(&track.codec_params, &dec_opts).unwrap();
-    AudioContext {
-        decoder,
-        probe_result,
-        track_id:track_id,
+        AudioPlayer {
+            path: String::from(path),
+            running: false,
+            decoder,
+            track_id,
+            probe_result
+        }
+    }
+}
+
+
+
+impl AudioPlayer {
+    pub fn play(&mut self, audio_output: &mut Option<Box<dyn AudioOutput>>, ) {
+        self.running = true;
+        loop {
+            let packet = match self.probe_result.format.next_packet() {
+                Ok(packet) => packet,
+                Err(Error::ResetRequired) => {
+                    println!("reset required");
+                    unimplemented!()
+                }
+                Err(err) => {
+                    println!("error . end of stream?");
+                    break;
+                }
+            };
+            match self.decoder.decode(&packet) {
+                Ok(decoded) => {
+                    // Consume the decoded audio samples (see below).
+                    // println!("got some samples {}", decoded.frames());
+                    if audio_output.is_none() {
+                        // println!("trying to open a device");
+                        // Get the audio buffer specification. This is a description of the decoded
+                        // audio buffer's sample format and sample rate.
+                        let spec = *decoded.spec();
+                        // println!("spec is {:?}",spec);
+
+                        // Get the capacity of the decoded buffer. Note that this is capacity, not
+                        // length! The capacity of the decoded buffer is constant for the life of the
+                        // decoder, but the length is not.
+                        let duration = decoded.capacity() as u64;
+                        // println!("duraction is {}",duration);
+
+                        // Try to open the audio output.
+                        audio_output.replace(output::try_open(spec, duration).unwrap());
+                    } else {
+                        // println!("still open");
+                    }
+                    if let Some(audio_output) = audio_output {
+                        audio_output.write(decoded).unwrap()
+                    }
+                }
+                Err(Error::IoError(_)) => {
+                    println!("io error");
+                    // The packet failed to decode due to an IO error, skip the packet.
+                    continue;
+                }
+                Err(Error::DecodeError(_)) => {
+                    println!("decode error");
+                    // The packet failed to decode due to invalid data, skip the packet.
+                    continue;
+                }
+                Err(err) => {
+                    // An unrecoverable error occured, halt decoding.
+                    println!("{}", err);
+                }
+            }
+        }
     }
 }
