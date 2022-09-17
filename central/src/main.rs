@@ -19,6 +19,7 @@ use common::{APICommand, APP_MANAGER_PORT, AppDisconnected, DBAddResponse, DBDel
 use structopt::StructOpt;
 use cool_logger::CoolLogger;
 use db::{JDB, JObj, JQuery};
+use audio::AudioService;
 
 struct Window {
     id:Uuid,
@@ -43,6 +44,7 @@ struct CentralState {
     apps:Vec<App>,
     debuggers:Vec<Debugger>,
     db:JDB,
+    audio_service:AudioService,
 }
 
 impl CentralState {
@@ -52,6 +54,7 @@ impl CentralState {
             apps: vec![],
             debuggers: vec![],
             db:JDB::load_from_file(file),
+            audio_service: AudioService::make(),
         }
     }
     fn add_app_from_stream(&mut self, stream:TcpStream, sender: Sender<IncomingMessage>, stop: Arc<AtomicBool>) {

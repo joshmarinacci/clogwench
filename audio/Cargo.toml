@@ -1,0 +1,13 @@
+[package]
+name = "audio"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+db = { path="../db"}
+symphonia = { version = "0.5", features = [ "mp3", "aac", "symphonia-codec-aac", "isomp4"] }
+cpal = "0.13.3"
+rb = "0.3.2"
+log = "0.4.14"

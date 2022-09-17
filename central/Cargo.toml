@@ -10,6 +10,7 @@ edition = "2018"
 common = { path="../common"}
 cool-logger = { path="../cool-logger"}
 db = { path="../db"}
+audio = { path="../audio"}
 structopt = "0.3.25"
 ctrlc = "3.2.1"
 serde = "1.0.133"

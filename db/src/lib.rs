@@ -75,6 +75,11 @@ impl JDB {
         }
         return jdb
     }
+    pub fn make_empty() -> JDB {
+        JDB {
+            data: vec![]
+        }
+    }
     pub fn process_add(&mut self, obj:JObj) -> JObj {
         let mut cl = obj.clone();
         let rand_string: String = thread_rng()
