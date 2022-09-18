@@ -71,7 +71,11 @@ impl JDB {
             let mp = ob.get("data").unwrap().as_object().unwrap();
             for (s,v) in mp.iter() {
                 // println!("key {} value {}",s,v);
-                song.data.insert(s.clone(), v.as_str().unwrap().to_string());
+                if !v.is_string() {
+                    println!("skip non string {}",v);
+                } else {
+                    song.data.insert(s.clone(), v.as_str().unwrap().to_string());
+                }
             }
             // println!("adding a db object {:?}",song);
             jdb.data.push(song);

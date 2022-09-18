@@ -256,6 +256,18 @@ pub struct AudioPlayTrackResponse {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct AudioPauseTrackRequest {
+    pub app_id:Uuid,
+    pub track:JObj,
+}
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct AudioPauseTrackResponse {
+    pub app_id:Uuid,
+    pub success:bool,
+    pub track:JObj,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum APICommand {
     AppConnect(HelloApp),
     AppConnectResponse(HelloAppResponse),
@@ -290,6 +302,8 @@ pub enum APICommand {
 
     AudioPlayTrackRequest(AudioPlayTrackRequest),
     AudioPlayTrackResponse(AudioPlayTrackResponse),
+    AudioPauseTrackRequest(AudioPauseTrackRequest),
+    AudioPauseTrackResponse(AudioPauseTrackResponse),
 
     SystemShutdown,
 }

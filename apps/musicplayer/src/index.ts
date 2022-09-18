@@ -60,7 +60,14 @@ function make_toolbar(player:MusicPlayer) {
     play.set_caption('play')
     play.on(COMMAND_ACTION, (e) => {
         let track = player.get_selected_track();
-        player.play_track(track);
+        let playing:boolean = player.is_playing();
+        if(playing) {
+            play.set_caption("play")
+            player.pause_track(track)
+        } else {
+            play.set_caption("pause")
+            player.play_track(track)
+        }
     })
     hbox.add(play)
     let next = new ActionButton()
@@ -76,12 +83,14 @@ export class MusicPlayer extends VBox {
     private song_list: SelectList;
     private _selected_track: DBObj;
     private app: App;
+    private playing: boolean;
 
     constructor(app: App) {
         super();
         this.app = app;
         this.set_name('MusicPlayer')
         this.add(make_toolbar(this))
+        this.playing = false
 
 
         let middle_layer = new HBox()
@@ -127,6 +136,7 @@ export class MusicPlayer extends VBox {
 
     play_track(track: DBObj) {
         log.info("music player playing",track);
+        this.playing = true
         this.app.send_and_wait({
             AudioPlayTrackRequest: {
                 app_id:this.app.id,
@@ -137,8 +147,25 @@ export class MusicPlayer extends VBox {
         })
     }
 
+    pause_track(track: DBObj) {
+        log.info("music player pausing",track);
+        this.playing = false
+        this.app.send_and_wait({
+            AudioPauseTrackRequest: {
+                app_id:this.app.id,
+                track:track,
+            }
+        }).then(r => {
+            log.info("got the result",r)
+        })
+    }
+
     private set_selected_track(item) {
         this._selected_track = item;
+    }
+
+    is_playing() {
+        return this.playing
     }
 }
 export function make_music_player(surface: SurfaceContext, app:App):MusicPlayer {

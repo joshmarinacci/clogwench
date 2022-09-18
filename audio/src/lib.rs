@@ -11,6 +11,13 @@ use crate::audio::{AudioCommand, AudioPlayer};
 use crate::output::AudioOutput;
 
 pub struct AudioService {
+    current_player:Option<AudioPlayerProxy>
+}
+
+impl AudioService {
+    pub fn current_processor(&mut self) -> &mut Option<AudioPlayerProxy>{
+        return &mut self.current_player
+    }
 }
 
 pub struct AudioPlayerProxy {
@@ -49,13 +56,14 @@ impl AudioPlayerProxy {
 impl AudioService {
     pub fn make() -> AudioService {
         AudioService {
+            current_player: None
         }
     }
     pub(crate) fn init(&mut self) {
     }
     pub(crate) fn shutdown(&self) {
     }
-    pub fn load_track(&self, track:&JObj, maybe_basepath: &Option<PathBuf>) -> AudioPlayerProxy {
+    pub fn load_track(&mut self, track:&JObj, maybe_basepath: &Option<PathBuf>) -> &mut Option<AudioPlayerProxy> {
         info!("loading track {:?}",track);
         info!("base path is {:?}",maybe_basepath);
         let path = if let Some(bp) = maybe_basepath {
@@ -70,7 +78,8 @@ impl AudioService {
         } else {
             String::from(track.data.get("filepath").unwrap())
         };
-        AudioPlayerProxy::make(&path)
+        self.current_player = Some(AudioPlayerProxy::make(&path));
+        return &mut self.current_player
     }
 }
 
@@ -96,16 +105,16 @@ mod tests {
         let mut audio = AudioService::make();
         audio.init();
         //get the audio processor reference
-        let mut processor = audio.load_track(&song, &jdb.base_path);
-
-        thread::sleep(Duration::from_millis(1000));
-        processor.play();
-        thread::sleep(Duration::from_millis(1000));
-        processor.pause();
-        thread::sleep(Duration::from_millis(1000));
-        processor.play();
-        thread::sleep(Duration::from_millis(1000));
-        processor.stop();
+        if let Some(processor) = audio.load_track(&song, &jdb.base_path) {
+            thread::sleep(Duration::from_millis(1000));
+            processor.play();
+            thread::sleep(Duration::from_millis(1000));
+            processor.pause();
+            thread::sleep(Duration::from_millis(1000));
+            processor.play();
+            thread::sleep(Duration::from_millis(1000));
+            processor.stop();
+        }
         //check the current progress
         // assert_eq!(processor.current_time(),2*1000);
         // processor.stop();

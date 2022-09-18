@@ -15,7 +15,7 @@ use log4rs::Config;
 use log4rs::config::{Appender, Root};
 use serde::Deserialize;
 use uuid::Uuid;
-use common::{APICommand, APP_MANAGER_PORT, AppDisconnected, DBAddResponse, DBDeleteResponse, DBQueryClause, DBQueryClauseKind, DBQueryRequest, DBQueryResponse, DBUpdateResponse, DEBUG_PORT, DebugMessage, HelloAppResponse, HelloWindowManagerResponse, IncomingMessage, OpenWindowCommand, OpenWindowResponse, Rect, WINDOW_MANAGER_PORT};
+use common::{APICommand, APP_MANAGER_PORT, AppDisconnected, AudioPauseTrackResponse, AudioPlayTrackResponse, DBAddResponse, DBDeleteResponse, DBQueryClause, DBQueryClauseKind, DBQueryRequest, DBQueryResponse, DBUpdateResponse, DEBUG_PORT, DebugMessage, HelloAppResponse, HelloWindowManagerResponse, IncomingMessage, OpenWindowCommand, OpenWindowResponse, Rect, WINDOW_MANAGER_PORT};
 use structopt::StructOpt;
 use cool_logger::CoolLogger;
 use db::{JDB, JObj, JQuery};
@@ -278,11 +278,31 @@ impl CentralState {
     }
     fn send_to_audio(&mut self, cmd: APICommand) {
         match cmd {
-            APICommand::AudioPlayTrackRequest(cmd) => {
-                let mut processor = self.audio_service.load_track(&cmd.track, &self.db.base_path);
-                processor.play()
+            APICommand::AudioPlayTrackRequest(req) => {
+                if let Some(processor) = self.audio_service.load_track(&req.track, &self.db.base_path) {
+                    processor.play();
+                    let msg = AudioPlayTrackResponse {
+                        app_id: req.app_id,
+                        success: true,
+                        track: req.track,
+                    };
+                    self.send_to_app(msg.app_id, APICommand::AudioPlayTrackResponse(msg))
+                }
             }
-            APICommand::AudioPlayTrackResponse(_) => {}
+            APICommand::AudioPauseTrackRequest(req) => {
+                let mut msg = AudioPauseTrackResponse {
+                    app_id: req.app_id,
+                    success:true,
+                    track: req.track,
+                };
+                if let Some(processor) = self.audio_service.current_processor() {
+                    processor.pause();
+                    msg.success = true
+                } else {
+                    msg.success = false
+                }
+                self.send_to_app(msg.app_id, APICommand::AudioPauseTrackResponse(msg))
+            }
             _ => {
                 info!("invalid command sent to audio! {:?}",cmd)
             }
@@ -461,11 +481,18 @@ fn start_router(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, state: Arc
                 APICommand::DBDeleteResponse(cmd) => {
                     state.lock().unwrap().send_to_app(cmd.app_id, APICommand::DBDeleteResponse(cmd))
                 }
+
                 APICommand::AudioPlayTrackRequest(cmd) => {
                     state.lock().unwrap().send_to_audio(APICommand::AudioPlayTrackRequest(cmd))
                 }
                 APICommand::AudioPlayTrackResponse(cmd) => {
                     state.lock().unwrap().send_to_app(cmd.app_id, APICommand::AudioPlayTrackResponse(cmd))
+                }
+                APICommand::AudioPauseTrackRequest(cmd) => {
+                    state.lock().unwrap().send_to_audio(APICommand::AudioPauseTrackRequest(cmd))
+                }
+                APICommand::AudioPauseTrackResponse(cmd) => {
+                    state.lock().unwrap().send_to_app(cmd.app_id, APICommand::AudioPauseTrackResponse(cmd))
                 }
 
                 APICommand::KeyDown(e) => {
