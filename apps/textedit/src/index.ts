@@ -49,7 +49,7 @@ function start(surface: ClogwenchWindowSurface, app: App) {
         // console.log("enter in the search",search_line.text)
         let query = search_line.text
         let results:DBObj[] = await app.db_query([
-            {kind:'equals',key:'type',value:'person-contact'},
+            {kind:'equals',key:'type',value:'text-document'},
             {kind:'substringi',key:'first',value:query},
         ]);
         list.set_data(results)
@@ -75,7 +75,7 @@ function start(surface: ClogwenchWindowSurface, app: App) {
     editor.set_text(selected_document.data.content)
     list.on(COMMAND_CHANGE,(e)=>{
         selected_document = e.item
-        editor.set_text(selected_document.data.content)
+        // editor.set_text(selected_document.data.content)
         // let contact_view = make_contact_view()
         // current_view.set_content(contact_view)
         // contact_view.set_contact(e.item)
@@ -100,6 +100,9 @@ function start(surface: ClogwenchWindowSurface, app: App) {
     root.add(vbox)
     surface.set_root(root)
     surface.start_input()
+    setTimeout(async () => {
+        refresh_list()
+    },500)
 }
 
 async function doit() {
