@@ -2,16 +2,11 @@ import {
     ActionButton,
     VBox,
     Label,
-    View,
     SurfaceContext,
     HBox,
     SelectList,
-    with_props,
-    CheckButton,
-    RadioButton,
     HSpacer,
-    randi,
-    TableView, BaseView, Size, ScrollView, COMMAND_ACTION, COMMAND_CHANGE,
+    BaseView, Size, ScrollView, COMMAND_ACTION, COMMAND_CHANGE,
 } from "thneed-gfx";
 import {make_logger} from "josh_js_util"
 import {App, DBObj} from "thneed-idealos-common";
