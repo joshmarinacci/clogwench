@@ -36,6 +36,10 @@ An SDL window will open with a dock and a clock app running
   * `sudo apt-get install build-essential`
   * [install nodejs v16](https://github.com/nodesource/distributions/blob/master/README.md) 
 
+
+Now you need the following native deps:
+* `sudo apt install libasound2-dev`
+
 ```shell
 git clone repo
 cargo check
@@ -52,6 +56,16 @@ cd ../..
 cd tools/runner
 cargo run -- --wmtype=native --start-dock=true
 ```
+
+
+You may also want the test data
+
+```shell
+git clone https://github.com/joshmarinacci/querylang-testdata.git
+```
+
+This will let you have cool sample music, images, and text documents to work with.
+
 
 
 
