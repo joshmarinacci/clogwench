@@ -7,7 +7,7 @@ const STD_PORT = 3333
 export class App {
     private client: Socket
     private windows: Map<any, any>;
-    private id: string;
+    public id: string;
     private _on_close_window_cb: Callback;
     private cb:Callback
 
