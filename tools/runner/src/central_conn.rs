@@ -6,6 +6,7 @@ use std::sync::mpsc;
 use common::events::MouseDownEvent;
 use serde::Deserialize;
 use std::io::Write;
+use std::path::PathBuf;
 use std::thread;
 use std::time::Duration;
 use log::{error, info};
@@ -78,14 +79,22 @@ impl CentralConnection {
     }
 }
 
-pub fn start_central_server() -> Result<CentralConnection,String> {
+pub fn start_central_server(datafile: &Option<PathBuf>) -> Result<CentralConnection,String> {
     let (sender,receiver):(Sender<DebugMessage>,Receiver<DebugMessage>) = mpsc::channel();
+
+    let final_datafile =  if let Some(file) = datafile {
+        file.to_str().unwrap()
+    } else {
+        "data.json"
+    };
+    info!("using the datafile path {:?}",datafile);
+
     let mut child = Command::new("../../target/debug/central")
         // .stdin(Stdio::null())
         // .stdout(Stdio::null())
         // .stdout(Stdio::inherit())
         .arg("--debug=true")
-        .arg("--database=data.json")
+        .arg(format!("--database={}", final_datafile))
         .env_clear()
         // .env("PATH", "/bin")
         .spawn()

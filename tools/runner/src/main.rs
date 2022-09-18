@@ -7,6 +7,7 @@ mod platwm;
 use std::fmt::DebugList;
 use std::io::Write;
 use std::net::TcpStream;
+use std::path::PathBuf;
 use std::process::{Child, Command};
 use std::str::FromStr;
 use std::sync::mpsc;
@@ -61,6 +62,8 @@ struct Cli {
     width:u32,
     #[structopt(long, default_value="480")]
     height:u32,
+    #[structopt(long, parse(from_os_str))]
+    datafile: Option<PathBuf>,
 }
 
 fn init_setup() -> Cli {
@@ -75,7 +78,7 @@ fn main() -> Result<(),String> {
     set_logger(&COOL_LOGGER).map(|()|log::set_max_level(LevelFilter::Info));
 
     // start central server
-    let mut debug_channel = central_conn::start_central_server()?;
+    let mut debug_channel = central_conn::start_central_server(&args.datafile)?;
     info!("runner: connected to the central server");
     debug_channel.send(DebugMessage::HelloDebugger);
     info!("runner: sent the hello debugger message");
