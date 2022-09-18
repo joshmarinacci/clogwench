@@ -126,7 +126,6 @@ function start(surface: ClogwenchWindowSurface, app:App) {
     toolbar.set_name('toolbar')
     toolbar.set_hflex(true)
     toolbar.set_vflex(false)
-    toolbar.set_fill('#c0c0c0')
     vbox.add(toolbar)
 
     let search_line = new TextLine()
