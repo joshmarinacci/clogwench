@@ -14,6 +14,7 @@ use rand::distributions::Alphanumeric;
 
 pub struct JDB {
     data: Vec<JObj>,
+    pub base_path: Option<PathBuf>,
 }
 
 
@@ -50,6 +51,7 @@ impl JDB {
         return cl
     }
     pub fn load_from_file(filepath: PathBuf) -> JDB {
+        let base_path = filepath.clone();
         println!("Loading {:?}",filepath.canonicalize().unwrap());
         let file = File::open(filepath).unwrap();
         let val:Value = serde_json::from_reader(BufReader::new(file)).unwrap();
@@ -57,7 +59,8 @@ impl JDB {
         let objs = val.as_object().unwrap().get("data").unwrap();
         // println!("objects are {}",objs);
         let mut jdb = JDB {
-            data: vec![]
+            data: vec![],
+            base_path: Some(base_path),
         };
         for ob in objs.as_array().unwrap() {
             // println!("object {:?}",ob);
@@ -77,7 +80,8 @@ impl JDB {
     }
     pub fn make_empty() -> JDB {
         JDB {
-            data: vec![]
+            data: vec![],
+            base_path:None
         }
     }
     pub fn process_add(&mut self, obj:JObj) -> JObj {
@@ -308,7 +312,8 @@ mod tests {
 
     fn make_test_db() -> JDB {
         let mut jdb = JDB {
-            data: vec![]
+            data: vec![],
+            base_path:None,
         };
         let mut song = JObj::make();
         song.data.insert("title".to_string(), "Catch Me I'm Falling".to_string());

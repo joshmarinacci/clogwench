@@ -276,6 +276,18 @@ impl CentralState {
             }
         }
     }
+    fn send_to_audio(&mut self, cmd: APICommand) {
+        match cmd {
+            APICommand::AudioPlayTrackRequest(cmd) => {
+                let mut processor = self.audio_service.load_track(&cmd.track, &self.db.base_path);
+                processor.play()
+            }
+            APICommand::AudioPlayTrackResponse(_) => {}
+            _ => {
+                info!("invalid command sent to audio! {:?}",cmd)
+            }
+        }
+    }
 }
 
 fn to_query(clauses: Vec<DBQueryClause>) -> JQuery {
@@ -448,6 +460,12 @@ fn start_router(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, state: Arc
                 }
                 APICommand::DBDeleteResponse(cmd) => {
                     state.lock().unwrap().send_to_app(cmd.app_id, APICommand::DBDeleteResponse(cmd))
+                }
+                APICommand::AudioPlayTrackRequest(cmd) => {
+                    state.lock().unwrap().send_to_audio(APICommand::AudioPlayTrackRequest(cmd))
+                }
+                APICommand::AudioPlayTrackResponse(cmd) => {
+                    state.lock().unwrap().send_to_app(cmd.app_id, APICommand::AudioPlayTrackResponse(cmd))
                 }
 
                 APICommand::KeyDown(e) => {

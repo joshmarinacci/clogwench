@@ -1,10 +1,12 @@
 import {Rect, View} from "thneed-gfx";
 import {App,ClogwenchWindowSurface} from "thneed-idealos-common"
 import {make_music_player} from "./index.js";
+import {make_logger} from "josh_js_util"
 
+const logger = make_logger("MP Node Wrapper")
 
 function start(app: App, surface: ClogwenchWindowSurface) {
-    let music_root = make_music_player(surface);
+    let music_root = make_music_player(surface,app);
     surface.set_root(music_root)
     surface.start_input()
     surface.repaint()
@@ -18,7 +20,7 @@ function start(app: App, surface: ClogwenchWindowSurface) {
         } catch (e) {
             console.error(e)
         }
-    },3000)
+    },1000)
 }
 
 async function doit() {

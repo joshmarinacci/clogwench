@@ -1,9 +1,11 @@
 mod audio;
 mod output;
 
+use std::path::PathBuf;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread;
 use std::thread::JoinHandle;
+use log::info;
 use db::{JObj};
 use crate::audio::{AudioCommand, AudioPlayer};
 use crate::output::AudioOutput;
@@ -53,8 +55,21 @@ impl AudioService {
     }
     pub(crate) fn shutdown(&self) {
     }
-    pub fn load_track(&self, track:&JObj) -> AudioPlayerProxy {
-        let path =  String::from(track.data.get("filepath").unwrap());
+    pub fn load_track(&self, track:&JObj, maybe_basepath: &Option<PathBuf>) -> AudioPlayerProxy {
+        info!("loading track {:?}",track);
+        info!("base path is {:?}",maybe_basepath);
+        let path = if let Some(bp) = maybe_basepath {
+            info!("using a bigger base path {:?}",bp);
+            let mut bp2 = bp.canonicalize().unwrap();
+            let mut bp3 = bp2.parent().unwrap();
+            info!("bp3 is {:?}",bp3);
+            let mut bp4 = bp3.to_path_buf();
+            bp4.push(String::from(track.data.get("filepath").unwrap()));
+            info!("now path is {:?}",bp4);
+            bp4.canonicalize().unwrap().to_str().unwrap().to_string()
+        } else {
+            String::from(track.data.get("filepath").unwrap())
+        };
         AudioPlayerProxy::make(&path)
     }
 }
@@ -81,7 +96,7 @@ mod tests {
         let mut audio = AudioService::make();
         audio.init();
         //get the audio processor reference
-        let mut processor = audio.load_track(&song);
+        let mut processor = audio.load_track(&song, &jdb.base_path);
 
         thread::sleep(Duration::from_millis(1000));
         processor.play();

@@ -244,6 +244,18 @@ pub struct DBDeleteResponse {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct AudioPlayTrackRequest {
+    pub app_id:Uuid,
+    pub track:JObj,
+}
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct AudioPlayTrackResponse {
+    pub app_id:Uuid,
+    pub success:bool,
+    pub track:JObj,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum APICommand {
     AppConnect(HelloApp),
     AppConnectResponse(HelloAppResponse),
@@ -275,6 +287,9 @@ pub enum APICommand {
     DBUpdateResponse(DBUpdateResponse),
     DBDeleteRequest(DBDeleteRequest),
     DBDeleteResponse(DBDeleteResponse),
+
+    AudioPlayTrackRequest(AudioPlayTrackRequest),
+    AudioPlayTrackResponse(AudioPlayTrackResponse),
 
     SystemShutdown,
 }

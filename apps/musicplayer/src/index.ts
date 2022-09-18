@@ -11,63 +11,21 @@ import {
     RadioButton,
     HSpacer,
     randi,
-    TableView, BaseView, Size, ScrollView,
+    TableView, BaseView, Size, ScrollView, COMMAND_ACTION, COMMAND_CHANGE,
 } from "thneed-gfx";
+import {make_logger} from "josh_js_util"
+import {App, DBObj} from "thneed-idealos-common";
 
+const log = make_logger("MusicPlayer")
 
 function make_statusbar() {
     let status_bar = new HBox()
-    status_bar.set_name('statusbar')
-    status_bar.set_fill('#aaaaaa')
     status_bar.set_vflex(false)
     status_bar.set_hflex(true)
     status_bar.add(new Label("cool status bar"))
-    status_bar.add(with_props(new CheckButton(), {caption:'Cool?'}))
-    status_bar.add(with_props(new RadioButton(), {caption:'Good?'}))
-    status_bar.add(with_props(new RadioButton(), {caption:'Better.'}))
-    status_bar.add(with_props(new RadioButton(), {caption:'Best!'}))
-    status_bar.add(new HSpacer())
     return status_bar
 }
 
-function make_random_word(min,max) {
-    let len = randi(min,max)
-    var result           = '';
-    var characters       = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.toLowerCase();
-    var charactersLength = characters.length;
-    for ( let i = 0; i < len; i++ ) {
-        result += characters.charAt(Math.floor(Math.random() * charactersLength));
-        if(i === 0) {
-            result = result.toUpperCase()
-        }
-    }
-    return result;
-}
-function make_random_words(min,max) {
-    let count = randi(min,max)
-    let res = ''
-    for(let i=0; i<count; i++) {
-        res += make_random_word(3,12) + ' '
-    }
-    return res
-}
-
-function make_song_list() {
-    let songs = []
-    for(let i=0; i<3; i++) {
-        songs.push({
-            type:'song',
-            artist:make_random_words(1,3),
-            title: make_random_word(2,8),
-            album: make_random_word(5,15),
-        })
-    }
-    let song_list = new TableView(songs, ['artist','title','album'], [200,200,300] );
-    song_list.set_name('song-list')
-    song_list.set_hflex(true)
-    song_list.set_vflex(true)
-    return song_list
-}
 
 class LCDView extends BaseView {
     constructor() {
@@ -90,7 +48,7 @@ class LCDView extends BaseView {
     }
 }
 
-function make_toolbar() {
+function make_toolbar(player:MusicPlayer) {
     let hbox = new HBox()
     hbox.set_fill('#00ffff')
     hbox.set_hflex(true)
@@ -100,6 +58,10 @@ function make_toolbar() {
     hbox.add(prev)
     let play = new ActionButton()
     play.set_caption('play')
+    play.on(COMMAND_ACTION, (e) => {
+        let track = player.get_selected_track();
+        player.play_track(track);
+    })
     hbox.add(play)
     let next = new ActionButton()
     next.set_caption('next')
@@ -112,10 +74,14 @@ function make_toolbar() {
 
 export class MusicPlayer extends VBox {
     private song_list: SelectList;
-    constructor() {
+    private _selected_track: DBObj;
+    private app: App;
+
+    constructor(app: App) {
         super();
+        this.app = app;
         this.set_name('MusicPlayer')
-        this.add(make_toolbar())
+        this.add(make_toolbar(this))
 
 
         let middle_layer = new HBox()
@@ -142,6 +108,9 @@ export class MusicPlayer extends VBox {
             return `${obj.data.title} - ${obj.data.artist}`
         }
         this.song_list = new SelectList([test_song],rend)
+        this.song_list.on(COMMAND_CHANGE,(e) => {
+            this.set_selected_track(e.item)
+        })
         middle_layer.add(this.song_list)
 
         this.add(middle_layer)
@@ -151,9 +120,29 @@ export class MusicPlayer extends VBox {
         // this.log("got the tracks",tracks)
         this.song_list.set_data(tracks)
     }
+
+    get_selected_track():DBObj {
+        return this._selected_track;
+    }
+
+    play_track(track: DBObj) {
+        log.info("music player playing",track);
+        this.app.send_and_wait({
+            AudioPlayTrackRequest: {
+                app_id:this.app.id,
+                track:track,
+            }
+        }).then(r => {
+            log.info("got the result",r)
+        })
+    }
+
+    private set_selected_track(item) {
+        this._selected_track = item;
+    }
 }
-export function make_music_player(surface: SurfaceContext):MusicPlayer {
-    let root = new MusicPlayer()
+export function make_music_player(surface: SurfaceContext, app:App):MusicPlayer {
+    let root = new MusicPlayer(app)
     root.set_hflex(true)
     root.set_vflex(true)
     return root
