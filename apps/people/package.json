@@ -5,7 +5,7 @@
   "module": "dist/module.js",
   "type": "module",
   "dependencies": {
-    "thneed-gfx": "^0.1.42",
+    "thneed-gfx": "^0.1.44",
     "typescript": "^4.7.2"
   },
   "devDependencies": {

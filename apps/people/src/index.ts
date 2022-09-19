@@ -2,7 +2,7 @@ import {
     ActionButton,
     BaseParentView,
     COMMAND_ACTION,
-    COMMAND_CHANGE,
+    COMMAND_CHANGE, FillChildPanel,
     HBox,
     Label,
     LayerView,
@@ -55,26 +55,6 @@ function make_contact_view():ContactView {
     return view
 }
 
-class SwapView extends BaseParentView {
-    constructor() {
-        super("swap-view")
-        this.set_name("swap-view")
-    }
-    draw(g: SurfaceContext) {
-    }
-    layout(g: SurfaceContext, available: Size): Size {
-        this.set_size(available)
-        this._children.forEach(ch => ch.layout(g,available))
-        return this.size()
-    }
-    set_content(view:View) {
-        this._children = []
-        this.add(view)
-    }
-    clear() {
-        this._children = []
-    }
-}
 
 const TEST_CONTACT:DBObj = {
     "id": "addr-id-03xxx",
@@ -157,16 +137,16 @@ function start(surface: ClogwenchWindowSurface, app:App) {
     let middle = new HBox()
     let list = make_contacts_list()
     middle.add(list)
-    let current_view = new SwapView()
+    let current_view = new FillChildPanel()
     middle.add(current_view)
     vbox.add(middle)
 
     let selected_contact:DBObj = TEST_CONTACT
-    current_view.set_content(make_contact_view())
+    current_view.set_child(make_contact_view())
     list.on(COMMAND_CHANGE,(e)=>{
         selected_contact = e.item
         let contact_view = make_contact_view()
-        current_view.set_content(contact_view)
+        current_view.set_child(contact_view)
         contact_view.set_contact(e.item)
     })
 
@@ -185,14 +165,14 @@ function start(surface: ClogwenchWindowSurface, app:App) {
         let contact_editor = new ContactEditor(app)
         contact_editor.on("DB-CHANGED",refresh_list)
         contact_editor.set_contact(make_empty_contact())
-        current_view.set_content(contact_editor)
+        current_view.set_child(contact_editor)
     })
 
     edit_button.on(COMMAND_ACTION, async () => {
         let contact_editor = new ContactEditor(app)
         contact_editor.on("DB-CHANGED",refresh_list)
         contact_editor.set_contact(selected_contact)
-        current_view.set_content(contact_editor)
+        current_view.set_child(contact_editor)
     })
 
     delete_button.on(COMMAND_ACTION, async () => {
