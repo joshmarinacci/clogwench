@@ -103,6 +103,7 @@ fn linuxkernel_to_KeyCode(code:u16) -> KeyCode {
         Key::KEY_RIGHTALT => KeyCode::ALT_RIGHT,
         Key::KEY_LEFTCTRL => KeyCode::CONTROL_LEFT,
         Key::KEY_RIGHTCTRL => KeyCode::CONTROL_RIGHT,
+        _ => KeyCode::UNKNOWN
     }
 }
 
