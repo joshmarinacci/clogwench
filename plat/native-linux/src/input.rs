@@ -58,6 +58,7 @@ fn linuxkernel_to_KeyCode(code:u16) -> KeyCode {
         Key::KEY_SPACE => KeyCode::SPACE,
         Key::KEY_ENTER => KeyCode::ENTER,
         Key::BTN_LEFT => KeyCode::MOUSE_PRIMARY,
+
         Key::KEY_A => KeyCode::LETTER_A,
         Key::KEY_B => KeyCode::LETTER_B,
         Key::KEY_C => KeyCode::LETTER_C,
@@ -96,6 +97,12 @@ fn linuxkernel_to_KeyCode(code:u16) -> KeyCode {
         Key::KEY_8 => KeyCode::DIGIT_8,
         Key::KEY_9 => KeyCode::DIGIT_9,
 
+        Key::KEY_LEFTSHIFT => KeyCode::SHIFT_LEFT,
+        Key::KEY_RIGHTSHIFT => KeyCode::SHIFT_RIGHT,
+        Key::KEY_LEFTALT => KeyCode::ALT_LEFT,
+        Key::KEY_RIGHTALT => KeyCode::ALT_RIGHT,
+        Key::KEY_LEFTCTRL => KeyCode::CONTROL_LEFT,
+        Key::KEY_RIGHTCTRL => KeyCode::CONTROL_RIGHT,
     }
 }
 
