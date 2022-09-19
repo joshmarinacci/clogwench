@@ -593,6 +593,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "gfx"
+version = "0.1.0"
+dependencies = [
+ "common",
+ "plat",
+]
+
+[[package]]
 name = "glob"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

@@ -24,6 +24,7 @@
       <sourceFolder url="file://$MODULE_DIR$/tools/runner/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/db/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/audio/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/gfx/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/temp" />
       <excludeFolder url="file://$MODULE_DIR$/.tmp" />
       <excludeFolder url="file://$MODULE_DIR$/tmp" />
