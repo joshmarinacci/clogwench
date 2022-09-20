@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "type": "module",
   "dependencies": {
-    "thneed-gfx": "^0.1.42",
+    "thneed-gfx": "^0.1.45",
     "thneed-idealos-common": "^0.0.4",
     "josh_js_util": "^0.0.9"
   },
