@@ -3,19 +3,14 @@ use std::net::{Shutdown, TcpListener, TcpStream};
 use std::sync::{Arc, mpsc, Mutex};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, Sender};
-use std::{env, io, thread};
-use std::fs::File;
+use std::{io, thread};
 use std::path::PathBuf;
 use std::thread::{JoinHandle, sleep};
 use std::time::Duration;
-use env_logger::Env;
-use log::{debug, error, info, LevelFilter, set_logger, warn};
-use log4rs::append::file::FileAppender;
-use log4rs::Config;
-use log4rs::config::{Appender, Root};
+use log::{error, info, LevelFilter, set_logger, warn};
 use serde::Deserialize;
 use uuid::Uuid;
-use common::{APICommand, APP_MANAGER_PORT, AppDisconnected, AudioPauseTrackResponse, AudioPlayTrackResponse, DBAddResponse, DBDeleteResponse, DBQueryClause, DBQueryClauseKind, DBQueryRequest, DBQueryResponse, DBUpdateResponse, DEBUG_PORT, DebugMessage, HelloAppResponse, HelloWindowManagerResponse, IncomingMessage, OpenWindowCommand, OpenWindowResponse, Rect, WINDOW_MANAGER_PORT};
+use common::{APICommand, APP_MANAGER_PORT, AppDisconnected, AudioPauseTrackResponse, AudioPlayTrackResponse, DBAddResponse, DBDeleteResponse, DBQueryClause, DBQueryClauseKind, DBQueryResponse, DBUpdateResponse, DEBUG_PORT, DebugMessage, HelloAppResponse, HelloWindowManagerResponse, IncomingMessage, OpenWindowCommand, OpenWindowResponse, Rect, WINDOW_MANAGER_PORT};
 use structopt::StructOpt;
 use cool_logger::CoolLogger;
 use db::{JDB, JObj, JQuery};
@@ -71,9 +66,9 @@ impl CentralState {
             bounds: ow.bounds.clone(),
             title: ow.window_title.clone(),
         };
-        let mut app = self.apps.iter_mut().find(|a|a.id == appid).unwrap();
+        let app = self.apps.iter_mut().find(|a|a.id == appid).unwrap();
         app.windows.push(win);
-        return winid
+        winid
     }
     fn add_wm_from_stream(&mut self, stream:TcpStream, sender: Sender<IncomingMessage>, stop: Arc<AtomicBool>) {
         let id = Uuid::new_v4();
@@ -211,7 +206,7 @@ impl CentralState {
             command: resp,
         };
         let data = serde_json::to_string(&im).unwrap();
-        let mut wm = self.wms.iter_mut().find(|a|a.id == id).unwrap();
+        let wm = self.wms.iter_mut().find(|a|a.id == id).unwrap();
         wm.stream.write_all(data.as_ref()).expect("failed to send data to wm");
     }
     fn send_to_all_wm(&mut self, resp: APICommand) {
@@ -320,7 +315,7 @@ fn to_query(clauses: Vec<DBQueryClause>) -> JQuery {
             DBQueryClauseKind::substringi => q.add_substringi(&cl.key, &cl.value),
         }
     }
-    return q;
+    q
 }
 
 static COOL_LOGGER:CoolLogger = CoolLogger;

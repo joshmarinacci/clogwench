@@ -1,4 +1,4 @@
-use common::{APICommand, DebugMessage, DrawRectCommand, HelloWindowManager, IncomingMessage, Point, WHITE, WINDOW_MANAGER_PORT};
+use common::{APICommand, DebugMessage, HelloWindowManager, IncomingMessage, Point, WHITE, WINDOW_MANAGER_PORT};
 use common_wm::{OutgoingMessage, WindowManagerState};
 use core::default::Default;
 use core::option::Option;
@@ -8,7 +8,7 @@ use std::io::Write;
 use std::net::TcpStream;
 use std::path::PathBuf;
 use std::sync::mpsc;
-use std::sync::mpsc::{Receiver, Sender, SendError};
+use std::sync::mpsc::{SendError};
 use std::thread;
 use std::thread::JoinHandle;
 use thread::spawn;

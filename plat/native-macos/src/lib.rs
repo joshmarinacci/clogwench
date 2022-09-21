@@ -1,23 +1,17 @@
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
-use log::{error, info};
+use std::sync::atomic::{AtomicBool};
+use log::{error};
 use std::sync::mpsc::Sender;
-use std::time::Duration;
-
 use sdl2::event::Event;
-use sdl2::keyboard::Keycode;
 use sdl2::render::{Texture, TextureAccess, TextureCreator, WindowCanvas};
-use sdl2::video::{Window, WindowContext};
-use sdl2::{EventPump, Sdl};
-use sdl2::keyboard::Keycode::D;
-use sdl2::pixels::{Color, PixelFormat, PixelFormatEnum};
+use sdl2::video::{WindowContext};
+use sdl2::{EventPump};
+use sdl2::pixels::{Color, PixelFormatEnum};
 use sdl2::rect::Rect as SDLRect;
-
 use uuid::Uuid;
 use common::{APICommand, ARGBColor, IncomingMessage, Point, Rect as CommonRect, Rect};
 use common::events::{KeyDownEvent, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent};
-use common::generated::KeyCode;
 use common::graphics::{GFXBuffer, PixelLayout};
 
 mod sdl_to_common;
@@ -44,14 +38,14 @@ pub fn make_plat<'a>(stop:Arc<AtomicBool>, sender: Sender<IncomingMessage>, w:u3
     println!("using scale {}x{} scale={}",w,h, (scale as f32)*1.0);
     canvas.set_scale((scale as f32)*1.0,(scale as f32)*1.0)?;
 
-    return Ok(Plat {
-        stop:stop,
+    Ok(Plat {
+        stop,
         textures: Default::default(),
         creator: canvas.texture_creator(),
-        canvas: canvas,
+        canvas,
         event_pump:sdl_context.event_pump()?,
-        sender: sender,
-    });
+        sender,
+    })
 }
 
 impl Plat {
@@ -61,7 +55,7 @@ impl Plat {
 
     pub fn get_screen_bounds(&self) -> CommonRect {
         let r2 = self.canvas.viewport();
-        return CommonRect {
+        CommonRect {
             x: r2.x(),
             y: r2.y(),
             w: r2.width() as i32,
@@ -214,7 +208,7 @@ fn scale_mouse_to_canvas(canvas:&WindowCanvas, x: i32, y: i32) -> (i32,i32) {
     let (scx, scy) = canvas.scale();
     let x = ((x as f32)/scx) as i32;
     let y = ((y as f32)/scy) as i32;
-    return (x,y)
+    (x,y)
 }
 
 fn sync_texture(can: &mut WindowCanvas, tx: &mut Texture, img: &GFXBuffer) {

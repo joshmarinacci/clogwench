@@ -16,7 +16,7 @@ pub struct AudioService {
 
 impl AudioService {
     pub fn current_processor(&mut self) -> &mut Option<AudioPlayerProxy>{
-        return &mut self.current_player
+        &mut self.current_player
     }
 }
 
@@ -35,7 +35,7 @@ impl AudioPlayerProxy {
             let mut audio_output:Option<Box<dyn AudioOutput>> = None;
             player.start(&mut audio_output, receiver);
         });
-        return AudioPlayerProxy {
+        AudioPlayerProxy {
             path: String::from(path),
             sender,
             handler,
@@ -68,8 +68,8 @@ impl AudioService {
         info!("base path is {:?}",maybe_basepath);
         let path = if let Some(bp) = maybe_basepath {
             info!("using a bigger base path {:?}",bp);
-            let mut bp2 = bp.canonicalize().unwrap();
-            let mut bp3 = bp2.parent().unwrap();
+            let bp2 = bp.canonicalize().unwrap();
+            let bp3 = bp2.parent().unwrap();
             info!("bp3 is {:?}",bp3);
             let mut bp4 = bp3.to_path_buf();
             bp4.push(String::from(track.data.get("filepath").unwrap()));
@@ -79,7 +79,7 @@ impl AudioService {
             String::from(track.data.get("filepath").unwrap())
         };
         self.current_player = Some(AudioPlayerProxy::make(&path));
-        return &mut self.current_player
+        &mut self.current_player
     }
 }
 

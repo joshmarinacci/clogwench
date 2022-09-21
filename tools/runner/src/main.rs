@@ -4,9 +4,6 @@ mod central_conn;
 mod platwm;
 
 
-use std::fmt::DebugList;
-use std::io::Write;
-use std::net::TcpStream;
 use std::path::PathBuf;
 use std::process::{Child, Command};
 use std::str::FromStr;
@@ -17,9 +14,8 @@ use std::thread::spawn;
 use std::time::Duration;
 use log::{info, LevelFilter, set_logger};
 use serde::Deserialize;
-use common::{APICommand, DEBUG_PORT, DebugMessage, HelloWindowManager, IncomingMessage, Point, Rect, WINDOW_MANAGER_PORT};
-use common::events::MouseDownEvent;
-use common_wm::{OutgoingMessage, WindowManagerState};
+use common::{APICommand, DebugMessage, HelloWindowManager, IncomingMessage, Point, Rect, WINDOW_MANAGER_PORT};
+use common_wm::{OutgoingMessage};
 use cool_logger::CoolLogger;
 use crate::headlesswm::HeadlessWindowManager;
 use crate::platwm::{PlatformWindowManager};

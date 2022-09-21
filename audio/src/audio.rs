@@ -1,12 +1,10 @@
 use std::fs::File;
-use std::path::PathBuf;
 use std::sync::mpsc::Receiver;
 use symphonia::default::{get_codecs, get_probe};
 use std::{env, thread};
 use std::time::Duration;
-use symphonia::core::formats::{FormatReader, FormatOptions};
+use symphonia::core::formats::{FormatOptions};
 use symphonia::core::codecs::{Decoder, DecoderOptions, CODEC_TYPE_NULL};
-use symphonia::core::meta::Metadata;
 use symphonia::core::probe::ProbeResult;
 use symphonia::core::io::MediaSourceStream;
 use symphonia::core::probe::Hint;

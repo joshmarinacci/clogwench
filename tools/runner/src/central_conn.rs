@@ -33,15 +33,15 @@ impl CentralConnection {
                 let cmd2 = cmd.clone();
                 info!("received command {:?}", cmd);
                 if matches!(cmd2,msg) {
-                    return Ok(cmd.clone())
+                    Ok(cmd.clone())
                 } else {
                     info!("incorrect message!");
-                    return Ok(cmd.clone())
+                    Ok(cmd.clone())
                 }
             }
             Err(e) => {
                 info!("error deserializing {:?}", e);
-                return Err(e.to_string());
+                Err(e.to_string())
             }
         }
     }
@@ -89,7 +89,7 @@ pub fn start_central_server(datafile: &Option<PathBuf>) -> Result<CentralConnect
     };
     info!("using the datafile path {:?}",datafile);
 
-    let mut child = Command::new("../../target/debug/central")
+    let child = Command::new("../../target/debug/central")
         // .stdin(Stdio::null())
         // .stdout(Stdio::null())
         // .stdout(Stdio::inherit())
@@ -105,7 +105,7 @@ pub fn start_central_server(datafile: &Option<PathBuf>) -> Result<CentralConnect
     loop {
         let conn_string = format!("localhost:{}", DEBUG_PORT);
         match TcpStream::connect(conn_string) {
-            Ok(mut master_stream) => {
+            Ok(master_stream) => {
                 let (tx_out, rx_out) = mpsc::channel::<DebugMessage>();
                 return Ok(CentralConnection {
                     receiver,

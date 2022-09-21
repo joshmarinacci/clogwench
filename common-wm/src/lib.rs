@@ -1,18 +1,16 @@
-use std::error::Error;
 use std::io::Write;
 use std::net::TcpStream;
 use std::sync::{Arc, mpsc};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc::{Receiver, Sender};
+use std::sync::mpsc::{Sender};
 use std::thread;
 use std::thread::JoinHandle;
 use log::{error, info};
 use uuid::Uuid;
-use common::{APICommand, ARGBColor, BLACK, CloseWindowResponse, HelloWindowManager, IncomingMessage, Padding, Point, Rect, Size};
+use common::{APICommand, ARGBColor, CloseWindowResponse, HelloWindowManager, IncomingMessage, Point, Rect, Size};
 use serde::{Deserialize, Serialize};
 use common::events::{MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent};
 use common::graphics::{GFXBuffer, PixelLayout};
-use common::graphics::PixelLayout::ARGB;
 
 pub struct App {
     pub id:Uuid,
@@ -50,7 +48,7 @@ impl Window {
 
 impl Window {
     pub fn content_bounds(&self) -> Rect {
-        return Rect {
+        Rect {
             x:self.position.x + WINDOW_BORDER_WIDTH,
             y:self.position.y + WINDOW_BORDER_WIDTH + TITLE_BAR_HEIGHT,
             w:self.content_size.w,
@@ -58,7 +56,7 @@ impl Window {
         }
     }
     pub fn external_bounds(&self) -> Rect {
-        return Rect {
+        Rect {
             x:self.position.x,
             y:self.position.y,
             w:WINDOW_BORDER_WIDTH+self.content_size.w+WINDOW_BORDER_WIDTH,
@@ -66,7 +64,7 @@ impl Window {
         }
     }
     pub fn titlebar_bounds(&self) -> Rect {
-        return Rect {
+        Rect {
             x:self.position.x + WINDOW_BORDER_WIDTH,
             y:self.position.y + WINDOW_BORDER_WIDTH,
             w:self.content_size.w,
@@ -74,7 +72,7 @@ impl Window {
         }
     }
     pub fn resize_bounds(&self) -> Rect {
-        return Rect {
+        Rect {
             x:self.position.x + WINDOW_BORDER_WIDTH+ self.content_size.w - 20,
             y:self.position.y + WINDOW_BORDER_WIDTH+TITLE_BAR_HEIGHT + self.content_size.h - 20,
             w:20,
@@ -82,7 +80,7 @@ impl Window {
         }
     }
     pub fn close_button_bounds(&self) -> Rect {
-        return Rect {
+        Rect {
             x:self.position.x + WINDOW_BORDER_WIDTH+1,
             y:self.position.y + WINDOW_BORDER_WIDTH+1,
             w: TITLE_BAR_HEIGHT-2,
@@ -115,7 +113,7 @@ impl WindowManagerState {
                 return true
             }
         }
-        return false
+        false
     }
     pub fn add_app(&mut self, app_id: Uuid) {
         let app = App {
@@ -143,7 +141,7 @@ impl WindowManagerState {
         if let Some(app) = self.find_app(app_id) {
             app.windows.push(win);
         }
-        return win_id;
+        win_id
     }
 
     pub fn get_focused_window(&self) -> &Option<Uuid> {
@@ -165,14 +163,14 @@ impl WindowManagerState {
             for app in &self.apps {
                 for win in &app.windows {
                     if win.id.eq(win_id) {
-                        if(win.external_bounds().contains(&pt)) {
+                        if win.external_bounds().contains(&pt) {
                             return Some(win)
                         }
                     }
                 }
             }
         }
-        return None
+        None
     }
     pub fn lookup_window_mut<'a>(&'a mut self, win_id: Uuid) -> Option<&'a mut Window> {
         for app in &mut self.apps {
@@ -182,7 +180,7 @@ impl WindowManagerState {
                 }
             }
         }
-        return None
+        None
     }
     pub fn lookup_window<'a>(&'a self, win_id: Uuid) -> Option<&'a Window> {
         for app in &self.apps {
@@ -192,7 +190,7 @@ impl WindowManagerState {
                 }
             }
         }
-        return None
+        None
     }
     pub fn dump(&self) {
         info!("WM State");
@@ -210,7 +208,7 @@ impl WindowManagerState {
                 res.push(win);
             }
         }
-        return res;
+        res
     }
     pub fn window_list_mut(&mut self) -> Vec<&mut Window> {
         let mut res:Vec<&mut Window> = vec![];
@@ -219,7 +217,7 @@ impl WindowManagerState {
                 res.push(win);
             }
         }
-        return res;
+        res
     }
     pub fn remove_window(&mut self, app_id: Uuid, win_id:Uuid) {
         if let Some(app) = self.find_app(app_id) {
@@ -404,7 +402,7 @@ pub fn start_wm_network_connection(stop: Arc<AtomicBool>, sender: Sender<Incomin
                 recv_thread:receiving_handle,
                 // tx_in:tx_in,
                 // rx_in:rx_in,
-                tx_out:tx_out,
+                tx_out,
             })
 
         }

@@ -96,7 +96,7 @@ pub fn sdl_to_common(kc: Keycode, keymod: Mod) -> KeyCode {
         }
     };
     // println!("to code {:?}",code);
-    return code
+    code
 }
 pub fn sdl_to_common_letter(kc: Keycode, keymod: Mod) -> String {
     if keymod.contains(Mod::LSHIFTMOD) || keymod.contains(Mod::RSHIFTMOD) {

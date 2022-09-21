@@ -2,8 +2,7 @@
 
 use std::sync::{Arc, mpsc};
 use std::sync::atomic::AtomicBool;
-use plat::{make_plat, Plat};
-use common::graphics::draw_test_pattern;
+use plat::{make_plat};
 use common::graphics::GFXBuffer;
 use common::graphics::PixelLayout;
 use common::{ARGBColor, BLACK, IncomingMessage, Point, WHITE};
@@ -14,7 +13,7 @@ fn main() -> Result<(),String> {
     let h = 240;
     let scale = 2;
     let stop: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
-    let (tx_in, mut rx_in) = mpsc::channel::<IncomingMessage>();
+    let (tx_in, rx_in) = mpsc::channel::<IncomingMessage>();
 
     let mut plat = make_plat(stop.clone(), tx_in.clone(), w, h,scale).unwrap();
     let bds = plat.get_screen_bounds();

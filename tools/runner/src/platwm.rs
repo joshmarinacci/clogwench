@@ -9,12 +9,12 @@ use std::thread::{JoinHandle, spawn};
 use std::time::{Duration, Instant};
 use log::info;
 use serde::Deserialize;
-use common::{APICommand, ARGBColor, BLACK, DebugMessage, HelloWindowManager, IncomingMessage, Point, Rect, WHITE, WINDOW_MANAGER_PORT, WindowResized};
-use common::events::{KeyDownEvent, MouseButton, MouseDownEvent, MouseUpEvent};
+use common::{APICommand, ARGBColor, DebugMessage, IncomingMessage, Point, Rect, WINDOW_MANAGER_PORT, WindowResized};
+use common::events::{KeyDownEvent};
 use common::font::{FontInfo2, load_font_from_json};
 use common::generated::KeyCode;
-use common::graphics::{draw_test_pattern, GFXBuffer, PixelLayout};
-use common_wm::{AppMouseGesture, FOCUSED_TITLEBAR_COLOR, FOCUSED_WINDOW_COLOR, InputGesture, NoOpGesture, OutgoingMessage, TITLEBAR_COLOR, WINDOW_BORDER_WIDTH, WINDOW_BUTTON_COLOR, WINDOW_COLOR, WindowCloseButtonGesture, WindowDragGesture, WindowManagerState, WindowResizeGesture};
+use common::graphics::{GFXBuffer};
+use common_wm::{AppMouseGesture, FOCUSED_TITLEBAR_COLOR, FOCUSED_WINDOW_COLOR, InputGesture, NoOpGesture, OutgoingMessage, TITLEBAR_COLOR, WINDOW_BUTTON_COLOR, WINDOW_COLOR, WindowCloseButtonGesture, WindowDragGesture, WindowManagerState, WindowResizeGesture};
 use plat::{make_plat, Plat};
 
 pub struct PlatformWindowManager {
@@ -51,7 +51,7 @@ impl PlatformWindowManager {
                 info!("connected to the central server");
 
                 let (tx_out, rx_out) = mpsc::channel::<OutgoingMessage>();
-                let (tx_in, mut rx_in) = mpsc::channel::<IncomingMessage>();
+                let (tx_in, rx_in) = mpsc::channel::<IncomingMessage>();
                 let stop: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
 
                 let sending_handle = spawn({
@@ -106,9 +106,9 @@ impl PlatformWindowManager {
 
                 let mut plat = make_plat(stop.clone(), tx_in.clone(), w, h,scale).unwrap();
                 let bds = plat.get_screen_bounds();
-                let mut background = GFXBuffer::new(bds.w as u32, bds.h as u32, &plat.get_preferred_pixel_layout());
+                let background = GFXBuffer::new(bds.w as u32, bds.h as u32, &plat.get_preferred_pixel_layout());
                 plat.register_image2(&background);
-                let mut cursor_image:GFXBuffer = GFXBuffer::from_png_file("../../resources/cursor.png").to_layout(plat.get_preferred_pixel_layout());
+                let cursor_image:GFXBuffer = GFXBuffer::from_png_file("../../resources/cursor.png").to_layout(plat.get_preferred_pixel_layout());
                 plat.register_image2(&cursor_image);
                 let font = load_font_from_json("../../resources/default-font.json").unwrap();
                 Some(PlatformWindowManager {
@@ -197,14 +197,14 @@ impl PlatformWindowManager {
                     }
                 },
                 APICommand::DrawRectCommand(dr) => {
-                    if let Some(mut win) = self.state.lookup_window_mut(dr.window_id) {
+                    if let Some(win) = self.state.lookup_window_mut(dr.window_id) {
                         // info!("NativeWM: draw rect to window {:?} {:?}", &dr.rect, &dr.color);
                         win.backbuffer.fill_rect(dr.rect, &dr.color);
                         // buf.copy_from(win.position.x, win.position.y, &win.backbuffer);
                     }
                 },
                 APICommand::DrawImageCommand(dr) => {
-                    if let Some(mut win) = self.state.lookup_window_mut(dr.window_id) {
+                    if let Some(win) = self.state.lookup_window_mut(dr.window_id) {
                         // info!("NativeWM: draw image to window {:?}", &dr.rect);
                         win.backbuffer.fill_rect_with_image(&dr.rect,&dr.buffer);
                     }
@@ -311,12 +311,12 @@ impl PlatformWindowManager {
                 }
             };
         }
-        return true
+        true
     }
     fn check_window_sizes(&mut self) {
         for win in self.state.window_list_mut() {
             // println!("buffer bounds {} {}",win.backbuffer.bounds(), win.content_bounds());
-            if (!win.backbuffer.bounds().size().eq(&win.content_bounds().size())) {
+            if !win.backbuffer.bounds().size().eq(&win.content_bounds().size()) {
                 println!("not equal");
                 info!("NativeWM: resizing window backbuffer to {}", &win.content_bounds().size());
                 // win.backbuffer.fill_rect_with_image(&dr.rect,&dr.buffer);
