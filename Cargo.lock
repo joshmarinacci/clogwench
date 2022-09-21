@@ -418,29 +418,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "digital-clock"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "common",
- "cool-logger",
- "log",
- "uuid",
-]
-
-[[package]]
-name = "echo-app"
-version = "0.1.0"
-dependencies = [
- "common",
- "cool-logger",
- "log",
- "serde",
- "serde_json",
- "uuid",
-]
-
-[[package]]
 name = "encoding"
 version = "0.2.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"

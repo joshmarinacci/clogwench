@@ -12,21 +12,20 @@ brew install sdl2
 ```
 
 ```shell
+cd plat
+cargo build
+cd ..
 cd central
 cargo build
 cd ..
-cd apps/digital-clock
 cargo build
-cd ../..
-cd ../apps/dock
-npm install
-npm run build
-cd ../..
 cd tools/runner
-cargo run -- --wmtype native --start-dock=true
+cargo run -- --wmtype native --datafile=data.json
 ```
 
-An SDL window will open with a dock and a clock app running
+An SDL window will open with a mouse cursor and a pink button to quit.
+
+To run apps download the [clogwench-app](https://github.com/joshmarinacci/clogwench-apps) repo, build it, then run one of the apps in it.
 
 
 ### linux
@@ -41,20 +40,15 @@ Now you need the following native deps:
 * `sudo apt install libasound2-dev`
 
 ```shell
-git clone repo
-cargo check
+cd plat
+cargo build
+cd ..
 cd central
 cargo build
 cd ..
-cd apps/digital-clock
 cargo build
-cd ../..
-cd ../apps/dock
-npm install
-npm run build
-cd ../..
 cd tools/runner
-cargo run -- --wmtype=native --start-dock=true
+cargo run -- --wmtype native --datafile=data.json
 ```
 
 

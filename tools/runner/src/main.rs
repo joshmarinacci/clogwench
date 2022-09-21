@@ -50,12 +50,12 @@ struct Cli {
     wmtype: WMType,
     #[structopt(short, long)]
     test:bool,
-    #[structopt(long)]
-    start_clock:bool,
-    #[structopt(long)]
-    start_echo:bool,
-    #[structopt(long)]
-    start_dock:bool,
+    // #[structopt(long)]
+    // start_clock:bool,
+    // #[structopt(long)]
+    // start_echo:bool,
+    // #[structopt(long)]
+    // start_dock:bool,
     #[structopt(long, default_value="1")]
     scale:u32,
     #[structopt(long, default_value="640")]
@@ -142,15 +142,6 @@ fn main() -> Result<(),String> {
     }
 
 
-    if args.start_clock {
-        start_app_with_delay(5000, String::from("../../apps/digital-clock"));
-    }
-    if args.start_echo {
-        start_app_with_delay(5000, String::from("../../apps/echo-app"));
-    }
-    if args.start_dock {
-        start_nodeapp_with_delay(2000, String::from("../../apps/dock"));
-    }
     match args.wmtype {
         WMType::Native => {
             info!("creating a native window manager");
