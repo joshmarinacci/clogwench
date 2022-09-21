@@ -1,0 +1,18 @@
+{
+  "name": "docs",
+  "version": "0.0.0",
+  "description": "",
+  "type": "module",
+  "module": "src/build.js",
+  "main": "src/build.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "josh_js_util": "^0.0.9",
+    "josh_node_util": "^0.0.4",
+    "toml": "^3.0.0"
+  }
+}
