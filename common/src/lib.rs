@@ -1,8 +1,7 @@
-use std::collections::HashMap;
 use std::fmt::Formatter;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use db::{JDB, JObj};
+use db::{JObj};
 use crate::events::{KeyDownEvent, KeyUpEvent, MouseDownEvent};
 use crate::graphics::{GFXBuffer, PixelLayout};
 
@@ -82,7 +81,7 @@ impl ARGBColor {
     pub fn to_rgb565_vec(&self) -> Vec<u8> {
         //turn rgba into two adjacent bytes. use set
         let upper = ((self.r >> 3)<<3) | ((self.g & 0b111_00000) >> 5);
-        let lower = (((self.g & 0b00011100) >> 2) << 5) | ((self.b & 0b1111_1000) >> 3);
+        let lower = (((self.g & 0b0001_1100) >> 2) << 5) | ((self.b & 0b1111_1000) >> 3);
         vec![lower,upper]
     }
     pub fn from_argb_vec(v:&Vec<u8>) -> ARGBColor {
@@ -442,13 +441,13 @@ impl Rect {
         if pt.y < self.y { return false }
         if pt.x > self.x + self.w { return false }
         if pt.y > self.y + self.h { return false}
-        return true
+        true
     }
     pub fn position(&self) -> Point {
-        return Point::init(self.x,self.y);
+        Point::init(self.x,self.y)
     }
     pub fn size(&self) -> Size {
-        return Size::init(self.w,self.h);
+        Size::init(self.w,self.h)
     }
     pub fn set_position(&mut self, pos: &Point) {
         self.x = pos.x;
@@ -467,7 +466,7 @@ impl Rect {
         if y < self.y { y = self.y }
         if x > self.x+self.w { x = self.x+self.w };
         if y > self.y + self.h { y = self.y + self.h; }
-        return Point::init(x,y);
+        Point::init(x,y)
     }
     pub(crate) fn intersect(&self, r2: Rect) -> Rect {
         let c1 = self.lower_right_corner();
@@ -488,12 +487,12 @@ impl Rect {
     }
     pub(crate) fn is_empty(&self) -> bool {
         if self.w <= 0 {
-            return true;
+            return true
         }
         if self.h <= 0 {
-            return true;
+            return true
         }
-        return false;
+        false
     }
 }
 impl std::fmt::Display for Point {

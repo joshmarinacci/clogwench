@@ -3,7 +3,6 @@ use std::fs;
 use std::fs::File;
 use std::io::BufWriter;
 use std::path::{PathBuf};
-use log::{error, warn};
 use png;
 use uuid::Uuid;
 use crate::{ARGBColor, Point, Rect};
@@ -40,7 +39,7 @@ pub struct GFXBuffer {
 
 impl GFXBuffer {
     pub fn new(width:u32, height:u32, layout: &PixelLayout) -> GFXBuffer {
-        if width <= 0 || height <= 0 {
+        if width == 0 || height == 0 {
             panic!("cannot create buffer of size {}x{}",width,height);
         }
         let byte_length = (layout.bytes_per_pixel() as u32) * width * height;
@@ -68,7 +67,7 @@ impl GFXBuffer {
                 gfx.set_pixel_argb(i as i32, j as i32, bytes[n*4+3], bytes[n*4+0], bytes[n*4+1], bytes[n*4+2]);
             }
         }
-        return gfx
+        gfx
     }
 }
 impl std::fmt::Display for GFXBuffer {
@@ -87,7 +86,7 @@ impl GFXBuffer {
                 buf.set_pixel_vec_argb(i as i32, j as i32, &v);
             }
         }
-        return buf;
+        buf
     }
     pub fn sub_rect(&self, rect: Rect) -> GFXBuffer {
         let mut sub = GFXBuffer::new(
@@ -111,7 +110,7 @@ impl GFXBuffer {
         // println!("filling rect with image {:?} {}x{}",rect, buf.width, buf.height);
         for j in rect.y .. rect.y + rect.h {
             for i in rect.x .. rect.x + rect.w {
-                let mut v = buf.get_pixel_vec_argb(
+                let v = buf.get_pixel_vec_argb(
                     ( (i - rect.x) as u32 % buf.width) as i32,
                     ( (j - rect.y) as u32 % buf.height) as i32);
                 if v[0] > 0 {
@@ -121,9 +120,8 @@ impl GFXBuffer {
         }
     }
     pub fn draw_image(&mut self, dst_pos:&Point, src_bounds:&Rect, src_buf:&GFXBuffer ) {
-        let mut dst_f_bounds = src_bounds.add(dst_pos).intersect(self.bounds());
+        let dst_f_bounds = src_bounds.add(dst_pos).intersect(self.bounds());
         if dst_f_bounds.is_empty() { return; }
-        let self_bounds = self.bounds().clone();
         let src_f_bounds = dst_f_bounds.subtract(dst_pos);
         // println!("drawing {} to {}  at {}  with {} {}", src_buf, self, dst_pos, src_bounds, self_bounds);
         // println!("drawing in src {}",src_f_bounds);
@@ -204,7 +202,7 @@ impl GFXBuffer {
                 continue;
             }
             let (_, after) = row.split_at_mut((bounds.x * bpp) as usize);
-            let (mut middle, _) = after.split_at_mut((bounds.w * bpp) as usize);
+            let (middle, _) = after.split_at_mut((bounds.w * bpp) as usize);
             middle.copy_from_slice(&cv2);
         }
     }
@@ -224,7 +222,7 @@ impl GFXBuffer {
                 //blu = up[4-0]
                 // let packed_color:u16 = ((self.data[n*2+0] as u16) << 8) | (self.data[n*2+1] as u16);
                 // return ARGBColor::from_16bit(packed_color).to_argb_vec();
-                let r:u8 = (upper & 0b11111_000);
+                let r:u8 = upper & 0b11111_000;
                 let g:u8 = ((upper & 0b0000_0111) << 5) | ((lower & 0b1110_0000) >> 5);
                 let b:u8 = (lower & 0b0001_1111)  << 3;
                 v[0] = 255;
@@ -240,15 +238,15 @@ impl GFXBuffer {
                 v[3] = self.data[n*4+3];
             }
         }
-        return v
+        v
     }
     pub fn get_pixel_vec_as_layout(&self, layout: &PixelLayout, x: i32, y: i32) -> Vec<u8> {
         let pix = self.get_pixel_vec_argb(x , y);
         let color = ARGBColor::from_argb_vec(&pix);
-        return color.as_layout(&layout);
+        color.as_layout(&layout)
     }
     pub fn set_pixel_vec_argb(&mut self, x:i32, y:i32, v:&Vec<u8>) {
-        if( x < 0 || y < 0) {
+        if x < 0 || y < 0 {
             // println!("set error. pixel {},{} out of bounds {}x{}",x,y,self.width,self.height);
             return;
         }
@@ -316,7 +314,7 @@ fn create_filled_row(size: usize, color: &Vec<u8>) -> Vec<u8> {
     for n in nv.chunks_exact_mut(color.len()) {
         n.copy_from_slice(color);
     }
-    return nv;
+    nv
 }
 
 

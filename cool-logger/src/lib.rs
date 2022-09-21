@@ -13,7 +13,7 @@ pub struct CoolLogger;
 impl log::Log for CoolLogger {
     fn enabled(&self, metadata: &Metadata) -> bool {
         println!("logger getting metadata {:?}",metadata);
-        return true;
+        true
     }
 
     fn log(&self, record: &Record) {

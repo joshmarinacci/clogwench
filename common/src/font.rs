@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::fs::{File, read_to_string};
-// use std::io::BufReader;
+use std::fs::{read_to_string};
 use std::io::Error;
 use crate::{ARGBColor, Size};
 use crate::graphics::GFXBuffer;
@@ -33,7 +32,7 @@ impl FontInfo2 {
                 if glyph.id as u8 as char == ch {
                     for j in 0 .. glyph.height {
                         for i in  glyph.left .. (glyph.width - glyph.right) {
-                            let src_n = (j * glyph.width + i);
+                            let src_n = j * glyph.width + i;
                             let src_bit = glyph.data[src_n as usize];
                             let fx = dx + (i as u32);
                             let fy = dy + (j as u32);
@@ -58,7 +57,7 @@ impl FontInfo2 {
                 }
             }
         }
-        return Size::init(x+4,h+1);
+        Size::init(x+4,h+1)
     }
 }
 
@@ -66,5 +65,5 @@ impl FontInfo2 {
 pub fn load_font_from_json(json_path: &str) -> Result<FontInfo2, Error> {
     let txt:String = read_to_string(json_path)?;
     let font:FontInfo2 = serde_json::from_str(txt.as_str())?;
-    return Ok(font)
+    Ok(font)
 }

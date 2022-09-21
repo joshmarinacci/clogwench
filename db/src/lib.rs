@@ -1,14 +1,12 @@
 extern crate core;
 
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, Result};
+use serde_json::{Value};
 use std::collections::HashMap;
-use std::env;
 use std::fs::File;
 use std::io::BufReader;
-use std::iter::{Filter, Iterator, Map};
+use std::iter::{Iterator};
 use std::path::PathBuf;
-use std::slice::Iter;
 use rand::{Rng, thread_rng};
 use rand::distributions::Alphanumeric;
 
@@ -43,12 +41,12 @@ impl JDB {
             }
         }
         // println!("final results are {:?}",results);
-        return results;
+        results
     }
     pub fn process_update(&mut self, opb: JObj) -> JObj {
         let cl = opb.clone();
         self.update_object(opb);
-        return cl
+        cl
     }
     pub fn load_from_file(filepath: PathBuf) -> JDB {
         let base_path = filepath.clone();
@@ -80,7 +78,7 @@ impl JDB {
             // println!("adding a db object {:?}",song);
             jdb.data.push(song);
         }
-        return jdb
+        jdb
     }
     pub fn make_empty() -> JDB {
         JDB {
@@ -99,14 +97,14 @@ impl JDB {
         cl.id = format!("obj_${}",rand_string);
         println!("adding object {:?}",cl);
         self.add_object(cl.clone());
-        return cl
+        cl
     }
 
     pub fn process_delete(&mut self, obj:JObj) -> JObj {
-        let mut cl = obj.clone();
+        let cl = obj.clone();
         self.delete(&obj);
         println!("deleting object {:?}",cl);
-        return cl
+        cl
     }
 
     pub fn add_object(&mut self, obj:JObj) {
@@ -139,15 +137,15 @@ impl JObj {
     }
 
     fn has_field(&self, field_name: &str) -> bool {
-        return self.data.contains_key(field_name)
+        self.data.contains_key(field_name)
     }
 
     fn field_matches(&self, name:&str, value:&str) -> bool {
         if let Some(val) = self.data.get(name) {
             // println!("comparing {} and {}",&val,value.to_string());
-            return val.eq(value)
+            val.eq(value)
         } else {
-            return false;
+            false
         }
 
     }
@@ -235,7 +233,7 @@ impl JQuery {
                 return false;
             }
         }
-        return true
+        true
     }
     pub fn add_equal(&mut self, key: &str, value: &str) {
         self.clauses.insert(String::from(key), JClause::equals(String::from(value)));
