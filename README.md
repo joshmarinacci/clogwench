@@ -62,6 +62,11 @@ This will let you have cool sample music, images, and text documents to work wit
 
 
 
+# arch
+
+diagram [diagram](./tools/docs/diagram.md)
+
+
 
 # old stuff
 # initial setup
