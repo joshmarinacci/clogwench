@@ -142,12 +142,6 @@ fn main() -> Result<(),String> {
         WMType::Native => {
             info!("creating a native window manager");
             let mut wm = PlatformWindowManager::init(args.width, args.height, args.scale).unwrap();
-            //send the initial hello message
-            let im = OutgoingMessage {
-                recipient: Default::default(),
-                command: APICommand::WMConnect(HelloWindowManager {})
-            };
-            wm.tx_out.send(im).unwrap();
             {
                 loop {
                     let keep_going = wm.main_service_loop();
@@ -156,8 +150,6 @@ fn main() -> Result<(),String> {
                 info!("WM Native shutting down");
                 wm.shutdown();
             }
-            // pt("window manager fully connected to the central server");
-
         }
         WMType::Headless => {
             info!("creating a headless window manager");

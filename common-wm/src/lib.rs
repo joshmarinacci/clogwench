@@ -247,15 +247,13 @@ pub struct CentralConnection {
     recv_thread: JoinHandle<()>,
     send_thread: JoinHandle<()>,
     pub tx_out: Sender<OutgoingMessage>,
-    // pub rx_in: Receiver<IncomingMessage>,
-    // pub tx_in: Sender<IncomingMessage>,
 }
 
 pub fn start_wm_network_connection(stop: Arc<AtomicBool>, sender: Sender<IncomingMessage>) -> Option<CentralConnection> {
     let conn_string ="localhost:3334";
     match TcpStream::connect(conn_string) {
         Ok(mut master_stream) => {
-            let (tx_out, rx_out) =mpsc::channel::<OutgoingMessage>();
+            //send hello message
             let im = IncomingMessage { source: Default::default(), command: APICommand::WMConnect(HelloWindowManager {})};
             match serde_json::to_string(&im) {
                 Ok(data) => {
@@ -288,7 +286,9 @@ pub fn start_wm_network_connection(stop: Arc<AtomicBool>, sender: Sender<Incomin
             }
             info!("window manager fully connected to the central server");
 
+            let (tx_out, rx_out) =mpsc::channel::<OutgoingMessage>();
             //receiving thread
+            // create thread to read IncomingMessage from network and copy to the WM sender
             let receiving_handle = thread::spawn({
                 let stream = master_stream.try_clone().unwrap();
                 let stop = stop.clone();
@@ -320,6 +320,7 @@ pub fn start_wm_network_connection(stop: Arc<AtomicBool>, sender: Sender<Incomin
                 }
             });
             //sending thread
+            // create thread to read OutgoingMessages from rx_out and copy them to the network stream
             let sending_handle = thread::spawn({
                 let mut stream = master_stream.try_clone().unwrap();
                 let stop = stop.clone();
@@ -359,8 +360,6 @@ pub fn start_wm_network_connection(stop: Arc<AtomicBool>, sender: Sender<Incomin
                 stream: master_stream,
                 send_thread:sending_handle,
                 recv_thread:receiving_handle,
-                // tx_in:tx_in,
-                // rx_in:rx_in,
                 tx_out,
             })
 

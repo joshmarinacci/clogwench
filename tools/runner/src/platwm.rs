@@ -14,16 +14,13 @@ use common::events::{KeyDownEvent};
 use common::font::{FontInfo2, load_font_from_json};
 use common::generated::KeyCode;
 use common::graphics::{GFXBuffer};
-use common_wm::{AppMouseGesture, FOCUSED_TITLEBAR_COLOR, FOCUSED_WINDOW_COLOR, InputGesture, NoOpGesture, OutgoingMessage, TITLEBAR_COLOR, WINDOW_BUTTON_COLOR, WINDOW_COLOR, WindowCloseButtonGesture, WindowDragGesture, WindowManagerState, WindowResizeGesture};
+use common_wm::{AppMouseGesture, CentralConnection, FOCUSED_TITLEBAR_COLOR, FOCUSED_WINDOW_COLOR, InputGesture, NoOpGesture, OutgoingMessage, start_wm_network_connection, TITLEBAR_COLOR, WINDOW_BUTTON_COLOR, WINDOW_COLOR, WindowCloseButtonGesture, WindowDragGesture, WindowManagerState, WindowResizeGesture};
 use plat::{make_plat, Plat};
 
 pub struct PlatformWindowManager {
-    pub stream: TcpStream,
+    pub connection:CentralConnection,
     pub plat: Plat,
     pub state: WindowManagerState,
-    pub receiving_handle: JoinHandle<()>,
-    pub sending_handle: JoinHandle<()>,
-    pub tx_out: Sender<OutgoingMessage>,
     pub rx_in: Receiver<IncomingMessage>,
     pub background: GFXBuffer,
     pub font: FontInfo2,
@@ -47,98 +44,37 @@ impl PlatformWindowManager {
 impl PlatformWindowManager {
     pub(crate) fn init(w: u32, h: u32, scale:u32) -> Option<PlatformWindowManager> {
         let conn_string = format!("localhost:{}", WINDOW_MANAGER_PORT);
-
-        match TcpStream::connect(conn_string) {
-            Ok(stream) => {
-                info!("connected to the central server");
-
-                let (tx_out, rx_out) = mpsc::channel::<OutgoingMessage>();
-                let (tx_in, rx_in) = mpsc::channel::<IncomingMessage>();
-                let stop: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
-
-                let sending_handle = spawn({
-                    let mut stream = stream.try_clone().unwrap();
-                    move || {
-                        loop {
-                            for out in &rx_out {
-                                // info!("got a message to send back out {:?}", out);
-                                let im = IncomingMessage {
-                                    source: Default::default(),
-                                    command: out.command
-                                };
-                                // info!("sending out message {:?}", im);
-                                let data = serde_json::to_string(&im).unwrap();
-                                // info!("sending data {:?}", data);
-                                stream.write_all(data.as_ref()).unwrap();
-                            }
-                        }
-                        info!("sending thread is done");
-                    }
-                });
-                let receiving_handle = spawn({
-                    let stream = stream.try_clone().unwrap();
-                    let tx_in = tx_in.clone();
-                    move || {
-                        info!("receiving thread starting");
-                        let mut de = serde_json::Deserializer::from_reader(stream);
-                        loop {
-                            match IncomingMessage::deserialize(&mut de) {
-                                Ok(cmd) => {
-                                    // pt(&format!("received command {:?}", cmd));
-                                    match tx_in.send(cmd) {
-                                        Ok(_) => {
-                                            // pt("sent just fine");
-                                        }
-                                        Err(e) => {
-                                            info!("had an error!!");
-                                            println!("err {}", e);
-                                            break;
-                                        }
-                                    }
-                                }
-                                Err(e) => {
-                                    info!("error deserializing {:?}", e);
-                                    break;
-                                }
-                            }
-                        }
-                        info!("receiving thread is done");
-                    }
-                });
-
-                let mut plat = make_plat(stop.clone(), tx_in.clone(), w, h,scale).unwrap();
-                let bds = plat.get_screen_bounds();
-                let background = GFXBuffer::new(bds.w as u32, bds.h as u32, &plat.get_preferred_pixel_layout());
-                plat.register_image2(&background);
-                let cursor_image:GFXBuffer = GFXBuffer::from_png_file("../../resources/cursor.png").to_layout(plat.get_preferred_pixel_layout());
-                plat.register_image2(&cursor_image);
-                let font = load_font_from_json("../../resources/default-font.json").unwrap();
-                let fps_buff = GFXBuffer::new(200,50, &plat.get_preferred_pixel_layout());
-                plat.register_image2(&fps_buff);
-                Some(PlatformWindowManager {
-                    stream,
-                    state: WindowManagerState::init(plat.get_preferred_pixel_layout()),
-                    plat,
-                    sending_handle,
-                    receiving_handle,
-                    tx_out,
-                    rx_in,
-                    background,
-                    font,
-                    gesture: Box::new(NoOpGesture::init()) as Box<dyn InputGesture>,
-                    cursor:  Point::init(0,0),
-                    cursor_image,
-                    tick: 0,
-                    fps: vec![],
-                    exit_button_bounds: Rect::from_ints(bds.w-40,bds.h-20,40,20),
-                    debug_pos: Point::init(0, bds.h-50),
-                    debug_buffer: fps_buff,
-                })
-            }
-            _ => {
-                info!("could not connect to server at");
-                None
-            }
+        let stop: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
+        let (tx_in, rx_in) = mpsc::channel::<IncomingMessage>();
+        if let Some(central) = start_wm_network_connection(stop.clone(), tx_in.clone()) {
+            let mut plat = make_plat(stop.clone(), tx_in, w, h, scale).unwrap();
+            let bds = plat.get_screen_bounds();
+            let background = GFXBuffer::new(bds.w as u32, bds.h as u32, &plat.get_preferred_pixel_layout());
+            plat.register_image2(&background);
+            let cursor_image: GFXBuffer = GFXBuffer::from_png_file("../../resources/cursor.png").to_layout(plat.get_preferred_pixel_layout());
+            plat.register_image2(&cursor_image);
+            let font = load_font_from_json("../../resources/default-font.json").unwrap();
+            let fps_buff = GFXBuffer::new(200, 50, &plat.get_preferred_pixel_layout());
+            plat.register_image2(&fps_buff);
+            Some(PlatformWindowManager {
+                connection:central,
+                state: WindowManagerState::init(plat.get_preferred_pixel_layout()),
+                plat,
+                rx_in,
+                background,
+                font,
+                gesture: Box::new(NoOpGesture::init()) as Box<dyn InputGesture>,
+                cursor: Point::init(0, 0),
+                cursor_image,
+                tick: 0,
+                fps: vec![],
+                exit_button_bounds: Rect::from_ints(bds.w - 40, bds.h - 20, 40, 20),
+                debug_pos: Point::init(0, bds.h - 50),
+                debug_buffer: fps_buff,
+            })
+        } else {
+            info!("could not connect to server at");
+            None
         }
     }
 
@@ -208,18 +144,18 @@ impl PlatformWindowManager {
                     }
                 },
                 APICommand::MouseUp(evt) => {
-                    self.gesture.mouse_up(evt, &mut self.state, &self.tx_out);
+                    self.gesture.mouse_up(evt, &mut self.state, &self.connection.tx_out);
                     self.gesture = Box::new(NoOpGesture::init()) as Box<dyn InputGesture>;
                 },
                 APICommand::MouseMove(evt) => {
                     self.cursor = Point::init(evt.x, evt.y);
-                    self.gesture.mouse_move(evt, &mut self.state, &self.tx_out);
+                    self.gesture.mouse_move(evt, &mut self.state, &self.connection.tx_out);
                 }
                 APICommand::MouseDown(evt) => {
                     let point = Point::init(evt.x, evt.y);
                     if self.exit_button_bounds.contains(&point) {
                         info!("clicked the exit button!");
-                        self.tx_out.send(OutgoingMessage {
+                        self.connection.tx_out.send(OutgoingMessage {
                             recipient: Default::default(),
                             command: APICommand::Debug(DebugMessage::RequestServerShutdown)
                         }).unwrap();
@@ -234,28 +170,28 @@ impl PlatformWindowManager {
                         if win.close_button_bounds().contains(&point) {
                             // info!("inside the close button");
                             self.gesture = Box::new(WindowCloseButtonGesture::init(point, win.id));
-                            self.gesture.mouse_down(evt, &mut self.state, &self.tx_out);
+                            self.gesture.mouse_down(evt, &mut self.state, &self.connection.tx_out);
                         } else if win.titlebar_bounds().contains(&point) {
                             // info!("inside the titlebar");
                             self.gesture = Box::new(WindowDragGesture::init(point, win.id));
-                            self.gesture.mouse_down(evt, &mut self.state, &self.tx_out);
+                            self.gesture.mouse_down(evt, &mut self.state, &self.connection.tx_out);
                         } else if win.resize_bounds().contains(&point) {
                             // info!("inside the resize control");
                             self.gesture = Box::new(WindowResizeGesture::init(point, win.id));
-                            self.gesture.mouse_down(evt, &mut self.state, &self.tx_out);
+                            self.gesture.mouse_down(evt, &mut self.state, &self.connection.tx_out);
                         } else {
                             self.gesture = Box::new(AppMouseGesture::init(aid,win.id));
-                            self.gesture.mouse_down(evt,&mut self.state, &self.tx_out);
+                            self.gesture.mouse_down(evt,&mut self.state, &self.connection.tx_out);
                         }
                         self.state.set_focused_window(wid);
                         self.state.raise_window(wid);
-                        self.tx_out.send(OutgoingMessage {
+                        self.connection.tx_out.send(OutgoingMessage {
                             recipient: Default::default(),
                             command: APICommand::Debug(DebugMessage::WindowFocusChanged(String::from("foo")))
                         }).unwrap();
                     } else {
                         info!("clicked on nothing. sending background debug event");
-                        self.tx_out.send(OutgoingMessage {
+                        self.connection.tx_out.send(OutgoingMessage {
                             recipient: Default::default(),
                             command: APICommand::Debug(DebugMessage::BackgroundReceivedMouseEvent)
                         }).unwrap();
@@ -264,7 +200,7 @@ impl PlatformWindowManager {
                 APICommand::KeyDown(evt) => {
                     match evt.code {
                         KeyCode::ESCAPE => {
-                            self.tx_out.send(OutgoingMessage {
+                            self.connection.tx_out.send(OutgoingMessage {
                                 recipient: Default::default(),
                                 command: APICommand::Debug(DebugMessage::RequestServerShutdown)
                             }).unwrap();
@@ -277,7 +213,7 @@ impl PlatformWindowManager {
                                 if let Some(win) = self.state.lookup_window(*id) {
                                     let wid = win.id.clone();
                                     let aid = win.owner.clone();
-                                    self.tx_out.send(OutgoingMessage {
+                                    self.connection.tx_out.send(OutgoingMessage {
                                         recipient: aid,
                                         command: APICommand::KeyDown(KeyDownEvent {
                                             app_id: aid,
@@ -296,7 +232,7 @@ impl PlatformWindowManager {
                     let pth = PathBuf::from("./screencapture.png");
                     info!("rect for screen capture {:?}",pth);
                     // export_to_png(&buf, &pth);
-                    self.tx_out.send(OutgoingMessage {
+                    self.connection.tx_out.send(OutgoingMessage {
                         recipient: Default::default(),
                         command: APICommand::Debug(DebugMessage::ScreenCaptureResponse()),
                     }).unwrap();
@@ -321,7 +257,7 @@ impl PlatformWindowManager {
                 self.plat.unregister_image2(&win.backbuffer);
                 win.backbuffer = GFXBuffer::new(win.content_size.w as u32, win.content_size.h as u32, &win.backbuffer.layout);
                 self.plat.register_image2(&win.backbuffer);
-                self.tx_out.send(OutgoingMessage {
+                self.connection.tx_out.send(OutgoingMessage {
                     recipient: win.owner,
                     command: APICommand::WindowResized(WindowResized {
                         app_id: win.owner,
