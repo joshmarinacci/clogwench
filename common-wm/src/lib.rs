@@ -44,9 +44,6 @@ impl Window {
         self.content_size.w = size.w;
         self.content_size.h = size.h;
     }
-}
-
-impl Window {
     pub fn content_bounds(&self) -> Rect {
         Rect {
             x:self.position.x + WINDOW_BORDER_WIDTH,
@@ -238,18 +235,6 @@ impl WindowManagerState {
     }
 
 }
-/*
-- common abstraction for window managers:
-	- windows (with simple memory back buffers). Needs to track window size and position too.
-	- window contents, so titlebar is outside of the requested size.
-	- an in memory drawing surface.
-	- ordering of windows
-	- given a point pick the highest window which contains that point
-	- get and sent currently focused window, if any.
-		- real wm can send keyboard event to the currently focused window.
-
- */
-
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct OutgoingMessage {
@@ -266,38 +251,12 @@ pub struct CentralConnection {
     // pub tx_in: Sender<IncomingMessage>,
 }
 
-// fn send_hello(sender: Sender<IncomingMessage>, tx_out: Sender<OutgoingMessage>) -> Result<(),String> {
-//     //send hello window manager
-//     let msg = OutgoingMessage {
-//         recipient: Default::default(),
-//         command: APICommand::WMConnect(HelloWindowManager {})
-//     };
-//     tx_out.send(msg).map_err(|e|e.to_string())?;
-//
-//     let resp = rx_in.recv().map_err(|e|e.to_string())?;
-//     let selfid = if let APICommand::WMConnectResponse(res) = resp.command {
-//         info!("got response back from the server {:?}",res);
-//         res.wm_id
-//     } else {
-//         panic!("did not get the window manager connect response. gah!");
-//     };
-//     Ok(())
-// }
-
 pub fn start_wm_network_connection(stop: Arc<AtomicBool>, sender: Sender<IncomingMessage>) -> Option<CentralConnection> {
     let conn_string ="localhost:3334";
     match TcpStream::connect(conn_string) {
         Ok(mut master_stream) => {
             let (tx_out, rx_out) =mpsc::channel::<OutgoingMessage>();
-            println!("connected to the linux-wm");
-
-            //do the hello connection
-            // let msg = OutgoingMessage {
-            //     recipient: Default::default(),
-            //     command: APICommand::WMConnect(HelloWindowManager {})
-            // };
             let im = IncomingMessage { source: Default::default(), command: APICommand::WMConnect(HelloWindowManager {})};
-            // println!("sending out message {:?}",im);
             match serde_json::to_string(&im) {
                 Ok(data) => {
                     // println!("sending data {:?}", data);

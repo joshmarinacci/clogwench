@@ -9,7 +9,7 @@ use std::thread::{JoinHandle, spawn};
 use std::time::{Duration, Instant};
 use log::info;
 use serde::Deserialize;
-use common::{APICommand, ARGBColor, DebugMessage, IncomingMessage, Point, Rect, WINDOW_MANAGER_PORT, WindowResized};
+use common::{APICommand, ARGBColor, BLACK, DebugMessage, IncomingMessage, Point, Rect, WHITE, WINDOW_MANAGER_PORT, WindowResized};
 use common::events::{KeyDownEvent};
 use common::font::{FontInfo2, load_font_from_json};
 use common::generated::KeyCode;
@@ -30,6 +30,8 @@ pub struct PlatformWindowManager {
     pub gesture: Box<dyn InputGesture>,
     pub cursor: Point,
     pub cursor_image: GFXBuffer,
+    pub debug_pos: Point,
+    pub debug_buffer: GFXBuffer,
     pub exit_button_bounds:Rect,
 
     tick:u128,
@@ -111,6 +113,8 @@ impl PlatformWindowManager {
                 let cursor_image:GFXBuffer = GFXBuffer::from_png_file("../../resources/cursor.png").to_layout(plat.get_preferred_pixel_layout());
                 plat.register_image2(&cursor_image);
                 let font = load_font_from_json("../../resources/default-font.json").unwrap();
+                let fps_buff = GFXBuffer::new(200,50, &plat.get_preferred_pixel_layout());
+                plat.register_image2(&fps_buff);
                 Some(PlatformWindowManager {
                     stream,
                     state: WindowManagerState::init(plat.get_preferred_pixel_layout()),
@@ -127,6 +131,8 @@ impl PlatformWindowManager {
                     tick: 0,
                     fps: vec![],
                     exit_button_bounds: Rect::from_ints(bds.w-40,bds.h-20,40,20),
+                    debug_pos: Point::init(0, bds.h-50),
+                    debug_buffer: fps_buff,
                 })
             }
             _ => {
@@ -158,15 +164,7 @@ impl PlatformWindowManager {
         if self.fps.len() > 60 {
             self.fps.remove(0);
         }
-        if self.tick % 30 == 0 {
-            let mut total = 0;
-            for dur in &self.fps {
-                total += dur;
-            }
-            // println!("calculated avg frame time {}", (total as f64)/(self.fps.len() as f64));
-        }
         self.tick += 1;
-        //thread::sleep(Duration::from_millis(100));
         true
     }
 
@@ -373,10 +371,22 @@ impl PlatformWindowManager {
                 self.plat.fill_rect(win.resize_bounds(), &MAGENTA);
             }
         }
-            //draw the exit button
+
+        //draw the fps amount
+        let mut total = 0;
+        for dur in &self.fps {
+            total += dur;
+        }
+        let avg_frame_length = (total as f64)/(self.fps.len() as f64);
+        self.debug_buffer.clear(&BLACK);
+        self.font.draw_text_at(&mut self.debug_buffer,
+                               &format!("avg frame: {:.2}", avg_frame_length),
+                               3, 20, &WHITE);
+        self.plat.draw_image(&self.debug_pos, &self.debug_buffer.bounds(), &self.debug_buffer);
+        //draw the exit button
         self.plat.fill_rect(self.exit_button_bounds, &MAGENTA);
-            // draw the cursor
-            self.plat.draw_image(&self.cursor,&self.cursor_image.bounds(),&self.cursor_image);
+        // draw the cursor
+        self.plat.draw_image(&self.cursor,&self.cursor_image.bounds(),&self.cursor_image);
 
     }
 }
