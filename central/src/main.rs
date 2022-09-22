@@ -1,6 +1,6 @@
 use std::io::Write;
 use std::net::{Shutdown, TcpListener, TcpStream};
-use std::sync::{Arc, mpsc, Mutex};
+use std::sync::{Arc, LockResult, mpsc, Mutex};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, Sender};
 use std::{io, thread};
@@ -15,6 +15,11 @@ use structopt::StructOpt;
 use cool_logger::CoolLogger;
 use db::{JDB, JObj, JQuery};
 use audio::AudioService;
+use crate::network::{setup_interface, spawn_client_handler};
+use crate::state::CentralState;
+
+mod network;
+mod state;
 
 struct Window {
     id:Uuid,
@@ -34,13 +39,6 @@ struct App {
     stream:TcpStream,
     windows:Vec<Window>,
 }
-struct CentralState {
-    wms:Vec<WM>,
-    apps:Vec<App>,
-    debuggers:Vec<Debugger>,
-    db:JDB,
-    audio_service:AudioService,
-}
 
 impl CentralState {
     fn init(file: PathBuf) -> CentralState {
@@ -56,7 +54,7 @@ impl CentralState {
         let id = Uuid::new_v4();
         self.apps.push(App{ id,stream,windows:vec![] });
         if let Some(app) = self.apps.iter().find(|a|a.id == id) {
-            self.spawn_app_handler(id.clone(), app.stream.try_clone().unwrap(), sender, stop);
+            spawn_client_handler(id.clone(), app.stream.try_clone().unwrap(), sender, stop);
         }
     }
     fn add_window_to_app(&mut self, appid: Uuid, ow: &OpenWindowCommand) -> Uuid {
@@ -74,7 +72,7 @@ impl CentralState {
         let id = Uuid::new_v4();
         self.wms.push(WM{id,stream});
         if let Some(wm) = self.wms.iter().find(|w|w.id == id) {
-            self.spawn_wm_handler(id.clone(), wm.stream.try_clone().unwrap(), sender, stop);
+            spawn_client_handler(id.clone(), wm.stream.try_clone().unwrap(), sender, stop);
         }
     }
     fn add_debugger_from_stream(&mut self, stream: TcpStream, sender: Sender<IncomingMessage>, stop: Arc<AtomicBool>) {
@@ -85,69 +83,6 @@ impl CentralState {
         }
     }
 
-    fn spawn_app_handler(&self, appid: Uuid, stream: TcpStream, sender: Sender<IncomingMessage>, stop: Arc<AtomicBool>) -> JoinHandle<()> {
-        thread::spawn(move || {
-            info!("app thread starting: {}",appid);
-            stream.set_nonblocking(false).unwrap();
-            let stream2 = stream.try_clone().unwrap();
-            let mut de = serde_json::Deserializer::from_reader(stream);
-            loop {
-                if stop.load(Ordering::Relaxed) == true {
-                    info!("app thread stopping");
-                    break;
-                }
-                match APICommand::deserialize(&mut de) {
-                    Ok(cmd) => {
-                        // info!("central received command {:?}",cmd);
-                        let im = IncomingMessage { source: appid, command:cmd, };
-                        if let Err(e) = sender.send(im) {
-                            error!("error sending command {}",e);
-                        }
-                    }
-                    Err(e) => {
-                        error!("error deserializing from app {:?}",e);
-                        info!("sending shutdown about app {}",appid);
-                        let im = IncomingMessage { source: appid, command:APICommand::AppDisconnected(AppDisconnected{ app_id: appid.clone() })};
-                        if let Err(e) = sender.send(im) {
-                            error!("error sending command {}",e);
-                        }
-                        stream2.shutdown(Shutdown::Both);
-                        break;
-                    }
-                }
-            }
-            // info!("app thread ending {}",appid);
-            info!("app {} thread ending",appid);
-        })
-    }
-    fn spawn_wm_handler(&self, wm_id: Uuid, stream: TcpStream, sender: Sender<IncomingMessage>, stop: Arc<AtomicBool>) -> JoinHandle<()> {
-        thread::spawn(move ||{
-            info!("CENTRAL: WM thread starting: {}",wm_id);
-            stream.set_nonblocking(false).unwrap();
-            // info!("wm thread starting: {}",wm_id);
-            let stream2 = stream.try_clone().unwrap();
-            let mut de = serde_json::Deserializer::from_reader(stream);
-            loop {
-                if stop.load(Ordering::Relaxed) == true {
-                    info!("wm thread stopping");
-                    stream2.shutdown(Shutdown::Both);
-                    break;
-                }
-                match IncomingMessage::deserialize(&mut de) {
-                    Ok(cmd) => {
-                        // info!("central received wm command {:?}",cmd);
-                        sender.send(IncomingMessage{ source: wm_id, command: cmd.command }).unwrap();
-                    }
-                    Err(e) => {
-                        error!("error deserializing from window manager {:?}",e);
-                        stream2.shutdown(Shutdown::Both);
-                        break;
-                    }
-                }
-            }
-            info!("WM {} thread ending", wm_id);
-        })
-    }
     fn spawn_debugger_handler(&self, id:Uuid, stream: TcpStream, sender: Sender<IncomingMessage>, stop: Arc<AtomicBool>) -> JoinHandle<()>{
         thread::spawn(move ||{
             info!("debugger thread starting: {}",id);
@@ -335,18 +270,18 @@ fn main() {
     let (tx, rx) = mpsc::channel::<IncomingMessage>();
     // let cls = move |stream:TcpStream, tx:Sender<IncomingMessage>, stop:Arc<AtomicBool>, state:Arc<Mutex<CentralState>>| {
     // };
-    let app_network_thread = start_network_interface(stop.clone(),tx.clone(), state.clone(),
+    let app_network_thread = setup_interface(stop.clone(),tx.clone(), state.clone(),
                                                      String::from("app"),APP_MANAGER_PORT,
                                                      |stream,tx,stop,state|{
                                                          state.lock().unwrap().add_app_from_stream(stream,tx,stop.clone());
                                                      });
-    let wm_network_thread = start_network_interface(stop.clone(),tx.clone(), state.clone(),
+    let wm_network_thread = setup_interface(stop.clone(),tx.clone(), state.clone(),
                                                     String::from("winman"),
                                                     WINDOW_MANAGER_PORT,
                                                     |stream,tx,stop,state|{
                                                         state.lock().unwrap().add_wm_from_stream(stream.try_clone().unwrap(),tx.clone(),stop.clone());
                                                     });
-    let debug_network_thread = start_network_interface(stop.clone(),tx.clone(), state.clone(),
+    let debug_network_thread = setup_interface(stop.clone(),tx.clone(), state.clone(),
                                                     String::from("debug"),
                                                     DEBUG_PORT,
                                                     |stream,tx,stop,state|{

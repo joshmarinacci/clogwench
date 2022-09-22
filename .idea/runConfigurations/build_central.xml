@@ -1,11 +1,11 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Run Mac" type="CargoCommandRunConfiguration" factoryName="Cargo Command">
-    <option name="command" value="run -- --wmtype=native  --scale=2" />
-    <option name="workingDirectory" value="file://$PROJECT_DIR$/tools/runner" />
+  <configuration default="false" name="build central" type="CargoCommandRunConfiguration" factoryName="Cargo Command">
+    <option name="command" value="build" />
+    <option name="workingDirectory" value="file://$PROJECT_DIR$/central" />
     <option name="channel" value="DEFAULT" />
     <option name="requiredFeatures" value="true" />
     <option name="allFeatures" value="false" />
-    <option name="emulateTerminal" value="true" />
+    <option name="emulateTerminal" value="false" />
     <option name="withSudo" value="false" />
     <option name="buildTarget" value="REMOTE" />
     <option name="backtrace" value="SHORT" />
