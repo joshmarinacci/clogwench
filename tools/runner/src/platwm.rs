@@ -294,6 +294,18 @@ impl PlatformWindowManager {
         let MAGENTA:ARGBColor = ARGBColor::new_rgb(255, 0, 255);
         self.draw_windows();
 
+        if let Some(rect) =  self.state.resize_rect {
+            let size = 2;
+            let left = Rect::from_ints(rect.x,rect.y,size,rect.h);
+            self.plat.fill_rect(left,&WHITE);
+            let right = Rect::from_ints(rect.x+rect.w-size, rect.y, size, rect.h);
+            self.plat.fill_rect(right, &WHITE);
+            let top = Rect::from_ints(rect.x, rect.y, rect.w, size);
+            self.plat.fill_rect(top, &WHITE);
+            let bot = Rect::from_ints(rect.x, rect.y+rect.h-size, rect.w, size);
+            self.plat.fill_rect(bot, &WHITE);
+        }
+
         //draw the fps amount
         let mut total = 0;
         for dur in &self.fps {

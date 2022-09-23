@@ -92,6 +92,7 @@ pub struct WindowManagerState {
     focused:Option<Uuid>,
     pub preferred_pixel_layout: PixelLayout,
     pub window_order:Vec<Uuid>,
+    pub resize_rect:Option<Rect>,
 }
 
 impl WindowManagerState {
@@ -100,7 +101,8 @@ impl WindowManagerState {
             apps: Vec::new(),
             focused: None,
             preferred_pixel_layout:ppl.clone(),
-            window_order: vec![]
+            window_order: vec![],
+            resize_rect:None
         }
     }
 
@@ -476,24 +478,27 @@ impl WindowResizeGesture {
 }
 impl InputGesture for WindowResizeGesture {
     fn mouse_down(&mut self, evt: MouseDownEvent, state: &mut WindowManagerState, tx_out: &Sender<OutgoingMessage>) {
-        println!("mouse down on resize {},{}", evt.x, evt.y);
+        // println!("mouse down on resize {},{}", evt.x, evt.y);
         self.mouse_start.x = evt.x;
         self.mouse_start.y = evt.y;
     }
 
     fn mouse_move(&mut self, evt: MouseMoveEvent, state: &mut WindowManagerState, tx_out: &Sender<OutgoingMessage>) {
-        println!("mouse move on resize {},{}",evt.x,evt.y);
+        // println!("mouse move on resize {},{}", evt.x, evt.y);
+        if let Some(win) = state.lookup_window(self.winid) {
+            let wb = win.external_bounds();
+            state.resize_rect = Some(Rect::from_ints(wb.x,wb.y,evt.x-wb.x,evt.y-wb.y));
+        }
     }
 
     fn mouse_up(&mut self, evt: MouseUpEvent, state: &mut WindowManagerState, tx_out: &Sender<OutgoingMessage>) {
-        println!("mouse up on resize {},{}",evt.x,evt.y);
+        // println!("mouse up on resize {},{}",evt.x,evt.y);
+        state.resize_rect = None;
         if let Some(win) = state.lookup_window_mut(self.winid) {
-            println!("start was {}",self.mouse_start);
-            println!("win pos is {}",win.position);
             let diff = Point::init(evt.x,evt.y).subtract(&win.position);
-            println!("final size is {}",diff);
+            let tb_h = win.titlebar_bounds().h;
             // win.position.copy_from(&new_pos);
-            win.set_size(Size{ w: diff.x, h: diff.y })
+            win.set_size(Size{ w: diff.x, h: diff.y -tb_h })
         }
     }
 }
