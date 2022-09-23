@@ -8,3 +8,12 @@ members = [
     "plat",
     "tools/runner",
 ]
+
+default-members = [
+    "central",
+    "common",
+    "db",
+    "gfx",
+    "plat",
+    "tools/runner",
+]
