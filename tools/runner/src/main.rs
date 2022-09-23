@@ -14,6 +14,7 @@ use std::thread::spawn;
 use std::time::Duration;
 use log::{info, LevelFilter, set_logger};
 use serde::Deserialize;
+use uuid::Uuid;
 use common::{APICommand, DebugMessage, HelloWindowManager, IncomingMessage, Point, Rect, WINDOW_MANAGER_PORT};
 use common_wm::{OutgoingMessage};
 use cool_logger::CoolLogger;
@@ -142,6 +143,8 @@ fn main() -> Result<(),String> {
         WMType::Native => {
             info!("creating a native window manager");
             let mut wm = PlatformWindowManager::init(args.width, args.height, args.scale).unwrap();
+            wm.make_fake_window(&"fake window 1".to_string(),&Rect::from_ints(100,100,150,200));
+            wm.make_fake_window(&"fake window 2".to_string(),&Rect::from_ints(300,100,150,200));
             {
                 loop {
                     let keep_going = wm.main_service_loop();

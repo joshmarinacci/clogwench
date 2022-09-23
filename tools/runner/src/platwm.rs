@@ -9,12 +9,13 @@ use std::thread::{JoinHandle, spawn};
 use std::time::{Duration, Instant};
 use log::info;
 use serde::Deserialize;
+use uuid::Uuid;
 use common::{APICommand, ARGBColor, BLACK, DebugMessage, IncomingMessage, Point, Rect, WHITE, WINDOW_MANAGER_PORT, WindowResized};
 use common::events::{KeyDownEvent};
 use common::font::{FontInfo2, load_font_from_json};
 use common::generated::KeyCode;
 use common::graphics::{GFXBuffer};
-use common_wm::{AppMouseGesture, CentralConnection, FOCUSED_TITLEBAR_COLOR, FOCUSED_WINDOW_COLOR, InputGesture, NoOpGesture, OutgoingMessage, start_wm_network_connection, TITLEBAR_COLOR, WINDOW_BUTTON_COLOR, WINDOW_COLOR, WindowCloseButtonGesture, WindowDragGesture, WindowManagerState, WindowResizeGesture};
+use common_wm::{AppMouseGesture, CentralConnection, FOCUSED_TITLEBAR_COLOR, FOCUSED_WINDOW_COLOR, InputGesture, NoOpGesture, OutgoingMessage, start_wm_network_connection, TITLE_BAR_HEIGHT, TITLEBAR_COLOR, Window, WINDOW_BUTTON_COLOR, WINDOW_COLOR, WindowCloseButtonGesture, WindowDragGesture, WindowManagerState, WindowResizeGesture};
 use plat::{make_plat, Plat};
 
 pub struct PlatformWindowManager {
@@ -29,10 +30,23 @@ pub struct PlatformWindowManager {
     pub cursor_image: GFXBuffer,
     pub debug_pos: Point,
     pub debug_buffer: GFXBuffer,
+    pub title_buffer: GFXBuffer,
     pub exit_button_bounds:Rect,
 
     tick:u128,
     fps:Vec<u128>,
+}
+
+impl PlatformWindowManager {
+    pub(crate) fn make_fake_window(&mut self, title: &String, bounds: &Rect) {
+        let fake_app = Uuid::new_v4();
+        self.state.add_app(fake_app);
+        let fake_window = Uuid::new_v4();
+        self.state.add_window(fake_app, fake_window, bounds, title);
+        if let Some(win) = self.state.lookup_window(fake_window) {
+            self.plat.register_image2(&win.backbuffer);
+        }
+    }
 }
 
 impl PlatformWindowManager {
@@ -54,8 +68,10 @@ impl PlatformWindowManager {
             let cursor_image: GFXBuffer = GFXBuffer::from_png_file("../../resources/cursor.png").to_layout(plat.get_preferred_pixel_layout());
             plat.register_image2(&cursor_image);
             let font = load_font_from_json("../../resources/default-font.json").unwrap();
-            let fps_buff = GFXBuffer::new(200, 50, &plat.get_preferred_pixel_layout());
-            plat.register_image2(&fps_buff);
+            let debug_buffer = GFXBuffer::new(200, 50, &plat.get_preferred_pixel_layout());
+            plat.register_image2(&debug_buffer);
+            let title_buffer = GFXBuffer::new(200, TITLE_BAR_HEIGHT as u32, &plat.get_preferred_pixel_layout());
+            plat.register_image2(&title_buffer);
             Some(PlatformWindowManager {
                 connection:central,
                 state: WindowManagerState::init(plat.get_preferred_pixel_layout()),
@@ -70,7 +86,8 @@ impl PlatformWindowManager {
                 fps: vec![],
                 exit_button_bounds: Rect::from_ints(bds.w - 40, bds.h - 20, 40, 20),
                 debug_pos: Point::init(0, bds.h - 50),
-                debug_buffer: fps_buff,
+                debug_buffer,
+                title_buffer,
             })
         } else {
             info!("could not connect to server at");
@@ -288,32 +305,42 @@ impl PlatformWindowManager {
                                &format!("avg frame: {:.2}", avg_frame_length),
                                3, 20, &WHITE);
         self.plat.draw_image(&self.debug_pos, &self.debug_buffer.bounds(), &self.debug_buffer);
+
         //draw the exit button
         self.plat.fill_rect(self.exit_button_bounds, &MAGENTA);
+
         // draw the cursor
         self.plat.draw_image(&self.cursor,&self.cursor_image.bounds(),&self.cursor_image);
-
     }
-    fn draw_windows(&mut self) {
-        let MAGENTA:ARGBColor = ARGBColor::new_rgb(255, 0, 255);
-        for win_id in &self.state.window_order {
-            if let Some(win) = self.state.lookup_window(*win_id) {
-                let (wc, tc) = if self.state.is_focused_window(win) {
-                    (FOCUSED_WINDOW_COLOR, FOCUSED_TITLEBAR_COLOR)
-                } else {
-                    (WINDOW_COLOR, TITLEBAR_COLOR)
-                };
-                // draw the titlebar
-                self.plat.fill_rect(win.titlebar_bounds(), &tc);
-                self.plat.fill_rect(win.close_button_bounds(), &WINDOW_BUTTON_COLOR);
-                //draw the content
-                let bd = win.content_bounds();
-                self.plat.fill_rect(bd, &MAGENTA);
-                self.plat.draw_image(&win.content_bounds().position(), &win.backbuffer.bounds(), &win.backbuffer);
-                // draw the resize button
-                self.plat.fill_rect(win.resize_bounds(), &MAGENTA);
 
-            }
+    fn draw_windows(&mut self) {
+        let magenta:ARGBColor = ARGBColor::new_rgb(255, 0, 255);
+        let wins:Vec<&Window> = self.state.get_windows_in_order();
+        for win in wins {
+            let tc = if self.state.is_focused_window(win) {
+                FOCUSED_TITLEBAR_COLOR
+            } else {
+                TITLEBAR_COLOR
+            };
+            //draw window contents
+            self.plat.draw_image(&win.content_bounds().position(), &win.backbuffer.bounds(), &win.backbuffer);
+
+            // draw the titlebar
+            self.plat.fill_rect(win.titlebar_bounds(), &tc);
+
+            let gray = ARGBColor::new_argb(0, 100, 100, 100);
+            // draw text to a scratch buffer
+            &self.title_buffer.clear(&tc);
+            self.font.draw_text_at(&mut self.title_buffer, &win.title, win.close_button_bounds().w+2, 7, &BLACK);
+
+            let pt = win.titlebar_bounds().position();
+            let tw = win.titlebar_bounds().w;
+            let sub_bounds = Rect::from_ints(0, 0, tw.min(self.title_buffer.width as i32), self.title_buffer.height as i32);
+            self.plat.draw_image(&pt,&sub_bounds,&self.title_buffer);
+            //draw the close button
+            self.plat.fill_rect(win.close_button_bounds(), &WINDOW_BUTTON_COLOR);
+            // draw the resize button
+            self.plat.fill_rect(win.resize_bounds(), &magenta);
         }
     }
 }

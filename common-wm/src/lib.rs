@@ -104,6 +104,12 @@ impl WindowManagerState {
         }
     }
 
+    pub fn get_windows_in_order(&self) -> Vec<&Window> {
+        self.window_order.iter()
+            .map(|winid| self.lookup_window(winid.clone()))
+            .filter_map(|o|o).collect::<Vec<&Window>>()
+    }
+
     pub fn is_focused_window(&self, win: &Window) -> bool {
         if let Some(foc) = self.get_focused_window() {
             if foc.eq(&win.id) {

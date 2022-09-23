@@ -171,9 +171,10 @@ impl Plat {
 
     pub fn draw_image(&mut self, dst_pos:&Point, src_bounds: &Rect, src_buf: &GFXBuffer) {
         if let Some(tex) = self.textures.get_mut(&src_buf.id) {
-            let dst: SDLRect = SDLRect::new(dst_pos.x, dst_pos.y, src_buf.width, src_buf.height);
+            let dst: SDLRect = SDLRect::new(dst_pos.x, dst_pos.y, src_bounds.w as u32, src_bounds.h as u32);
             sync_texture(&mut self.canvas, tex, src_buf);
-            self.canvas.copy(tex, None, dst);
+            let src: SDLRect = SDLRect::new(src_bounds.x, src_bounds.y, src_bounds.w as u32, src_bounds.h as u32);
+            self.canvas.copy(tex, src, dst);
         } else {
             error!("no image found for {}",src_buf.id);
         }
