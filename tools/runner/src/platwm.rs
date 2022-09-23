@@ -270,43 +270,12 @@ impl PlatformWindowManager {
         }
     }
     fn draw_screen(&mut self) {
-            self.plat.clear();
+        self.plat.clear();
 
-            self.background.clear(&ARGBColor::new_rgb(120,128,128));
-            // self.background.fill_rect(Rect::from_ints(0,0,25,25), &ARGBColor::new_rgb(0,0,0));
-            // self.background.fill_rect(Rect::from_ints(0,25,25,25), &ARGBColor::new_rgb(255,0,0));
-            // self.background.fill_rect(Rect::from_ints(0,50,25,25), &ARGBColor::new_rgb(0,255,0));
-            // self.background.fill_rect(Rect::from_ints(0,75,25,25), &ARGBColor::new_rgb(0,0,255));
-            // self.background.fill_rect(Rect::from_ints(0,100,25,25), &ARGBColor::new_rgb(255,255,0));
-            // self.background.fill_rect(Rect::from_ints(0,125,25,25), &ARGBColor::new_rgb(0,255,255));
-            // self.background.fill_rect(Rect::from_ints(0,150,25,25), &ARGBColor::new_rgb(255,0,255));
-            // self.background.fill_rect(Rect::from_ints(0,175,25,25), &ARGBColor::new_rgb(255,255,255));
-
-            // draw_test_pattern(&mut self.background);
-            // self.font.draw_text_at(&mut self.background,"Greetings Earthling",40,40,&ARGBColor::new_rgb(0,255,0));
-            self.plat.draw_image(&Point::init(0, 0), &self.background.bounds(), &self.background);
-            // self.background.to_png(&PathBuf::from("output.png"));
-            // panic!();
+        self.background.clear(&ARGBColor::new_rgb(120,128,128));
+        self.plat.draw_image(&Point::init(0, 0), &self.background.bounds(), &self.background);
         let MAGENTA:ARGBColor = ARGBColor::new_rgb(255, 0, 255);
-        for win_id in &self.state.window_order {
-            if let Some(win) = self.state.lookup_window(*win_id) {
-                let (wc, tc) = if self.state.is_focused_window(win) {
-                    (FOCUSED_WINDOW_COLOR, FOCUSED_TITLEBAR_COLOR)
-                } else {
-                    (WINDOW_COLOR, TITLEBAR_COLOR)
-                };
-                // self.plat.draw_rect(win.external_bounds(), &wc, WINDOW_BORDER_WIDTH);
-                // draw the titlebar
-                self.plat.fill_rect(win.titlebar_bounds(), &tc);
-                self.plat.fill_rect(win.close_button_bounds(), &WINDOW_BUTTON_COLOR);
-                //draw the content
-                let bd = win.content_bounds();
-                self.plat.fill_rect(bd, &MAGENTA);
-                self.plat.draw_image(&win.content_bounds().position(), &win.backbuffer.bounds(), &win.backbuffer);
-                // draw the resize button
-                self.plat.fill_rect(win.resize_bounds(), &MAGENTA);
-            }
-        }
+        self.draw_windows();
 
         //draw the fps amount
         let mut total = 0;
@@ -324,5 +293,27 @@ impl PlatformWindowManager {
         // draw the cursor
         self.plat.draw_image(&self.cursor,&self.cursor_image.bounds(),&self.cursor_image);
 
+    }
+    fn draw_windows(&mut self) {
+        let MAGENTA:ARGBColor = ARGBColor::new_rgb(255, 0, 255);
+        for win_id in &self.state.window_order {
+            if let Some(win) = self.state.lookup_window(*win_id) {
+                let (wc, tc) = if self.state.is_focused_window(win) {
+                    (FOCUSED_WINDOW_COLOR, FOCUSED_TITLEBAR_COLOR)
+                } else {
+                    (WINDOW_COLOR, TITLEBAR_COLOR)
+                };
+                // draw the titlebar
+                self.plat.fill_rect(win.titlebar_bounds(), &tc);
+                self.plat.fill_rect(win.close_button_bounds(), &WINDOW_BUTTON_COLOR);
+                //draw the content
+                let bd = win.content_bounds();
+                self.plat.fill_rect(bd, &MAGENTA);
+                self.plat.draw_image(&win.content_bounds().position(), &win.backbuffer.bounds(), &win.backbuffer);
+                // draw the resize button
+                self.plat.fill_rect(win.resize_bounds(), &MAGENTA);
+
+            }
+        }
     }
 }

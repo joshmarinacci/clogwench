@@ -12,5 +12,6 @@ common = { path= "../../common" }
 common-wm = { path= "../../common-wm" }
 cool-logger = { path= "../../cool-logger" }
 plat = { path= "../../plat" }
+uuid = { version="0.8.2", features=["v4","serde"]}
 log = "0.4.14"
 structopt = "0.3.25"
