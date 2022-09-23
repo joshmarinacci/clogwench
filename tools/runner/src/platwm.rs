@@ -344,13 +344,13 @@ impl PlatformWindowManager {
             // draw text to a scratch buffer
             &self.title_buffer.clear(&tc);
             self.font.draw_text_at(&mut self.title_buffer, &win.title, win.close_button_bounds().w+2, 7, &BLACK);
+            let glyph = 14; // close glyph
+            self.font.draw_glyph_at(&mut self.title_buffer, glyph,5,5,&BLACK );
 
             let pt = win.titlebar_bounds().position();
             let tw = win.titlebar_bounds().w;
             let sub_bounds = Rect::from_ints(0, 0, tw.min(self.title_buffer.width as i32), self.title_buffer.height as i32);
             self.plat.draw_image(&pt,&sub_bounds,&self.title_buffer);
-            //draw the close button
-            self.plat.fill_rect(win.close_button_bounds(), &WINDOW_BUTTON_COLOR);
             // draw the resize button
             self.plat.fill_rect(win.resize_bounds(), &magenta);
         }

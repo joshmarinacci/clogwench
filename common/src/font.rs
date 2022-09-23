@@ -24,6 +24,26 @@ pub struct FontInfo2 {
 }
 
 impl FontInfo2 {
+    pub fn draw_glyph_at(&self, buf: &mut GFXBuffer, ch:u32, x: i32, y: i32, color: &ARGBColor) {
+        let mut dx:u32 = x as u32;
+        let mut dy:u32 = y as u32;
+        for glyph in &self.glyphs {
+            if glyph.id == ch {
+                for j in 0 .. glyph.height {
+                    for i in  glyph.left .. (glyph.width - glyph.right) {
+                        let src_n = j * glyph.width + i;
+                        let src_bit = glyph.data[src_n as usize];
+                        let fx = dx + (i as u32);
+                        let fy = dy + (j as u32);
+                        if src_bit == 1 {
+                            buf.set_pixel_vec_argb(fx as i32, fy as i32, &color.to_argb_vec());
+                        }
+                    }
+                }
+                dx += (glyph.width - glyph.left - glyph.right + 1) as u32;
+            }
+        }
+    }
     pub fn draw_text_at(&self, buf: &mut GFXBuffer, text: &str, x: i32, y: i32, color: &ARGBColor) {
         let mut dx:u32 = x as u32;
         let mut dy:u32 = y as u32;
