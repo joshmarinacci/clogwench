@@ -60,7 +60,7 @@ struct Cli {
     #[structopt(long, default_value="480")]
     height:u32,
     #[structopt(long, parse(from_os_str))]
-    datafile: Option<PathBuf>,
+    datafile: Vec<PathBuf>,
 }
 
 fn init_setup() -> Cli {

@@ -1,15 +1,18 @@
+use std::collections::HashMap;
+use std::fs::File;
 use std::sync::mpsc::{Receiver, Sender};
 use common::{DEBUG_PORT, DebugMessage};
 use std::process::{Child, Command};
 use std::net::TcpStream;
 use std::sync::mpsc;
 use common::events::MouseDownEvent;
-use serde::Deserialize;
-use std::io::Write;
-use std::path::PathBuf;
+use serde::{Deserialize, Deserializer};
+use std::io::{BufReader, Write};
+use std::path::{Path, PathBuf};
 use std::thread;
 use std::time::Duration;
 use log::{error, info};
+use serde_json::{Map, Value};
 
 pub struct CentralConnection {
     pub receiver: Receiver<DebugMessage>,
@@ -79,15 +82,29 @@ impl CentralConnection {
     }
 }
 
-pub fn start_central_server(datafile: &Option<PathBuf>) -> Result<CentralConnection,String> {
+pub fn start_central_server(files: &Vec<PathBuf>) -> Result<CentralConnection,String> {
     let (sender,receiver):(Sender<DebugMessage>,Receiver<DebugMessage>) = mpsc::channel();
+    info!("using the datafile path {:?}",files);
+    let mut data_out:Vec<Value> = vec![];
 
-    let final_datafile =  if let Some(file) = datafile {
-        file.to_str().unwrap()
-    } else {
-        "data.json"
-    };
-    info!("using the datafile path {:?}",datafile);
+    for file in files {
+        info!("Loading data file {:?}",file.canonicalize().unwrap());
+        let file = File::open(file).unwrap();
+        let val:Value = serde_json::from_reader(BufReader::new(file)).unwrap();
+        let data_field = val.as_object().unwrap().get("data");
+        let data_part = data_field.unwrap().as_array().unwrap();
+        for val in data_part {
+            info!("adding {:?}",val.as_object().unwrap().get("id").unwrap().as_str().unwrap());
+            data_out.push(val.clone());
+        }
+    }
+    let mut hm:Map<String,Value> = Map::new();
+    hm.insert(String::from("data"), Value::Array(data_out));
+    let object_out:Value = Value::Object(hm);
+
+    let final_datafile = "data_combined.json";
+    let output = File::create(final_datafile).unwrap();
+    serde_json::to_writer(output,&object_out).unwrap();
 
     let child = Command::new("../../target/debug/central")
         // .stdin(Stdio::null())
