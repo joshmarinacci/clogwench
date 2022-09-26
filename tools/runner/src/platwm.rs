@@ -65,9 +65,9 @@ impl PlatformWindowManager {
             let bds = plat.get_screen_bounds();
             let background = GFXBuffer::new(bds.w as u32, bds.h as u32, &plat.get_preferred_pixel_layout());
             plat.register_image2(&background);
-            let cursor_image: GFXBuffer = GFXBuffer::from_png_file("../../resources/cursor.png").to_layout(plat.get_preferred_pixel_layout());
+            let cursor_image: GFXBuffer = GFXBuffer::from_png_file("./resources/cursor.png").to_layout(plat.get_preferred_pixel_layout());
             plat.register_image2(&cursor_image);
-            let font = load_font_from_json("../../resources/default-font.json").unwrap();
+            let font = load_font_from_json("./resources/default-font.json").unwrap();
             let debug_buffer = GFXBuffer::new(200, 50, &plat.get_preferred_pixel_layout());
             plat.register_image2(&debug_buffer);
             let title_buffer = GFXBuffer::new(200, TITLE_BAR_HEIGHT as u32, &plat.get_preferred_pixel_layout());

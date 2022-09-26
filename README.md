@@ -12,21 +12,11 @@ brew install sdl2
 ```
 
 ```shell
-cd plat
 cargo build
-cd ..
-cd central
-cargo build
-cd ..
-cargo build
-cd tools/runner
-cargo run -- --wmtype native --datafile=data.json
+cargo run --bin runner -- --wmtype native --datafile=tools/runner/data.json
 ```
 
 An SDL window will open with a mouse cursor and a pink button to quit.
-
-To run apps download the [clogwench-app](https://github.com/joshmarinacci/clogwench-apps) repo, build it, then run one of the apps in it.
-
 
 ### linux
 
@@ -40,17 +30,20 @@ Now you need the following native deps:
 * `sudo apt install libasound2-dev`
 
 ```shell
-cd plat
 cargo build
-cd ..
-cd central
-cargo build
-cd ..
-cargo build
-cd tools/runner
-cargo run -- --wmtype native --datafile=data.json
+cargo run --bin runner -- --wmtype native --datafile=tools/runner/data.json
 ```
 
+
+# Apps
+This repo is just the core and window manager. The apps are in the [clogwench-app](https://github.com/joshmarinacci/clogwench-apps) repo. To use apps, clone
+that repo, build them with the instructions, then add the apps.json file to the datapath when
+you start the os. ex: if  you checked out `clogwench-apps` next to `clogwench` then you
+can run:
+
+```shell
+cargo run --bin runner -- --wmtype native --datafile=tools/runner/data.json --datafile=../clogwench-apps/apps.json
+```
 
 You may also want the test data
 

@@ -106,7 +106,7 @@ pub fn start_central_server(files: &Vec<PathBuf>) -> Result<CentralConnection,St
     let output = File::create(final_datafile).unwrap();
     serde_json::to_writer(output,&object_out).unwrap();
 
-    let child = Command::new("../../target/debug/central")
+    let child = Command::new("./target/debug/central")
         // .stdin(Stdio::null())
         // .stdout(Stdio::null())
         // .stdout(Stdio::inherit())
