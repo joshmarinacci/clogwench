@@ -118,7 +118,11 @@ impl CentralState {
         // info!("sending to app {:?}",resp);
         let data = serde_json::to_string(&resp).unwrap();
         if let Some(app) = self.apps.iter_mut().find(|a|a.id == id){
-            app.stream.write_all(data.as_ref()).expect("failed to send rect");
+            let res = app.stream.write_all(data.as_ref());
+            if let Err(e) = res {
+                error!("error happened in app thread {}: {}",id,e);
+            }
+            //.expect("failed to send rect");
         } else {
             info!("didnt send to the app. couldnt find an app for {}",id);
         }
