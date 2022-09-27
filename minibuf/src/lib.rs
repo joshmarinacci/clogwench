@@ -3,13 +3,16 @@ the new minifb based plat
 
 
  */
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use minifb::{Key, MouseButton, MouseMode, Scale, Window, WindowOptions};
 use common::{ARGBColor, IncomingMessage, Rect, BLACK, Point, APICommand};
 use std::sync::mpsc::Sender;
 use log::info;
-use common::events::{MouseDownEvent, MouseMoveEvent, MouseUpEvent};
+use common::events::{KeyDownEvent, MouseDownEvent, MouseMoveEvent, MouseUpEvent};
+use common::generated::KeyCode;
 use common::graphics::{GFXBuffer, PixelLayout};
 
 // const WIDTH: usize = 640;
@@ -22,6 +25,7 @@ pub struct Plat {
     pub window: Window,
     mouse_down:bool,
     pub buffer: Vec<u32>,
+    pub keys_data: Rc<RefCell<Vec<u32>>>,
 }
 
 impl Plat {
@@ -135,6 +139,26 @@ impl Plat {
                 }
             }
         }
+
+        let mut keys = self.keys_data.borrow_mut();
+        for t in keys.iter() {
+            println!("Code point: {},   Character: {:?}", *t, char::from_u32(*t));
+            let keycode = minifb_to_KeyCode(t);
+            let cmd = IncomingMessage {
+                source: Default::default(),
+                command: APICommand::KeyDown(KeyDownEvent {
+                    app_id: Default::default(),
+                    window_id: Default::default(),
+                    original_timestamp: 0,
+                    code: keycode,
+                    key: "".to_string()
+                })
+            };
+            if let Err(e) = self.sender.send(cmd) {
+                println!("error sending key down out {:?}",e);
+            }
+        }
+        keys.clear();
     }
     pub fn get_preferred_pixel_layout(&self) -> &PixelLayout {
         return &self.layout
@@ -149,6 +173,31 @@ impl Plat {
     }
 }
 
+fn minifb_to_KeyCode(id: &u32) -> KeyCode {
+    match id {
+        65 => KeyCode::LETTER_A,
+        97 => KeyCode::LETTER_A,
+        66 => KeyCode::LETTER_B,
+        98 => KeyCode::LETTER_B,
+        _ => KeyCode::UNKNOWN,
+    }
+}
+
+type KeyVec = Rc<RefCell<Vec<u32>>>;
+struct Input {
+    keys: KeyVec,
+}
+
+impl Input {
+    fn new(data: &KeyVec) -> Input {
+        Input { keys: data.clone() }
+    }
+}
+impl minifb::InputCallback for Input {
+    fn add_char(&mut self, uni_char: u32) {
+        self.keys.borrow_mut().push(uni_char);
+    }
+}
 pub fn make_plat<'a>(stop:Arc<AtomicBool>, sender: Sender<IncomingMessage>, width:u32, height:u32, scale:u32) -> Result<Plat, String> {
     println!("making minibuf plat scale settings");
     let screen_size = Rect::from_ints(0,0,640,480);
@@ -169,6 +218,10 @@ pub fn make_plat<'a>(stop:Arc<AtomicBool>, sender: Sender<IncomingMessage>, widt
             panic!("unable to create window");
         }
     };
+    let keys_data = KeyVec::new(RefCell::new(Vec::new()));
+    let input = Box::new(Input::new(&keys_data));
+    window.set_input_callback(input);
+
 
     return Ok(Plat {
         sender,
@@ -177,5 +230,6 @@ pub fn make_plat<'a>(stop:Arc<AtomicBool>, sender: Sender<IncomingMessage>, widt
         screen_size: screen_size,
         layout:PixelLayout::ARGB(),
         mouse_down:false,
+        keys_data,
     });
 }
