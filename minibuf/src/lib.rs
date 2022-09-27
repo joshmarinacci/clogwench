@@ -17,6 +17,7 @@ use common::graphics::{GFXBuffer, PixelLayout};
 
 // const WIDTH: usize = 640;
 // const HEIGHT: usize = 360;
+type KeyVec = Rc<RefCell<Vec<(Key,bool)>>>;
 
 pub struct Plat {
     sender:Sender<IncomingMessage>,
@@ -25,7 +26,7 @@ pub struct Plat {
     pub window: Window,
     mouse_down:bool,
     pub buffer: Vec<u32>,
-    pub keys_data: Rc<RefCell<Vec<u32>>>,
+    pub keys_data2: KeyVec,
 }
 
 impl Plat {
@@ -140,9 +141,9 @@ impl Plat {
             }
         }
 
-        let mut keys = self.keys_data.borrow_mut();
-        for t in keys.iter() {
-            println!("Code point: {},   Character: {:?}", *t, char::from_u32(*t));
+        let mut keys = self.keys_data2.borrow_mut();
+        for (t,s) in keys.iter() {
+            println!("Code point: {:?} state {}", t,s);
             let keycode = minifb_to_KeyCode(t);
             let cmd = IncomingMessage {
                 source: Default::default(),
@@ -173,29 +174,32 @@ impl Plat {
     }
 }
 
-fn minifb_to_KeyCode(id: &u32) -> KeyCode {
+fn minifb_to_KeyCode(id: &Key) -> KeyCode {
     match id {
-        65 => KeyCode::LETTER_A,
-        97 => KeyCode::LETTER_A,
-        66 => KeyCode::LETTER_B,
-        98 => KeyCode::LETTER_B,
+        Key::A => KeyCode::LETTER_A,
+        Key::B => KeyCode::LETTER_B,
         _ => KeyCode::UNKNOWN,
     }
 }
 
-type KeyVec = Rc<RefCell<Vec<u32>>>;
 struct Input {
     keys: KeyVec,
 }
 
 impl Input {
     fn new(data: &KeyVec) -> Input {
-        Input { keys: data.clone() }
+        Input {
+            keys: data.clone(),
+        }
     }
 }
 impl minifb::InputCallback for Input {
     fn add_char(&mut self, uni_char: u32) {
-        self.keys.borrow_mut().push(uni_char);
+        // self.keys.borrow_mut().push(uni_char);
+    }
+    fn set_key_state(&mut self, key: Key, state: bool) {
+        println!("key {:?} state={:?}", key, state);
+        self.keys.borrow_mut().push((key,state));
     }
 }
 pub fn make_plat<'a>(stop:Arc<AtomicBool>, sender: Sender<IncomingMessage>, width:u32, height:u32, scale:u32) -> Result<Plat, String> {
@@ -218,10 +222,11 @@ pub fn make_plat<'a>(stop:Arc<AtomicBool>, sender: Sender<IncomingMessage>, widt
             panic!("unable to create window");
         }
     };
-    let keys_data = KeyVec::new(RefCell::new(Vec::new()));
-    let input = Box::new(Input::new(&keys_data));
+    // let keys_data = KeyVec::new(RefCell::new(Vec::new()));
+    let keys_data2 = KeyVec::new(RefCell::new(Vec::new()));
+    let input = Box::new(Input::new(&keys_data2));
     window.set_input_callback(input);
-
+    window.limit_update_rate(Some(std::time::Duration::from_millis(16))); //60fps
 
     return Ok(Plat {
         sender,
@@ -230,6 +235,6 @@ pub fn make_plat<'a>(stop:Arc<AtomicBool>, sender: Sender<IncomingMessage>, widt
         screen_size: screen_size,
         layout:PixelLayout::ARGB(),
         mouse_down:false,
-        keys_data,
+        keys_data2,
     });
 }
