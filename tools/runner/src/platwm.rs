@@ -16,7 +16,7 @@ use common::font::{FontInfo2, load_font_from_json};
 use common::generated::KeyCode;
 use common::graphics::{GFXBuffer};
 use common_wm::{AppMouseGesture, CentralConnection, FOCUSED_TITLEBAR_COLOR, FOCUSED_WINDOW_COLOR, InputGesture, NoOpGesture, OutgoingMessage, start_wm_network_connection, TITLE_BAR_HEIGHT, TITLEBAR_COLOR, Window, WINDOW_BUTTON_COLOR, WINDOW_COLOR, WindowCloseButtonGesture, WindowDragGesture, WindowManagerState, WindowResizeGesture};
-use plat::{make_plat, Plat};
+use minibuf::{make_plat, Plat};
 
 pub struct PlatformWindowManager {
     pub connection:CentralConnection,

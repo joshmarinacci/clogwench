@@ -5,6 +5,7 @@ members = [
     "common",
     "db",
     "gfx",
+    "minibuf",
     "plat",
     "tools/runner",
 ]
@@ -14,6 +15,7 @@ default-members = [
     "common",
     "db",
     "gfx",
+    "minibuf",
     "plat",
     "tools/runner",
 ]

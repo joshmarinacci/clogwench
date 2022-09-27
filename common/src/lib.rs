@@ -30,6 +30,12 @@ impl ARGBColor {
     pub fn to_rgb_vec(&self) -> Vec<u8> {
         vec![self.r,self.g,self.b]
     }
+    pub fn to_argb_u32(&self) -> u32 {
+        return ((self.a as u32) << 24)
+            | ((self.r as u32) << 16)
+            | ((self.g as u32) << 8)
+            | ((self.b as u32) << 0)
+    }
     pub fn to_rgb565_vec(&self) -> Vec<u8> {
         //turn rgba into two adjacent bytes. use set
         let upper = ((self.r >> 3)<<3) | ((self.g & 0b111_00000) >> 5);
