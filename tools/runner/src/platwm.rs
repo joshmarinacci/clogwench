@@ -313,6 +313,7 @@ impl PlatformWindowManager {
         }
         let avg_frame_length = (total as f64)/(self.fps.len() as f64);
         self.debug_buffer.clear(&BLACK);
+        // println!("avg frame: {:.2}",avg_frame_length);
         self.font.draw_text_at(&mut self.debug_buffer,
                                &format!("avg frame: {:.2}", avg_frame_length),
                                3, 20, &WHITE);

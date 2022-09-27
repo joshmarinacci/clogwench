@@ -27,7 +27,7 @@ pub struct Plat {
 impl Plat {
     pub fn clear(&mut self) {
         for i in self.buffer.iter_mut() {
-            *i = 0xFFFFFFFF;
+            *i = 0xFF000000;
         }
     }
     pub fn fill_rect(&mut self, rect: Rect, fill_color: &ARGBColor) {
@@ -49,18 +49,16 @@ impl Plat {
     }
     pub fn draw_image(&mut self, dst_pos: &Point, src_bounds: &Rect, src_buf: &GFXBuffer) {
         let (width, height) = self.window.get_size();
+        // println!("src format {:?}", src_buf.layout);
         for j in src_bounds.y .. src_bounds.y + src_bounds.h {
             for i in src_bounds.x .. src_bounds.x + src_bounds.w {
-                let v = src_buf.get_pixel_vec_argb(
+                let v = src_buf.get_pixel_u32_argb(
                     ( (i - src_bounds.x) as u32 % src_buf.width) as i32,
                     ( (j - src_bounds.y) as u32 % src_buf.height) as i32);
-                if v[0] > 0 {
-                    let color = ARGBColor::from_argb_vec(&v).to_argb_u32();
-                    let dx = (i + dst_pos.x) as usize;
-                    let dy = (j + dst_pos.y) as usize;
-                    if dx >= 0 && dx < width && dy >= 0 && dy < height {
-                        self.buffer[dy * width + dx] = color
-                    }
+                let dx = (i + dst_pos.x) as usize;
+                let dy = (j + dst_pos.y) as usize;
+                if dx >= 0 && dx < width && dy >= 0 && dy < height {
+                    self.buffer[dy * width + dx] = v
                 }
             }
         }

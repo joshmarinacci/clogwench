@@ -245,6 +245,24 @@ impl GFXBuffer {
         let color = ARGBColor::from_argb_vec(&pix);
         color.as_layout(&layout)
     }
+    pub fn get_pixel_u32_argb(&self, x: i32, y: i32) -> u32 {
+        if x < 0 || x >= self.width as i32 || y < 0 || y >= self.height as i32 {
+            println!("get error. pixel {},{} out of bounds {}x{}",x,y,self.width,self.height);
+            return 0;
+        }
+        return match self.layout {
+            RGB565() => {
+                ARGBColor::from_argb_vec(&self.get_pixel_vec_argb(x, y)).to_argb_u32()
+            }
+            ARGB() => {
+                let n = (x + y * (self.width as i32)) as usize;
+                ((self.data[n * 4 + 0] as u32) << 24)
+                    | ((self.data[n * 4 + 1] as u32) << 16)
+                    | ((self.data[n * 4 + 2] as u32) << 8)
+                    | ((self.data[n * 4 + 3] as u32) << 0)
+            }
+        }
+    }
     pub fn set_pixel_vec_argb(&mut self, x:i32, y:i32, v:&Vec<u8>) {
         if x < 0 || y < 0 {
             // println!("set error. pixel {},{} out of bounds {}x{}",x,y,self.width,self.height);
