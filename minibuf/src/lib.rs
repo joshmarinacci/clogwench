@@ -6,8 +6,10 @@ the new minifb based plat
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use minifb::{Key, MouseButton, MouseMode, Scale, Window, WindowOptions};
-use common::{ARGBColor, IncomingMessage, Rect, BLACK, Point};
+use common::{ARGBColor, IncomingMessage, Rect, BLACK, Point, APICommand};
 use std::sync::mpsc::Sender;
+use log::info;
+use common::events::{MouseDownEvent, MouseMoveEvent, MouseUpEvent};
 use common::graphics::{GFXBuffer, PixelLayout};
 
 // const WIDTH: usize = 640;
@@ -18,6 +20,7 @@ pub struct Plat {
     screen_size:Rect,
     layout:PixelLayout,
     pub window: Window,
+    mouse_down:bool,
     pub buffer: Vec<u32>,
 }
 
@@ -55,7 +58,9 @@ impl Plat {
                     let color = ARGBColor::from_argb_vec(&v).to_argb_u32();
                     let dx = (i + dst_pos.x) as usize;
                     let dy = (j + dst_pos.y) as usize;
-                    self.buffer[dy * width + dx] = color
+                    if dx >= 0 && dx < width && dy >= 0 && dy < height {
+                        self.buffer[dy * width + dx] = color
+                    }
                 }
             }
         }
@@ -74,7 +79,63 @@ impl Plat {
     }
     pub fn service_input(&mut self) {
         if let Some((x, y)) = self.window.get_mouse_pos(MouseMode::Discard) {
-            println!("mouse pos is {}x{}",x,y);
+            let x = x.floor() as i32;
+            let y = y.floor() as i32;
+            // println!("mouse pos is {}x{}",x,y);
+            let current_mouse_down = self.window.get_mouse_down(MouseButton::Left);
+            if current_mouse_down != self.mouse_down {
+                if current_mouse_down {
+                    self.mouse_down = current_mouse_down;
+                    let cmd = IncomingMessage {
+                        source: Default::default(),
+                        command: APICommand::MouseDown(MouseDownEvent {
+                            app_id: Default::default(),
+                            window_id: Default::default(),
+                            original_timestamp: 0,
+                            button: common::events::MouseButton::Primary,
+                            x,
+                            y,
+                        })
+                    };
+                    // info!("about to send out {:?}",cmd);
+                    if let Err(e) = self.sender.send(cmd) {
+                        println!("error sending mouse down out {:?}",e);
+                    }
+                } else {
+                    self.mouse_down = current_mouse_down;
+                    let cmd = IncomingMessage {
+                        source: Default::default(),
+                        command: APICommand::MouseUp(MouseUpEvent {
+                            app_id: Default::default(),
+                            window_id: Default::default(),
+                            original_timestamp: 0,
+                            button: common::events::MouseButton::Primary,
+                            x,
+                            y,
+                        })
+                    };
+                    // info!("about to send out {:?}",cmd);
+                    if let Err(e) = self.sender.send(cmd) {
+                        println!("error sending mouse up out {:?}",e);
+                    }
+                }
+            } else {
+                let cmd = IncomingMessage {
+                    source: Default::default(),
+                    command: APICommand::MouseMove(MouseMoveEvent {
+                        app_id: Default::default(),
+                        window_id: Default::default(),
+                        original_timestamp: 0,
+                        button: common::events::MouseButton::Primary,
+                        x,
+                        y,
+                    })
+                };
+                // info!("about to send out {:?}",cmd);
+                if let Err(e) = self.sender.send(cmd) {
+                    println!("error sending mouse motion out {:?}", e);
+                }
+            }
         }
     }
     pub fn get_preferred_pixel_layout(&self) -> &PixelLayout {
@@ -117,5 +178,6 @@ pub fn make_plat<'a>(stop:Arc<AtomicBool>, sender: Sender<IncomingMessage>, widt
         window:window,
         screen_size: screen_size,
         layout:PixelLayout::ARGB(),
+        mouse_down:false,
     });
 }

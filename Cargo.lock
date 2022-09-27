@@ -938,6 +938,7 @@ name = "minibuf"
 version = "0.1.0"
 dependencies = [
  "common",
+ "log",
  "minifb",
 ]
 
