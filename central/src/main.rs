@@ -160,13 +160,14 @@ impl CentralState {
         }
     }
     fn send_to_debugger(&mut self, resp: DebugMessage) {
-        info!("CENTRAL: sending to debugger {:?}",resp);
+        // info!("CENTRAL: sending to debugger {:?}",resp);
         let data = serde_json::to_string(&resp).unwrap();
         for dbg in self.debuggers.iter_mut() {
             dbg.stream.write_all(data.as_ref()).expect("CENTRAL: error sending to debugger");
         }
     }
     fn send_to_database(&mut self, cmd: APICommand) {
+        // info!("sending to database {:?}",cmd);
         match cmd {
             APICommand::DBQueryRequest(req) => {
                 let query:JQuery = to_query(req.query);

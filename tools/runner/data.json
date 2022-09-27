@@ -72,6 +72,33 @@
         "last": "Stark",
         "email": "tony@stark.com"
       }
+    },
+    {
+      "id": "task-id-01",
+      "data": {
+        "type": "task-item",
+        "description":"first item",
+        "completed":false,
+        "tags":[]
+      }
+    },
+    {
+      "id": "task-id-02",
+      "data": {
+        "type": "task-item",
+        "description":"second item",
+        "completed":true,
+        "tags":["never"]
+      }
+    },
+    {
+      "id": "task-id-03",
+      "data": {
+        "type": "task-item",
+        "description":"third item",
+        "completed":false,
+        "tags":["good","better","best"]
+      }
     }
   ]
 }
