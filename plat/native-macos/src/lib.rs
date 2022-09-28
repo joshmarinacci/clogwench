@@ -3,6 +3,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool};
 use log::{error};
 use std::sync::mpsc::Sender;
+use std::time::{SystemTime, UNIX_EPOCH};
 use sdl2::event::Event;
 use sdl2::render::{Texture, TextureAccess, TextureCreator, WindowCanvas};
 use sdl2::video::{WindowContext};
@@ -82,6 +83,8 @@ impl Plat {
                         // println!("scancode is {:?}",scancode);
                         // println!("mod is {}",keymod);
                         let cmd = IncomingMessage {
+                            trace: false,
+                            timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
                             source: Default::default(),
                             command: APICommand::KeyDown(KeyDownEvent{
                                 app_id: Default::default(),
@@ -99,6 +102,8 @@ impl Plat {
                 Event::MouseButtonDown { x, y,mouse_btn, .. } => {
                     let (x, y) = scale_mouse_to_canvas(&self.canvas,x,y);
                     let cmd = IncomingMessage {
+                        trace: false,
+                        timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
                         source: Default::default(),
                         command: APICommand::MouseDown(MouseDownEvent{
                             app_id: Default::default(),
@@ -116,6 +121,8 @@ impl Plat {
                 Event::MouseButtonUp {x,y,mouse_btn,..} =>  {
                     let (x, y) = scale_mouse_to_canvas(&self.canvas,x,y);
                     let cmd = IncomingMessage {
+                        trace: false,
+                        timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
                         source: Default::default(),
                         command: APICommand::MouseUp(MouseUpEvent{
                             app_id: Default::default(),
@@ -135,6 +142,8 @@ impl Plat {
                 } => {
                     let (x, y) = scale_mouse_to_canvas(&self.canvas,x,y);
                     let cmd = IncomingMessage {
+                        trace: false,
+                        timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
                         source: Default::default(),
                         command: APICommand::MouseMove(MouseMoveEvent {
                             app_id: Default::default(),

@@ -6,7 +6,7 @@ use std::sync::atomic::AtomicBool;
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread;
 use std::thread::{JoinHandle, spawn};
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use log::info;
 use serde::Deserialize;
 use uuid::Uuid;
@@ -123,7 +123,9 @@ impl PlatformWindowManager {
 
     fn process_input(&mut self) -> bool {
         for cmd in self.rx_in.try_iter() {
-            // pt(&format!("received {:?}", cmd));
+            if cmd.trace {
+                info!("platwm Lib received {:?}", cmd);
+            }
             match cmd.command {
                 APICommand::SystemShutdown => {
                     info!("the core is shutting down. bye");
@@ -170,9 +172,12 @@ impl PlatformWindowManager {
                 }
                 APICommand::MouseDown(evt) => {
                     let point = Point::init(evt.x, evt.y);
+                    info!("checking mouse down path");
                     if self.exit_button_bounds.contains(&point) {
                         info!("clicked the exit button!");
                         self.connection.tx_out.send(OutgoingMessage {
+                            trace: cmd.trace,
+                            timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
                             recipient: Default::default(),
                             command: APICommand::Debug(DebugMessage::RequestServerShutdown)
                         }).unwrap();
@@ -185,30 +190,37 @@ impl PlatformWindowManager {
                         let aid = win.owner.clone();
 
                         if win.close_button_bounds().contains(&point) {
-                            // info!("inside the close button");
+                            info!("inside the close button");
                             self.gesture = Box::new(WindowCloseButtonGesture::init(point, win.id));
-                            self.gesture.mouse_down(evt, &mut self.state, &self.connection.tx_out);
+                            self.gesture.mouse_down(evt, &mut self.state, &self.connection.tx_out,cmd.trace);
                         } else if win.titlebar_bounds().contains(&point) {
-                            // info!("inside the titlebar");
+                            info!("inside the title bar");
                             self.gesture = Box::new(WindowDragGesture::init(point, win.id));
-                            self.gesture.mouse_down(evt, &mut self.state, &self.connection.tx_out);
+                            self.gesture.mouse_down(evt, &mut self.state, &self.connection.tx_out,cmd.trace);
                         } else if win.resize_bounds().contains(&point) {
-                            // info!("inside the resize control");
+                            info!("inside the resize control");
                             self.gesture = Box::new(WindowResizeGesture::init(point, win.id));
-                            self.gesture.mouse_down(evt, &mut self.state, &self.connection.tx_out);
+                            self.gesture.mouse_down(evt, &mut self.state, &self.connection.tx_out,cmd.trace);
                         } else {
+                            // it needs to go to the app
+                            info!("inside the window content for the app");
                             self.gesture = Box::new(AppMouseGesture::init(aid,win.id));
-                            self.gesture.mouse_down(evt,&mut self.state, &self.connection.tx_out);
+                            self.gesture.mouse_down(evt,&mut self.state, &self.connection.tx_out,cmd.trace);
                         }
                         self.state.set_focused_window(wid);
                         self.state.raise_window(wid);
+                        info!("sending out focus changed");
                         self.connection.tx_out.send(OutgoingMessage {
+                            trace: cmd.trace,
+                            timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
                             recipient: Default::default(),
                             command: APICommand::Debug(DebugMessage::WindowFocusChanged(String::from("foo")))
                         }).unwrap();
                     } else {
-                        info!("clicked on nothing. sending background debug event");
+                        // info!("clicked on nothing. sending background debug event");
                         self.connection.tx_out.send(OutgoingMessage {
+                            trace: cmd.trace,
+                            timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
                             recipient: Default::default(),
                             command: APICommand::Debug(DebugMessage::BackgroundReceivedMouseEvent)
                         }).unwrap();
@@ -218,6 +230,8 @@ impl PlatformWindowManager {
                     match evt.code {
                         KeyCode::ESCAPE => {
                             self.connection.tx_out.send(OutgoingMessage {
+                                trace: false,
+                                timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
                                 recipient: Default::default(),
                                 command: APICommand::Debug(DebugMessage::RequestServerShutdown)
                             }).unwrap();
@@ -231,6 +245,8 @@ impl PlatformWindowManager {
                                     let wid = win.id.clone();
                                     let aid = win.owner.clone();
                                     self.connection.tx_out.send(OutgoingMessage {
+                                        trace: false,
+                                        timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
                                         recipient: aid,
                                         command: APICommand::KeyDown(KeyDownEvent {
                                             app_id: aid,
@@ -250,6 +266,8 @@ impl PlatformWindowManager {
                     info!("rect for screen capture {:?}",pth);
                     // export_to_png(&buf, &pth);
                     self.connection.tx_out.send(OutgoingMessage {
+                        trace: false,
+                        timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
                         recipient: Default::default(),
                         command: APICommand::Debug(DebugMessage::ScreenCaptureResponse()),
                     }).unwrap();
@@ -275,6 +293,8 @@ impl PlatformWindowManager {
                 win.backbuffer = GFXBuffer::new(win.content_size.w as u32, win.content_size.h as u32, &win.backbuffer.layout);
                 self.plat.register_image2(&win.backbuffer);
                 self.connection.tx_out.send(OutgoingMessage {
+                    trace: false,
+                    timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
                     recipient: win.owner,
                     command: APICommand::WindowResized(WindowResized {
                         app_id: win.owner,

@@ -34,7 +34,7 @@ impl CentralConnection {
         match DebugMessage::deserialize(&mut de) {
             Ok(cmd) => {
                 let cmd2 = cmd.clone();
-                info!("received command {:?}", cmd);
+                // info!("received command {:?}", cmd);
                 if matches!(cmd2,msg) {
                     Ok(cmd.clone())
                 } else {
@@ -54,7 +54,7 @@ impl CentralConnection {
             match DebugMessage::deserialize(&mut de) {
                 Ok(cmd) => {
                     let cmd2 = cmd.clone();
-                    info!("received command {:?}", cmd);
+                    // info!("received command {:?}", cmd);
                 }
                 Err(e) => {
                     error!("error deserializing {:?}", e);
@@ -65,7 +65,7 @@ impl CentralConnection {
     }
     pub(crate) fn send(&mut self, im:DebugMessage) {
         // let im = IncomingMessage { source: Default::default(), command: APICommand::WMConnect(HelloWindowManager {})};
-        info!("sending out message {:?}", im);
+        // info!("sending out message {:?}", im);
         match serde_json::to_string(&im) {
             Ok(data) => {
                 // println!("sending data {:?}", data);

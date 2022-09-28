@@ -11,6 +11,7 @@ use std::sync::mpsc;
 use std::sync::mpsc::{SendError};
 use std::thread;
 use std::thread::JoinHandle;
+use std::time::{SystemTime, UNIX_EPOCH};
 use thread::spawn;
 use log::{error, info, warn};
 use serde::Deserialize;
@@ -42,6 +43,8 @@ impl HeadlessWindowManager {
                             for out in &rx_out {
                                 // pt(&format!("got a message to send back out {:?}", out));
                                 let im = IncomingMessage {
+                                    trace: false,
+                                    timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
                                     source: Default::default(),
                                     command: out.command
                                 };
@@ -121,10 +124,14 @@ impl HeadlessWindowManager {
                                             let aid = win.owner.clone();
                                             state.set_focused_window(wid);
                                             tx_out.send(OutgoingMessage {
+                                                trace: false,
+                                                timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
                                                 recipient: Default::default(),
                                                 command: APICommand::Debug(DebugMessage::WindowFocusChanged(String::from("foo")))
                                             }).unwrap();
                                             tx_out.send(OutgoingMessage {
+                                                trace: false,
+                                                timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
                                                 recipient: aid,
                                                 command: APICommand::MouseDown(MouseDownEvent{
                                                     app_id: aid,
@@ -138,6 +145,8 @@ impl HeadlessWindowManager {
                                         } else {
                                             // info!("clicked on nothing. sending background debug event");
                                             tx_out.send(OutgoingMessage {
+                                                trace: false,
+                                                timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
                                                 recipient: Default::default(),
                                                 command: APICommand::Debug(DebugMessage::BackgroundReceivedMouseEvent)
                                             }).unwrap();
@@ -148,6 +157,8 @@ impl HeadlessWindowManager {
                                         // info!("rect for screen capture {:?}",pth);
                                         buf.to_png(&pth);
                                         tx_out.send(OutgoingMessage {
+                                            trace: false,
+                                            timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
                                             recipient: Default::default(),
                                             command: APICommand::Debug(DebugMessage::ScreenCaptureResponse()),
                                         }).unwrap();
@@ -167,6 +178,8 @@ impl HeadlessWindowManager {
                 });
 
                 let im = OutgoingMessage {
+                    trace: false,
+                    timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
                     recipient: Default::default(),
                     command: APICommand::WMConnect(HelloWindowManager {})
                 };

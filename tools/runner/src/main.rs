@@ -76,11 +76,11 @@ fn main() -> Result<(),String> {
 
     // start central server
     let mut debug_channel = central_conn::start_central_server(&args.datafile)?;
-    info!("runner: connected to the central server");
+    // info!("runner: connected to the central server");
     debug_channel.send(DebugMessage::HelloDebugger);
-    info!("runner: sent the hello debugger message");
+    // info!("runner: sent the hello debugger message");
     debug_channel.wait_for(DebugMessage::HelloDebuggerResponse);
-    info!("runner: got back the response!");
+    // info!("runner: got back the response!");
 
     // wait(1000);
 

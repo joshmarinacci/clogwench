@@ -10,6 +10,7 @@ use std::sync::atomic::AtomicBool;
 use minifb::{Key, MouseButton, MouseMode, Scale, Window, WindowOptions};
 use common::{ARGBColor, IncomingMessage, Rect, BLACK, Point, APICommand};
 use std::sync::mpsc::Sender;
+use std::time::{SystemTime, UNIX_EPOCH};
 use log::info;
 use common::events::{KeyDownEvent, MouseDownEvent, MouseMoveEvent, MouseUpEvent};
 use common::generated::KeyCode;
@@ -91,6 +92,8 @@ impl Plat {
                     self.mouse_down = current_mouse_down;
                     let cmd = IncomingMessage {
                         source: Default::default(),
+                        trace: true,
+                        timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
                         command: APICommand::MouseDown(MouseDownEvent {
                             app_id: Default::default(),
                             window_id: Default::default(),
@@ -107,6 +110,8 @@ impl Plat {
                 } else {
                     self.mouse_down = current_mouse_down;
                     let cmd = IncomingMessage {
+                        trace: false,
+                        timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
                         source: Default::default(),
                         command: APICommand::MouseUp(MouseUpEvent {
                             app_id: Default::default(),
@@ -124,6 +129,8 @@ impl Plat {
                 }
             } else {
                 let cmd = IncomingMessage {
+                    trace: false,
+                    timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
                     source: Default::default(),
                     command: APICommand::MouseMove(MouseMoveEvent {
                         app_id: Default::default(),
@@ -143,9 +150,11 @@ impl Plat {
 
         let mut keys = self.keys_data2.borrow_mut();
         for (t,s) in keys.iter() {
-            println!("Code point: {:?} state {}", t,s);
+            // println!("Code point: {:?} state {}", t,s);
             let keycode = minifb_to_KeyCode(t);
             let cmd = IncomingMessage {
+                trace: false,
+                timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
                 source: Default::default(),
                 command: APICommand::KeyDown(KeyDownEvent {
                     app_id: Default::default(),
@@ -198,12 +207,12 @@ impl minifb::InputCallback for Input {
         // self.keys.borrow_mut().push(uni_char);
     }
     fn set_key_state(&mut self, key: Key, state: bool) {
-        println!("key {:?} state={:?}", key, state);
+        // println!("key {:?} state={:?}", key, state);
         self.keys.borrow_mut().push((key,state));
     }
 }
 pub fn make_plat<'a>(stop:Arc<AtomicBool>, sender: Sender<IncomingMessage>, width:u32, height:u32, scale:u32) -> Result<Plat, String> {
-    println!("making minibuf plat scale settings");
+    // println!("making minibuf plat scale settings");
     let screen_size = Rect::from_ints(0,0,640,480);
 
     let mut window = match Window::new(

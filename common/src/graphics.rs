@@ -55,10 +55,10 @@ impl GFXBuffer {
     pub fn from_png_file(path: &str) -> GFXBuffer {
         let decoder = png::Decoder::new(File::open(path).unwrap());
         let mut reader = decoder.read_info().unwrap();
-        println!("loading bytes {}", reader.output_buffer_size());
+        // println!("loading bytes {}", reader.output_buffer_size());
         let mut buf = vec![0; reader.output_buffer_size()];
         let info = reader.next_frame(&mut buf).unwrap();
-        println!("size {}x{} bit depth={:?} color type={:?}",info.width, info.height, info.bit_depth, info.color_type);
+        // println!("size {}x{} bit depth={:?} color type={:?}",info.width, info.height, info.bit_depth, info.color_type);
         let bytes = &buf[..info.buffer_size()];
         let mut gfx = GFXBuffer::new(info.width, info.height, &PixelLayout::ARGB());
         for j in 0..info.height {

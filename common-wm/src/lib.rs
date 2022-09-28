@@ -5,6 +5,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Sender};
 use std::thread;
 use std::thread::JoinHandle;
+use std::time::{SystemTime, UNIX_EPOCH};
 use log::{error, info};
 use uuid::Uuid;
 use common::{APICommand, ARGBColor, CloseWindowResponse, HelloWindowManager, IncomingMessage, Point, Rect, Size};
@@ -248,6 +249,8 @@ impl WindowManagerState {
 pub struct OutgoingMessage {
     pub recipient:Uuid,
     pub command:APICommand,
+    pub trace:bool,
+    pub timestamp_usec:u128,
 }
 
 pub struct CentralConnection {
@@ -262,7 +265,11 @@ pub fn start_wm_network_connection(stop: Arc<AtomicBool>, sender: Sender<Incomin
     match TcpStream::connect(conn_string) {
         Ok(mut master_stream) => {
             //send hello message
-            let im = IncomingMessage { source: Default::default(), command: APICommand::WMConnect(HelloWindowManager {})};
+            let im = IncomingMessage {
+                trace: true,
+                timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
+                source: Default::default(),
+                command: APICommand::WMConnect(HelloWindowManager {})};
             match serde_json::to_string(&im) {
                 Ok(data) => {
                     // println!("sending data {:?}", data);
@@ -280,9 +287,11 @@ pub fn start_wm_network_connection(stop: Arc<AtomicBool>, sender: Sender<Incomin
             let mut de = serde_json::Deserializer::from_reader(&master_stream);
             match IncomingMessage::deserialize(&mut de) {
                 Ok(cmd) => {
-                    // info!("received command {:?}", cmd);
+                    if cmd.trace {
+                        info!("==== received command {:?}", cmd);
+                    }
                     if let APICommand::WMConnectResponse(res) = cmd.command {
-                        info!("got response back from the server {:?}",res);
+                        // info!("got response back from the server {:?}",res);
                         // res.wm_id
                     }
                 }
@@ -292,7 +301,7 @@ pub fn start_wm_network_connection(stop: Arc<AtomicBool>, sender: Sender<Incomin
                     return None
                 }
             }
-            info!("window manager fully connected to the central server");
+            // info!("window manager fully connected to the central server");
 
             let (tx_out, rx_out) =mpsc::channel::<OutgoingMessage>();
             //receiving thread
@@ -302,7 +311,7 @@ pub fn start_wm_network_connection(stop: Arc<AtomicBool>, sender: Sender<Incomin
                 let stop = stop.clone();
                 // let tx_in = tx_in.clone();
                 move || {
-                    info!("receiving thread starting");
+                    // info!("receiving thread starting");
                     let mut de = serde_json::Deserializer::from_reader(stream);
                     loop {
                         if stop.load(Ordering::Relaxed) == true {
@@ -333,20 +342,22 @@ pub fn start_wm_network_connection(stop: Arc<AtomicBool>, sender: Sender<Incomin
                 let mut stream = master_stream.try_clone().unwrap();
                 let stop = stop.clone();
                 move || {
-                    info!("sending thread starting");
+                    // info!("sending thread starting");
                     for out in rx_out {
                         if stop.load(Ordering::Relaxed) == true {
                             break;
                         }
                         // info!("got a message to send back out {:?}",out);
                         let im = IncomingMessage {
+                            trace: out.trace,
+                            timestamp_usec: out.timestamp_usec,
                             source: Default::default(),
                             command: out.command
                         };
-                        // println!("sending out message {:?}",im);
+                        println!("sending out message {:?}",im);
                         match serde_json::to_string(&im) {
                             Ok(data) => {
-                                // println!("sending data {:?}", data);
+                                println!("sending data {:?}", data);
                                 if let Err(e) = stream.write_all(data.as_ref()) {
                                     error!("error sending data back to server {}",e);
                                     break;
@@ -381,7 +392,7 @@ pub fn start_wm_network_connection(stop: Arc<AtomicBool>, sender: Sender<Incomin
 
 
 pub trait InputGesture {
-    fn mouse_down(&mut self, evt:MouseDownEvent, state:&mut WindowManagerState, tx_out:&Sender<OutgoingMessage>);
+    fn mouse_down(&mut self, evt:MouseDownEvent, state:&mut WindowManagerState, tx_out:&Sender<OutgoingMessage>,trace:bool);
     fn mouse_move(&mut self, evt:MouseMoveEvent, state:&mut WindowManagerState, tx_out:&Sender<OutgoingMessage>);
     fn mouse_up(  &mut self, evt:MouseUpEvent, state:&mut WindowManagerState, tx_out:&Sender<OutgoingMessage>);
 }
@@ -398,7 +409,7 @@ impl NoOpGesture {
 }
 
 impl InputGesture for NoOpGesture {
-    fn mouse_down(&mut self, evt: MouseDownEvent, state:&mut WindowManagerState, tx_out:&Sender<OutgoingMessage>) {
+    fn mouse_down(&mut self, evt: MouseDownEvent, state: &mut WindowManagerState, tx_out:&Sender<OutgoingMessage>, trace:bool) {
         info!("got a mouse down event {:?}",evt);
     }
 
@@ -407,7 +418,7 @@ impl InputGesture for NoOpGesture {
     }
 
     fn mouse_up(&mut self, evt: MouseUpEvent, state:&mut WindowManagerState, tx_out:&Sender<OutgoingMessage>) {
-        info!("got a mouse up event {:?}",evt);
+        // info!("got a mouse up event {:?}",evt);
     }
 }
 
@@ -428,7 +439,7 @@ impl WindowDragGesture {
 }
 
 impl InputGesture for WindowDragGesture {
-    fn mouse_down(&mut self, evt: MouseDownEvent, state:&mut WindowManagerState, tx_out:&Sender<OutgoingMessage>) {
+    fn mouse_down(&mut self, evt: MouseDownEvent, state: &mut WindowManagerState, tx_out:&Sender<OutgoingMessage>, trace:bool) {
         // info!("WDG: mouse down {:?}",evt);
         self.win_start = if let Some(win) = state.lookup_window(self.winid) {
             win.position.clone()
@@ -477,7 +488,7 @@ impl WindowResizeGesture {
     }
 }
 impl InputGesture for WindowResizeGesture {
-    fn mouse_down(&mut self, evt: MouseDownEvent, state: &mut WindowManagerState, tx_out: &Sender<OutgoingMessage>) {
+    fn mouse_down(&mut self, evt: MouseDownEvent, state: &mut WindowManagerState, tx_out:&Sender<OutgoingMessage>, trace:bool) {
         // println!("mouse down on resize {},{}", evt.x, evt.y);
         self.mouse_start.x = evt.x;
         self.mouse_start.y = evt.y;
@@ -516,22 +527,24 @@ impl WindowCloseButtonGesture {
     }
 }
 impl InputGesture for WindowCloseButtonGesture {
-    fn mouse_down(&mut self, evt: MouseDownEvent, state: &mut WindowManagerState, tx_out: &Sender<OutgoingMessage>) {
+    fn mouse_down(&mut self, evt: MouseDownEvent, state: &mut WindowManagerState, tx_out:&Sender<OutgoingMessage>, trace:bool) {
     }
 
     fn mouse_move(&mut self, evt: MouseMoveEvent, state: &mut WindowManagerState, tx_out: &Sender<OutgoingMessage>) {
     }
 
     fn mouse_up(&mut self, evt: MouseUpEvent, state: &mut WindowManagerState, tx_out: &Sender<OutgoingMessage>) {
-        println!("mouse up. send the window close event");
+        // println!("mouse up. send the window close event");
         // let point = Point::init(evt.x, evt.y);
         if let Some(win) = state.lookup_window(self.winid) {
-            info!("picked a window for mouse up");
+            // info!("picked a window for mouse up");
             let wid = win.id.clone();
             let aid = win.owner.clone();
             // let app_point = point.subtract(&win.content_bounds().position());
             state.remove_window(aid,wid);
             tx_out.send(OutgoingMessage {
+                trace: false,
+                timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
                 recipient: aid,
                 command: APICommand::CloseWindowResponse(CloseWindowResponse {
                     app_id: aid,
@@ -557,13 +570,15 @@ impl AppMouseGesture {
 
 
 impl InputGesture for AppMouseGesture {
-    fn mouse_down(&mut self, evt: MouseDownEvent, state: &mut WindowManagerState, tx_out:&Sender<OutgoingMessage>) {
-        println!("Mouse down to app");
+    fn mouse_down(&mut self, evt: MouseDownEvent, state: &mut WindowManagerState, tx_out:&Sender<OutgoingMessage>, trace:bool) {
+        println!("Mouse down to app. trace is {}",trace);
         let point = Point::init(evt.x, evt.y);
         if let Some(win) = state.lookup_window(self.winid) {
             let app_point = point.subtract(&win.content_bounds().position());
             // win.position.copy_from(&new_pos);
             tx_out.send(OutgoingMessage {
+                trace,
+                timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
                 recipient: self.app_id,
                 command: APICommand::MouseDown(MouseDownEvent {
                     app_id: self.app_id,
@@ -582,11 +597,13 @@ impl InputGesture for AppMouseGesture {
         println!("Mouse move to app");
         let point = Point::init(evt.x, evt.y);
         if let Some(win) = state.pick_window_at(point) {
-            info!("picked a window for mouse move");
+            // info!("picked a window for mouse move");
             let wid = win.id.clone();
             let aid = win.owner.clone();
             let app_point = point.subtract(&win.content_bounds().position());
             tx_out.send(OutgoingMessage {
+                trace: false,
+                timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
                 recipient: aid,
                 command: APICommand::MouseMove(MouseMoveEvent {
                     app_id: aid,
@@ -604,11 +621,13 @@ impl InputGesture for AppMouseGesture {
         println!("Mouse up to app");
         let point = Point::init(evt.x, evt.y);
         if let Some(win) = state.pick_window_at(point) {
-            info!("picked a window for mouse up");
+            // info!("picked a window for mouse up");
             let wid = win.id.clone();
             let aid = win.owner.clone();
             let app_point = point.subtract(&win.content_bounds().position());
             tx_out.send(OutgoingMessage {
+                trace: false,
+                timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
                 recipient: aid,
                 command: APICommand::MouseUp(MouseUpEvent {
                     app_id: aid,

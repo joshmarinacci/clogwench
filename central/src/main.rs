@@ -6,7 +6,7 @@ use std::sync::mpsc::{Receiver, Sender};
 use std::{io, thread};
 use std::path::PathBuf;
 use std::thread::{JoinHandle, sleep};
-use std::time::Duration;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use log::{error, info, LevelFilter, set_logger, warn};
 use serde::Deserialize;
 use uuid::Uuid;
@@ -98,7 +98,12 @@ impl CentralState {
                 match DebugMessage::deserialize(&mut de) {
                     Ok(cmd) => {
                         info!("CENTRAL: received debugger command {:?}",cmd);
-                        sender.send(IncomingMessage{source:id, command:APICommand::Debug(cmd)}).unwrap();
+                        sender.send(IncomingMessage{
+                            source:id,
+                            command:APICommand::Debug(cmd),
+                            trace:false,
+                            timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
+                        }).unwrap();
                     }
                     Err(e) => {
                         // if e.kind() == io::ErrorKind::WouldBlock {
@@ -132,17 +137,21 @@ impl CentralState {
         let im = IncomingMessage {
             source: Default::default(),
             command: resp,
+            trace:false,
+            timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
         };
         let data = serde_json::to_string(&im).unwrap();
         for app in self.apps.iter_mut() {
             app.stream.write_all(data.as_ref()).expect("failed to send to all wm")
         }
     }
-    fn send_to_wm(&mut self, id:Uuid, resp: APICommand) {
+    fn send_to_wm(&mut self, id:Uuid, resp: APICommand, trace:bool) {
         // info!("sending to wm {:?}",resp);
         let im = IncomingMessage {
             source: Default::default(),
             command: resp,
+            trace: trace,
+            timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
         };
         let data = serde_json::to_string(&im).unwrap();
         let wm = self.wms.iter_mut().find(|a|a.id == id).unwrap();
@@ -153,6 +162,8 @@ impl CentralState {
         let im = IncomingMessage {
             source: Default::default(),
             command: resp,
+            trace: false,
+            timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
         };
         let data = serde_json::to_string(&im).unwrap();
         for wm in self.wms.iter_mut() {
@@ -306,7 +317,9 @@ fn start_router(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, state: Arc
     thread::spawn(move||{
         info!("router thread starting");
         for msg in rx {
-            // info!("incoming message {:?}",msg);
+            if msg.trace {
+                info!("==== trace: ====== {:?}",msg);
+            }
             match msg.command {
                 APICommand::Debug(DebugMessage::HelloDebugger) => {
                     let resp = DebugMessage::HelloDebuggerResponse;
@@ -382,7 +395,7 @@ fn start_router(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, state: Arc
                     let resp = APICommand::WMConnectResponse(HelloWindowManagerResponse{
                         wm_id:msg.source
                     });
-                    state.lock().unwrap().send_to_wm(msg.source, resp.clone());
+                    state.lock().unwrap().send_to_wm(msg.source, resp, msg.trace);
                     state.lock().unwrap().send_to_debugger(DebugMessage::WindowManagerConnected);
                 }
                 APICommand::DrawRectCommand(cmd) => {

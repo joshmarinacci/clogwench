@@ -5,7 +5,7 @@ use common::{APICommand, AppDisconnected, DebugMessage, IncomingMessage};
 use std::thread::{JoinHandle, sleep};
 use std::net::{Shutdown, TcpListener, TcpStream};
 use std::{io, thread};
-use std::time::Duration;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use log::{error, info};
 use uuid::Uuid;
 use serde::Deserialize;
@@ -72,7 +72,12 @@ pub fn spawn_client_handler(uuid: Uuid, stream: TcpStream, sender: Sender<Incomi
             match IncomingMessage::deserialize(&mut de) {
                 Ok(cmd) => {
                     // info!("central received wm command {:?}",cmd);
-                    sender.send(IncomingMessage{ source: uuid, command: cmd.command }).unwrap();
+                    sender.send(IncomingMessage{
+                        source: uuid,
+                        command: cmd.command,
+                        trace:cmd.trace,
+                        timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
+                    }).unwrap();
                 }
                 Err(e) => {
                     error!("error deserializing from window manager {:?}",e);

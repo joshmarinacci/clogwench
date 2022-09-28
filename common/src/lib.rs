@@ -1,4 +1,5 @@
 use std::fmt::Formatter;
+use std::time::{SystemTime, UNIX_EPOCH};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use db::{JObj};
@@ -269,6 +270,8 @@ pub enum APICommand {
 pub struct IncomingMessage {
     pub source:Uuid,
     pub command:APICommand,
+    pub trace:bool,
+    pub timestamp_usec:u128,
 }
 
 #[derive(Serialize, Deserialize, Debug, Copy, Clone)]
