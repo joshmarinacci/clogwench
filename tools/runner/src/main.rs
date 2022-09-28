@@ -16,7 +16,6 @@ use log::{info, LevelFilter, set_logger};
 use serde::Deserialize;
 use uuid::Uuid;
 use common::{APICommand, DebugMessage, HelloWindowManager, IncomingMessage, Point, Rect, WINDOW_MANAGER_PORT};
-use common_wm::{OutgoingMessage};
 use cool_logger::CoolLogger;
 use crate::headlesswm::HeadlessWindowManager;
 use crate::platwm::{PlatformWindowManager};

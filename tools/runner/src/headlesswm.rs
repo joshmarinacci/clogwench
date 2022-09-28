@@ -1,5 +1,5 @@
 use common::{APICommand, DebugMessage, HelloWindowManager, IncomingMessage, Point, WHITE, WINDOW_MANAGER_PORT};
-use common_wm::{OutgoingMessage, WindowManagerState};
+use common_wm::{WindowManagerState};
 use core::default::Default;
 use core::option::Option;
 use core::option::Option::{None, Some};
@@ -31,7 +31,7 @@ impl HeadlessWindowManager {
 
         match TcpStream::connect(conn_string) {
             Ok(stream) => {
-                let (tx_out, rx_out) =mpsc::channel::<OutgoingMessage>();
+                let (tx_out, rx_out) =mpsc::channel::<IncomingMessage>();
                 let (tx_in, rx_in) = mpsc::channel::<IncomingMessage>();
                 info!("connected to the central server");
 
@@ -123,16 +123,18 @@ impl HeadlessWindowManager {
                                             let wid = win.id.clone();
                                             let aid = win.owner.clone();
                                             state.set_focused_window(wid);
-                                            tx_out.send(OutgoingMessage {
+                                            tx_out.send(IncomingMessage {
+                                                source:Default::default(),
                                                 trace: false,
                                                 timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
-                                                recipient: Default::default(),
+                                                // recipient: Default::default(),
                                                 command: APICommand::Debug(DebugMessage::WindowFocusChanged(String::from("foo")))
                                             }).unwrap();
-                                            tx_out.send(OutgoingMessage {
+                                            tx_out.send(IncomingMessage {
+                                                source:Default::default(),
                                                 trace: false,
                                                 timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
-                                                recipient: aid,
+                                                // recipient: aid,
                                                 command: APICommand::MouseDown(MouseDownEvent{
                                                     app_id: aid,
                                                     window_id: wid,
@@ -144,10 +146,11 @@ impl HeadlessWindowManager {
                                             }).unwrap();
                                         } else {
                                             // info!("clicked on nothing. sending background debug event");
-                                            tx_out.send(OutgoingMessage {
+                                            tx_out.send(IncomingMessage {
+                                                source:Default::default(),
                                                 trace: false,
                                                 timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
-                                                recipient: Default::default(),
+                                                // recipient: Default::default(),
                                                 command: APICommand::Debug(DebugMessage::BackgroundReceivedMouseEvent)
                                             }).unwrap();
                                         }
@@ -156,10 +159,11 @@ impl HeadlessWindowManager {
                                         let pth = PathBuf::from("./screencapture.png");
                                         // info!("rect for screen capture {:?}",pth);
                                         buf.to_png(&pth);
-                                        tx_out.send(OutgoingMessage {
+                                        tx_out.send(IncomingMessage {
+                                            source:Default::default(),
                                             trace: false,
                                             timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
-                                            recipient: Default::default(),
+                                            // recipient: Default::default(),
                                             command: APICommand::Debug(DebugMessage::ScreenCaptureResponse()),
                                         }).unwrap();
                                     }
@@ -177,10 +181,11 @@ impl HeadlessWindowManager {
                     }
                 });
 
-                let im = OutgoingMessage {
+                let im = IncomingMessage {
+                    source:Default::default(),
                     trace: false,
                     timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
-                    recipient: Default::default(),
+                    // recipient: Default::default(),
                     command: APICommand::WMConnect(HelloWindowManager {})
                 };
                 tx_out.send(im).unwrap();

@@ -15,7 +15,7 @@ use common::events::{KeyDownEvent};
 use common::font::{FontInfo2, load_font_from_json};
 use common::generated::KeyCode;
 use common::graphics::{GFXBuffer};
-use common_wm::{AppMouseGesture, CentralConnection, FOCUSED_TITLEBAR_COLOR, FOCUSED_WINDOW_COLOR, InputGesture, NoOpGesture, OutgoingMessage, start_wm_network_connection, TITLE_BAR_HEIGHT, TITLEBAR_COLOR, Window, WINDOW_BUTTON_COLOR, WINDOW_COLOR, WindowCloseButtonGesture, WindowDragGesture, WindowManagerState, WindowResizeGesture};
+use common_wm::{AppMouseGesture, CentralConnection, FOCUSED_TITLEBAR_COLOR, FOCUSED_WINDOW_COLOR, InputGesture, NoOpGesture, start_wm_network_connection, TITLE_BAR_HEIGHT, TITLEBAR_COLOR, Window, WINDOW_BUTTON_COLOR, WINDOW_COLOR, WindowCloseButtonGesture, WindowDragGesture, WindowManagerState, WindowResizeGesture};
 use minibuf::{make_plat, Plat};
 
 pub struct PlatformWindowManager {
@@ -175,10 +175,10 @@ impl PlatformWindowManager {
                     info!("checking mouse down path");
                     if self.exit_button_bounds.contains(&point) {
                         info!("clicked the exit button!");
-                        self.connection.tx_out.send(OutgoingMessage {
+                        self.connection.tx_out.send(IncomingMessage {
+                            source:Default::default(),
                             trace: cmd.trace,
                             timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
-                            recipient: Default::default(),
                             command: APICommand::Debug(DebugMessage::RequestServerShutdown)
                         }).unwrap();
                         thread::sleep(Duration::from_millis(500));
@@ -210,18 +210,20 @@ impl PlatformWindowManager {
                         self.state.set_focused_window(wid);
                         self.state.raise_window(wid);
                         info!("sending out focus changed");
-                        self.connection.tx_out.send(OutgoingMessage {
+                        self.connection.tx_out.send(IncomingMessage {
+                            source:Default::default(),
                             trace: cmd.trace,
                             timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
-                            recipient: Default::default(),
+                            // recipient: Default::default(),
                             command: APICommand::Debug(DebugMessage::WindowFocusChanged(String::from("foo")))
                         }).unwrap();
                     } else {
                         // info!("clicked on nothing. sending background debug event");
-                        self.connection.tx_out.send(OutgoingMessage {
+                        self.connection.tx_out.send(IncomingMessage {
+                            source:Default::default(),
                             trace: cmd.trace,
                             timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
-                            recipient: Default::default(),
+                            // recipient: Default::default(),
                             command: APICommand::Debug(DebugMessage::BackgroundReceivedMouseEvent)
                         }).unwrap();
                     }
@@ -229,10 +231,11 @@ impl PlatformWindowManager {
                 APICommand::KeyDown(evt) => {
                     match evt.code {
                         KeyCode::ESCAPE => {
-                            self.connection.tx_out.send(OutgoingMessage {
+                            self.connection.tx_out.send(IncomingMessage {
+                                source:Default::default(),
                                 trace: false,
                                 timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
-                                recipient: Default::default(),
+                                // recipient: Default::default(),
                                 command: APICommand::Debug(DebugMessage::RequestServerShutdown)
                             }).unwrap();
                             thread::sleep(Duration::from_millis(500));
@@ -244,10 +247,11 @@ impl PlatformWindowManager {
                                 if let Some(win) = self.state.lookup_window(*id) {
                                     let wid = win.id.clone();
                                     let aid = win.owner.clone();
-                                    self.connection.tx_out.send(OutgoingMessage {
+                                    self.connection.tx_out.send(IncomingMessage {
+                                        source:Default::default(),
                                         trace: false,
                                         timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
-                                        recipient: aid,
+                                        // recipient: aid,
                                         command: APICommand::KeyDown(KeyDownEvent {
                                             app_id: aid,
                                             window_id: wid,
@@ -265,10 +269,11 @@ impl PlatformWindowManager {
                     let pth = PathBuf::from("./screencapture.png");
                     info!("rect for screen capture {:?}",pth);
                     // export_to_png(&buf, &pth);
-                    self.connection.tx_out.send(OutgoingMessage {
+                    self.connection.tx_out.send(IncomingMessage {
+                        source:Default::default(),
                         trace: false,
                         timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
-                        recipient: Default::default(),
+                        // recipient: Default::default(),
                         command: APICommand::Debug(DebugMessage::ScreenCaptureResponse()),
                     }).unwrap();
                 }
@@ -292,10 +297,11 @@ impl PlatformWindowManager {
                 self.plat.unregister_image2(&win.backbuffer);
                 win.backbuffer = GFXBuffer::new(win.content_size.w as u32, win.content_size.h as u32, &win.backbuffer.layout);
                 self.plat.register_image2(&win.backbuffer);
-                self.connection.tx_out.send(OutgoingMessage {
+                self.connection.tx_out.send(IncomingMessage {
+                    source:Default::default(),
                     trace: false,
                     timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
-                    recipient: win.owner,
+                    // recipient: win.owner,
                     command: APICommand::WindowResized(WindowResized {
                         app_id: win.owner,
                         window_id: win.id,

@@ -245,19 +245,11 @@ impl WindowManagerState {
 
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct OutgoingMessage {
-    pub recipient:Uuid,
-    pub command:APICommand,
-    pub trace:bool,
-    pub timestamp_usec:u128,
-}
-
 pub struct CentralConnection {
     pub stream: TcpStream,
     recv_thread: JoinHandle<()>,
     send_thread: JoinHandle<()>,
-    pub tx_out: Sender<OutgoingMessage>,
+    pub tx_out: Sender<IncomingMessage>,
 }
 
 pub fn start_wm_network_connection(stop: Arc<AtomicBool>, sender: Sender<IncomingMessage>) -> Option<CentralConnection> {
@@ -303,7 +295,7 @@ pub fn start_wm_network_connection(stop: Arc<AtomicBool>, sender: Sender<Incomin
             }
             // info!("window manager fully connected to the central server");
 
-            let (tx_out, rx_out) =mpsc::channel::<OutgoingMessage>();
+            let (tx_out, rx_out) =mpsc::channel::<IncomingMessage>();
             //receiving thread
             // create thread to read IncomingMessage from network and copy to the WM sender
             let receiving_handle = thread::spawn({
@@ -337,7 +329,7 @@ pub fn start_wm_network_connection(stop: Arc<AtomicBool>, sender: Sender<Incomin
                 }
             });
             //sending thread
-            // create thread to read OutgoingMessages from rx_out and copy them to the network stream
+            // create thread to read Messages from rx_out and copy them to the network stream
             let sending_handle = thread::spawn({
                 let mut stream = master_stream.try_clone().unwrap();
                 let stop = stop.clone();
@@ -392,9 +384,9 @@ pub fn start_wm_network_connection(stop: Arc<AtomicBool>, sender: Sender<Incomin
 
 
 pub trait InputGesture {
-    fn mouse_down(&mut self, evt:MouseDownEvent, state:&mut WindowManagerState, tx_out:&Sender<OutgoingMessage>,trace:bool);
-    fn mouse_move(&mut self, evt:MouseMoveEvent, state:&mut WindowManagerState, tx_out:&Sender<OutgoingMessage>);
-    fn mouse_up(  &mut self, evt:MouseUpEvent, state:&mut WindowManagerState, tx_out:&Sender<OutgoingMessage>);
+    fn mouse_down(&mut self, evt:MouseDownEvent, state:&mut WindowManagerState, tx_out:&Sender<IncomingMessage>,trace:bool);
+    fn mouse_move(&mut self, evt:MouseMoveEvent, state:&mut WindowManagerState, tx_out:&Sender<IncomingMessage>);
+    fn mouse_up(  &mut self, evt:MouseUpEvent, state:&mut WindowManagerState, tx_out:&Sender<IncomingMessage>);
 }
 
 
@@ -409,15 +401,15 @@ impl NoOpGesture {
 }
 
 impl InputGesture for NoOpGesture {
-    fn mouse_down(&mut self, evt: MouseDownEvent, state: &mut WindowManagerState, tx_out:&Sender<OutgoingMessage>, trace:bool) {
+    fn mouse_down(&mut self, evt: MouseDownEvent, state: &mut WindowManagerState, tx_out:&Sender<IncomingMessage>, trace:bool) {
         info!("got a mouse down event {:?}",evt);
     }
 
-    fn mouse_move(&mut self, evt: MouseMoveEvent, state:&mut WindowManagerState, tx_out:&Sender<OutgoingMessage>) {
+    fn mouse_move(&mut self, evt: MouseMoveEvent, state:&mut WindowManagerState, tx_out:&Sender<IncomingMessage>) {
         //info!("got a mouse move event {:?}",evt);
     }
 
-    fn mouse_up(&mut self, evt: MouseUpEvent, state:&mut WindowManagerState, tx_out:&Sender<OutgoingMessage>) {
+    fn mouse_up(&mut self, evt: MouseUpEvent, state:&mut WindowManagerState, tx_out:&Sender<IncomingMessage>) {
         // info!("got a mouse up event {:?}",evt);
     }
 }
@@ -439,7 +431,7 @@ impl WindowDragGesture {
 }
 
 impl InputGesture for WindowDragGesture {
-    fn mouse_down(&mut self, evt: MouseDownEvent, state: &mut WindowManagerState, tx_out:&Sender<OutgoingMessage>, trace:bool) {
+    fn mouse_down(&mut self, evt: MouseDownEvent, state: &mut WindowManagerState, tx_out:&Sender<IncomingMessage>, trace:bool) {
         // info!("WDG: mouse down {:?}",evt);
         self.win_start = if let Some(win) = state.lookup_window(self.winid) {
             win.position.clone()
@@ -449,7 +441,7 @@ impl InputGesture for WindowDragGesture {
         self.mouse_start = Point::init(evt.x, evt.y);
     }
 
-    fn mouse_move(&mut self, evt: MouseMoveEvent, state:&mut WindowManagerState, tx_out:&Sender<OutgoingMessage>) {
+    fn mouse_move(&mut self, evt: MouseMoveEvent, state:&mut WindowManagerState, tx_out:&Sender<IncomingMessage>) {
         // info!("WDG: mouse move {:?}",evt);
         let curr = Point::init(evt.x,evt.y);
         let diff = self.mouse_start.subtract(&self.win_start);
@@ -460,7 +452,7 @@ impl InputGesture for WindowDragGesture {
         }
     }
 
-    fn mouse_up(&mut self, evt: MouseUpEvent, state:&mut WindowManagerState, tx_out:&Sender<OutgoingMessage>) {
+    fn mouse_up(&mut self, evt: MouseUpEvent, state:&mut WindowManagerState, tx_out:&Sender<IncomingMessage>) {
         // info!("WDG completed");
         let curr = Point::init(evt.x,evt.y);
         let diff = self.mouse_start.subtract(&self.win_start);
@@ -488,13 +480,13 @@ impl WindowResizeGesture {
     }
 }
 impl InputGesture for WindowResizeGesture {
-    fn mouse_down(&mut self, evt: MouseDownEvent, state: &mut WindowManagerState, tx_out:&Sender<OutgoingMessage>, trace:bool) {
+    fn mouse_down(&mut self, evt: MouseDownEvent, state: &mut WindowManagerState, tx_out:&Sender<IncomingMessage>, trace:bool) {
         // println!("mouse down on resize {},{}", evt.x, evt.y);
         self.mouse_start.x = evt.x;
         self.mouse_start.y = evt.y;
     }
 
-    fn mouse_move(&mut self, evt: MouseMoveEvent, state: &mut WindowManagerState, tx_out: &Sender<OutgoingMessage>) {
+    fn mouse_move(&mut self, evt: MouseMoveEvent, state: &mut WindowManagerState, tx_out: &Sender<IncomingMessage>) {
         // println!("mouse move on resize {},{}", evt.x, evt.y);
         if let Some(win) = state.lookup_window(self.winid) {
             let wb = win.external_bounds();
@@ -502,7 +494,7 @@ impl InputGesture for WindowResizeGesture {
         }
     }
 
-    fn mouse_up(&mut self, evt: MouseUpEvent, state: &mut WindowManagerState, tx_out: &Sender<OutgoingMessage>) {
+    fn mouse_up(&mut self, evt: MouseUpEvent, state: &mut WindowManagerState, tx_out: &Sender<IncomingMessage>) {
         // println!("mouse up on resize {},{}",evt.x,evt.y);
         state.resize_rect = None;
         if let Some(win) = state.lookup_window_mut(self.winid) {
@@ -527,13 +519,13 @@ impl WindowCloseButtonGesture {
     }
 }
 impl InputGesture for WindowCloseButtonGesture {
-    fn mouse_down(&mut self, evt: MouseDownEvent, state: &mut WindowManagerState, tx_out:&Sender<OutgoingMessage>, trace:bool) {
+    fn mouse_down(&mut self, evt: MouseDownEvent, state: &mut WindowManagerState, tx_out:&Sender<IncomingMessage>, trace:bool) {
     }
 
-    fn mouse_move(&mut self, evt: MouseMoveEvent, state: &mut WindowManagerState, tx_out: &Sender<OutgoingMessage>) {
+    fn mouse_move(&mut self, evt: MouseMoveEvent, state: &mut WindowManagerState, tx_out: &Sender<IncomingMessage>) {
     }
 
-    fn mouse_up(&mut self, evt: MouseUpEvent, state: &mut WindowManagerState, tx_out: &Sender<OutgoingMessage>) {
+    fn mouse_up(&mut self, evt: MouseUpEvent, state: &mut WindowManagerState, tx_out: &Sender<IncomingMessage>) {
         // println!("mouse up. send the window close event");
         // let point = Point::init(evt.x, evt.y);
         if let Some(win) = state.lookup_window(self.winid) {
@@ -542,10 +534,10 @@ impl InputGesture for WindowCloseButtonGesture {
             let aid = win.owner.clone();
             // let app_point = point.subtract(&win.content_bounds().position());
             state.remove_window(aid,wid);
-            tx_out.send(OutgoingMessage {
+            tx_out.send(IncomingMessage {
+                source:Default::default(),
                 trace: false,
                 timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
-                recipient: aid,
                 command: APICommand::CloseWindowResponse(CloseWindowResponse {
                     app_id: aid,
                     window_id: wid,
@@ -570,16 +562,16 @@ impl AppMouseGesture {
 
 
 impl InputGesture for AppMouseGesture {
-    fn mouse_down(&mut self, evt: MouseDownEvent, state: &mut WindowManagerState, tx_out:&Sender<OutgoingMessage>, trace:bool) {
+    fn mouse_down(&mut self, evt: MouseDownEvent, state: &mut WindowManagerState, tx_out:&Sender<IncomingMessage>, trace:bool) {
         println!("Mouse down to app. trace is {}",trace);
         let point = Point::init(evt.x, evt.y);
         if let Some(win) = state.lookup_window(self.winid) {
             let app_point = point.subtract(&win.content_bounds().position());
             // win.position.copy_from(&new_pos);
-            tx_out.send(OutgoingMessage {
+            tx_out.send(IncomingMessage {
+                source:Default::default(),
                 trace,
                 timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
-                recipient: self.app_id,
                 command: APICommand::MouseDown(MouseDownEvent {
                     app_id: self.app_id,
                     window_id: self.winid,
@@ -593,7 +585,7 @@ impl InputGesture for AppMouseGesture {
 
     }
 
-    fn mouse_move(&mut self, evt: MouseMoveEvent, state: &mut WindowManagerState, tx_out:&Sender<OutgoingMessage>) {
+    fn mouse_move(&mut self, evt: MouseMoveEvent, state: &mut WindowManagerState, tx_out:&Sender<IncomingMessage>) {
         println!("Mouse move to app");
         let point = Point::init(evt.x, evt.y);
         if let Some(win) = state.pick_window_at(point) {
@@ -601,10 +593,10 @@ impl InputGesture for AppMouseGesture {
             let wid = win.id.clone();
             let aid = win.owner.clone();
             let app_point = point.subtract(&win.content_bounds().position());
-            tx_out.send(OutgoingMessage {
+            tx_out.send(IncomingMessage {
+                source:Default::default(),
                 trace: false,
                 timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
-                recipient: aid,
                 command: APICommand::MouseMove(MouseMoveEvent {
                     app_id: aid,
                     window_id: wid,
@@ -617,7 +609,7 @@ impl InputGesture for AppMouseGesture {
         }
     }
 
-    fn mouse_up(&mut self, evt: MouseUpEvent, state: &mut WindowManagerState, tx_out:&Sender<OutgoingMessage>) {
+    fn mouse_up(&mut self, evt: MouseUpEvent, state: &mut WindowManagerState, tx_out:&Sender<IncomingMessage>) {
         println!("Mouse up to app");
         let point = Point::init(evt.x, evt.y);
         if let Some(win) = state.pick_window_at(point) {
@@ -625,10 +617,10 @@ impl InputGesture for AppMouseGesture {
             let wid = win.id.clone();
             let aid = win.owner.clone();
             let app_point = point.subtract(&win.content_bounds().position());
-            tx_out.send(OutgoingMessage {
+            tx_out.send(IncomingMessage {
+                source:Default::default(),
                 trace: false,
                 timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
-                recipient: aid,
                 command: APICommand::MouseUp(MouseUpEvent {
                     app_id: aid,
                     window_id: wid,
