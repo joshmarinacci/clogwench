@@ -3,17 +3,20 @@ extern crate core;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use std::collections::HashMap;
+use std::fs;
 use std::fs::File;
-use std::io::BufReader;
+use std::io::{BufReader, Write};
 use std::iter::{Iterator};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use rand::{Rng, thread_rng};
 use rand::distributions::Alphanumeric;
+use uuid::Uuid;
 
 pub struct JDB {
     data: Vec<JObj>,
     pub base_path: Option<PathBuf>,
     pub save_path: Option<PathBuf>,
+    pub atts_dir: Option<PathBuf>,
 }
 
 impl JDB {
@@ -39,16 +42,49 @@ impl JDB {
             println!("cannot save because no save path was provided");
         }
     }
-}
-
-impl JDB {
+    pub(crate) fn create_attachment(&self, blob: &Vec<u8>) -> &str {
+        let att_id = "dummy_att_id";
+        if let Some(dir) = &self.atts_dir {
+            if let Ok(_) = fs::create_dir_all(dir) {
+                let mut full_path = dir.clone();
+                full_path.push(att_id);
+                if let Ok(mut file) = File::create(&full_path) {
+                    if let Ok(bytes) = file.write(blob) {
+                        println!("wrote {} bytes to the file {:?}", bytes,full_path);
+                    } else {
+                        println!("error writing to the file {:?} ", full_path);
+                    }
+                } else {
+                    println!("error creating the file {:?}",dir);
+                }
+            } else {
+                println!("error creating the dir! {:?}",dir);
+            }
+        } else {
+            println!("no dir for attachments specified, can't save.");
+        }
+        return att_id
+    }
+    pub(crate) fn load_attachment(&self, att_id: &str) -> Vec<u8> {
+        if let Some(dir) = &self.atts_dir {
+            if let Ok(_) = fs::create_dir_all(dir) {
+                let mut full_path = dir.clone();
+                full_path.push(att_id);
+                println!("loading from file {:?}",full_path);
+                if let Ok(bytes) = fs::read(&full_path) {
+                    println!("correctly read {} bytes from {:?}",bytes.len(),full_path);
+                    return bytes;
+                }
+            }
+            vec![]
+        } else {
+            println!("no dir for attachments specified, can't save.");
+            vec![]
+        }
+    }
     pub(crate) fn close(&self) {
         println!("nothing really to do to close!")
     }
-}
-
-
-impl JDB {
     pub(crate) fn find_by_id(&self, id: &str) -> Option<&JObj> {
         self.data.iter().find(|obj|obj.id == id && obj.deleted==false)
     }
@@ -64,9 +100,6 @@ impl JDB {
             println!("warning. couldn't delete {}",obj.id);
         }
     }
-}
-
-impl JDB {
     pub fn process_query(&self, query: &JQuery) -> Vec<JObj> {
         // println!("db processing the query");
         let mut results:Vec<JObj> = vec![];
@@ -112,7 +145,7 @@ impl JDB {
         return songs
     }
 
-    pub(crate) fn load_from_file_with_append(src_file: PathBuf, append_file: PathBuf) -> JDB {
+    pub(crate) fn load_from_file_with_append(src_file: PathBuf, append_file: PathBuf, att_dir:PathBuf) -> JDB {
         let mut data:HashMap<String,JObj> = HashMap::new();
 
         let file = File::open(&src_file).unwrap();
@@ -144,6 +177,7 @@ impl JDB {
             data:data.into_values().collect(),
             base_path: Some(src_file),
             save_path: Some(append_file),
+            atts_dir: Some(att_dir)
         }
     }
 
@@ -160,6 +194,7 @@ impl JDB {
             data: vals,
             base_path: Some(base_path),
             save_path: None,
+            atts_dir: None,
         }
     }
     pub fn make_empty() -> JDB {
@@ -167,6 +202,7 @@ impl JDB {
             data: vec![],
             base_path:None,
             save_path:None,
+            atts_dir: None,
         }
     }
     pub fn process_add(&mut self, obj:JObj) -> JObj {
@@ -346,7 +382,7 @@ mod tests {
     use std::{env, fs};
     use std::fs::File;
     use std::io::BufReader;
-    use std::path::PathBuf;
+    use std::path::{Path, PathBuf};
     use serde::de::Error;
     use serde_json::Value;
     use crate::{JDB, JObj, JQuery};
@@ -407,7 +443,8 @@ mod tests {
         let mut jdb = JDB {
             data: vec![],
             base_path:None,
-            save_path: None
+            save_path: None,
+            atts_dir: None,
         };
         let mut song = JObj::make();
         song.data.insert("title".to_string(), "Catch Me I'm Falling".to_string());
@@ -556,6 +593,7 @@ mod tests {
         }
     }
 
+    use uuid::Uuid;
     #[test]
     fn persistence_test() {
         // create test_data_file
@@ -563,13 +601,15 @@ mod tests {
         let obj1_id = "some-unique-id-04";
         let obj2_id = "some-unique-id-05";
         let mut obj3_id:String = String::from("some_unique_id-06");
-        let append_file_path = "./test_data_append.json";
-        if let Err(e) = fs::remove_file(append_file_path) {
+        let append_file_path = format!("./{}.json",Uuid::new_v4());
+        if let Err(e) = fs::remove_file(&append_file_path) {
             println!("error removing a file {:?}",e);
         }
         let mut jdb = JDB::load_from_file_with_append(
             PathBuf::from("./test_data.json"),
-            PathBuf::from(append_file_path));
+            PathBuf::from(&append_file_path),
+            PathBuf::from("dummy-dir"),
+        );
         {
             //confirm the right number of objects
             let mut query = JQuery::new();
@@ -618,7 +658,9 @@ mod tests {
         {
             let mut jdb = JDB::load_from_file_with_append(
                 PathBuf::from("./test_data.json"),
-                PathBuf::from(append_file_path));
+                PathBuf::from(&append_file_path),
+                PathBuf::from("dummy-dir"),
+            );
             // let mut jdb = JDB::load_from_file(PathBuf::from("./test_data.json"));
             // confirm it has the right number of objects.
             let mut query = JQuery::new();
@@ -659,7 +701,74 @@ mod tests {
 
     #[test]
     fn create_attachment_test() {
-        assert!(false,"test not implemented yet")
+        let png_blob: Vec<u8> = vec![0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+        // create empty db with particular attachment dir,
+        let append_file_path = "./test_data_append.json";
+        delete_if_exists(&append_file_path);
+        let attachments_dir = "./atts";
+        delete_if_exists(attachments_dir);
+        {
+            let mut jdb = JDB::load_from_file_with_append(
+                PathBuf::from("./test_data.json"),
+                PathBuf::from(&append_file_path),
+                PathBuf::from(attachments_dir));
+            // make binary blob in memory with random data,
+            // create attachment,
+            let attid: &str = jdb.create_attachment(&png_blob);
+            // make object,
+            let mut obj = JObj::make();
+            // attach attachment to object,
+            obj.add_field("type","my-test-object");
+            obj.add_field("att", attid);
+            // save object
+            jdb.process_add(obj);
+            // save db to particular file.
+            jdb.save();
+            // Close db.
+            jdb.close()
+        }
+
+        {
+            // Load db from file.
+            let mut jdb = JDB::load_from_file_with_append(
+                PathBuf::from("./test_data.json"),
+                PathBuf::from(&append_file_path),
+                PathBuf::from(attachments_dir)
+            );
+            // load object,
+            let mut query = JQuery::new();
+            query.add_equal("type","my-test-object");
+            let res = jdb.process_query(&query);
+            assert_eq!(res.len(),1);
+            let item = &res[0];
+            // confirm it has the attachment
+            assert_eq!(item.has_field("att"),true);
+            let att_id = item.field("att").unwrap();
+            // load attachment,
+            let blob:Vec<u8> = jdb.load_attachment(att_id);
+            // confirm it has the same data.
+            assert_eq!(png_blob,blob);
+            // Delete db file.
+            delete_if_exists(&append_file_path);
+            // Delete attachment dir.
+            delete_dir(attachments_dir);
+        }
+    }
+
+    fn delete_dir(dir: &str) {
+        if let Err(e) = fs::remove_dir_all(dir) {
+            println!("error removing directory {:?}",dir);
+        } else {
+            println!("deleted dir {:?}",dir);
+        }
+    }
+
+    fn delete_if_exists(path: &str) {
+        if let Err(e) = fs::remove_file(path) {
+            println!("error removing a file {:?}",e);
+        } else {
+            println!("successfully deleted file {:?}",path);
+        }
     }
 
     #[test]
