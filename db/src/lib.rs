@@ -1,7 +1,7 @@
 extern crate core;
 
 use serde::{Deserialize, Serialize};
-use serde_json::{Value};
+use serde_json::{Map, Value};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::BufReader;
@@ -13,6 +13,38 @@ use rand::distributions::Alphanumeric;
 pub struct JDB {
     data: Vec<JObj>,
     pub base_path: Option<PathBuf>,
+    pub save_path: Option<PathBuf>,
+}
+
+impl JDB {
+    pub(crate) fn save(&self) {
+        println!("saving to {:?}", self.save_path);
+        if let Some(path) = &self.save_path {
+            if let Ok(output) = File::create(path) {
+                println!("really saving to the file {:?}", path);
+                let mut data_out:Vec<Value> = vec![];
+                for obj in &self.data {
+                    if let Ok(value) = serde_json::to_value(obj) {
+                        println!("saving value {}",value);
+                        data_out.push(value)
+                    }
+                }
+                // save as { data:[] }
+                let mut hm:Map<String,Value> = Map::new();
+                hm.insert(String::from("data"), Value::Array(data_out));
+                let object_out:Value = Value::Object(hm);
+                serde_json::to_writer(output,&object_out).unwrap();
+            }
+        } else {
+            println!("cannot save because no save path was provided");
+        }
+    }
+}
+
+impl JDB {
+    pub(crate) fn close(&self) {
+        println!("nothing really to do to close!")
+    }
 }
 
 
@@ -25,8 +57,11 @@ impl JDB {
         self.data.push(obj);
     }
     pub(crate) fn delete(&mut self, obj: &JObj) {
+        println!("deleting object {:?}",obj);
         if let Some(ob) = self.data.iter_mut().find(|ob|ob.id == obj.id) {
             ob.deleted = true;
+        } else {
+            println!("warning. couldn't delete {}",obj.id);
         }
     }
 }
@@ -48,24 +83,19 @@ impl JDB {
         self.update_object(opb);
         cl
     }
-    pub fn load_from_file(filepath: PathBuf) -> JDB {
-        let base_path = filepath.clone();
-        println!("Loading {:?}",filepath.canonicalize().unwrap());
-        let file = File::open(filepath).unwrap();
-        let val:Value = serde_json::from_reader(BufReader::new(file)).unwrap();
-        // println!("value is {}",val);
-        let objs = val.as_object().unwrap().get("data").unwrap();
-        // println!("objects are {}",objs);
-        let mut jdb = JDB {
-            data: vec![],
-            base_path: Some(base_path),
-        };
-        for ob in objs.as_array().unwrap() {
-            // println!("object {:?}",ob);
+
+    pub(crate) fn process_obj_values(values: &Vec<Value>) -> Vec<JObj> {
+        let mut songs:Vec<JObj> = vec![];
+        for ob in values {
             let mut song = JObj::make();
-            // ob.as_object().
-            let id = ob.get("id").unwrap();
-            song.id = id.as_str().unwrap().to_string();
+            let json = ob.as_object().unwrap();
+            song.id = json.get("id").unwrap().as_str().unwrap().to_string();
+            if json.contains_key("deleted") {
+                song.deleted = json.get("deleted").unwrap().as_bool().unwrap();
+            } else {
+                song.deleted = false
+            }
+
             let mp = ob.get("data").unwrap().as_object().unwrap();
             for (s,v) in mp.iter() {
                 // println!("key {} value {}",s,v);
@@ -75,15 +105,68 @@ impl JDB {
                     song.data.insert(s.clone(), v.as_str().unwrap().to_string());
                 }
             }
-            // println!("adding a db object {:?}",song);
-            jdb.data.push(song);
+            println!("adding a db object {:?}",song);
+            // db.data.push(song);
+            songs.push(song);
         }
-        jdb
+        return songs
+    }
+
+    pub(crate) fn load_from_file_with_append(src_file: PathBuf, append_file: PathBuf) -> JDB {
+        let mut data:HashMap<String,JObj> = HashMap::new();
+
+        let file = File::open(&src_file).unwrap();
+        let val:Value = serde_json::from_reader(BufReader::new(file)).unwrap();
+        let objs = val.as_object().unwrap().get("data").unwrap().as_array().unwrap();
+        let mut items = JDB::process_obj_values(objs);
+        //put items to the map to remove dupes
+        for item in items {
+            data.insert(item.id.clone(), item);
+        }
+
+
+        if let Ok(file) = File::open(&append_file) {
+            let val: Value = serde_json::from_reader(BufReader::new(file)).unwrap();
+            let objs = val.as_object().unwrap().get("data").unwrap().as_array().unwrap();
+            let mut items = JDB::process_obj_values(objs);
+            // put items into the map to remove dupes
+            for item in items {
+                data.insert(item.id.clone(), item);
+            }
+        } else {
+            println!("the append file couldn't be loaded for some reason");
+        }
+        println!("final values are");
+        for id in data.values() {
+            println!("    {:?}",id);
+        }
+        JDB {
+            data:data.into_values().collect(),
+            base_path: Some(src_file),
+            save_path: Some(append_file),
+        }
+    }
+
+    pub fn load_from_file(filepath: PathBuf) -> JDB {
+        let base_path = filepath.clone();
+        println!("Loading {:?}",filepath.canonicalize().unwrap());
+        let file = File::open(filepath).unwrap();
+        let val:Value = serde_json::from_reader(BufReader::new(file)).unwrap();
+        // println!("value is {}",val);
+        let objs = val.as_object().unwrap().get("data").unwrap().as_array().unwrap();
+        // println!("objects are {}",objs);
+        let vals = JDB::process_obj_values(objs);
+        JDB {
+            data: vals,
+            base_path: Some(base_path),
+            save_path: None,
+        }
     }
     pub fn make_empty() -> JDB {
         JDB {
             data: vec![],
-            base_path:None
+            base_path:None,
+            save_path:None,
         }
     }
     pub fn process_add(&mut self, obj:JObj) -> JObj {
@@ -119,8 +202,9 @@ impl JDB {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct JObj {
     pub id:String,
-    deleted:bool,
-    pub data:HashMap<String,String>
+    pub deleted:bool,
+    pub data:HashMap<String,String>,
+    // pub attachments:Vec<String>,
 }
 
 impl JObj {
@@ -159,6 +243,13 @@ impl JObj {
     pub(crate) fn remove_field(&mut self, key: &str) {
         self.data.remove(key);
     }
+}
+
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct JAttachment {
+    pub id:String,
+    pub path:String,
 }
 
 #[derive(Debug)]
@@ -252,7 +343,7 @@ impl JQuery {
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
-    use std::env;
+    use std::{env, fs};
     use std::fs::File;
     use std::io::BufReader;
     use std::path::PathBuf;
@@ -316,6 +407,7 @@ mod tests {
         let mut jdb = JDB {
             data: vec![],
             base_path:None,
+            save_path: None
         };
         let mut song = JObj::make();
         song.data.insert("title".to_string(), "Catch Me I'm Falling".to_string());
@@ -463,32 +555,120 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn persistence_test() {
+        // create test_data_file
+        // load test data file,
+        let obj1_id = "some-unique-id-04";
+        let obj2_id = "some-unique-id-05";
+        let mut obj3_id:String = String::from("some_unique_id-06");
+        let append_file_path = "./test_data_append.json";
+        if let Err(e) = fs::remove_file(append_file_path) {
+            println!("error removing a file {:?}",e);
+        }
+        let mut jdb = JDB::load_from_file_with_append(
+            PathBuf::from("./test_data.json"),
+            PathBuf::from(append_file_path));
+        {
+            //confirm the right number of objects
+            let mut query = JQuery::new();
+            query.add_equal("type","person-contact");
+            let mut res = jdb.process_query(&query);
+            assert_eq!(res.len(), 2);
+
+
+            // make one object change,
+            if let Some(obj1) = jdb.find_by_id(obj1_id) {
+                assert_eq!(obj1.field("first"), Some(&"Josh".to_string()));
+                let mut obj1 = obj1.clone();
+                obj1.set_field("first", "Joshua");
+                // save it back
+                jdb.update_object(obj1);
+            } else {
+                panic!("obj1 is missing");
+            }
+
+            println!("got here");
+            // delete one object.
+            if let Some(obj2) = jdb.find_by_id(obj2_id) {
+                assert_eq!(obj2.deleted,false);
+                jdb.delete(&obj2.clone());
+            } else {
+                panic!("obj2 is missing");
+            }
+
+            // add one new object,
+            let mut obj3 = JObj::make();
+            obj3.set_field("type", "person-contact");
+            obj3.set_field("first", "Michael");
+            obj3_id = jdb.process_add(obj3).id;
+
+            //query again to confirm the right number of objects
+            // should still be 2 because we added one and deleted one
+            let mut res = jdb.process_query(&query);
+            assert_eq!(res.len(), 2);
+
+            // tell it to save to a particular file randomly generated.
+            jdb.save();
+            // Close db.
+            jdb.close();
+        }
+        // Load db from the new file,
+        {
+            let mut jdb = JDB::load_from_file_with_append(
+                PathBuf::from("./test_data.json"),
+                PathBuf::from(append_file_path));
+            // let mut jdb = JDB::load_from_file(PathBuf::from("./test_data.json"));
+            // confirm it has the right number of objects.
+            let mut query = JQuery::new();
+            query.add_equal("type","person-contact");
+            let mut res = jdb.process_query(&query);
+            assert_eq!(res.len(), 2);
+
+            // Confirm object was changed.
+            if let Some(obj1) = jdb.find_by_id(obj1_id) {
+                assert_eq!(obj1.has_field("first"),true);
+                assert_eq!(obj1.field("first").unwrap(),"Joshua");
+            } else {
+                panic!("obj1 is missing");
+            }
+
+            // Confirm object was deleted.
+            if let None = jdb.find_by_id(obj2_id) {
+                println!("obj2 is missing. this is correct");
+            } else {
+                panic!("obj2 was found. this is bad");
+            }
+
+            //confirm object 3 was created
+            if let Some(obj3) = jdb.find_by_id(&obj3_id) {
+                assert_eq!(obj3.field_matches("first","Michael"),true);
+            } else {
+                panic!("obj3 is missing");
+            }
+            // Close db.
+            jdb.close();
+            // Remove test file.
+            if let Err(e) = fs::remove_file(append_file_path) {
+                println!("error removing a file {:?}",e);
+            }
+        }
+
+    }
+
+    #[test]
+    fn create_attachment_test() {
+        assert!(false,"test not implemented yet")
+    }
+
+    #[test]
+    fn load_disk_attachments_test() {
+        assert!(false,"test not implemented yet")
+    }
+
+    #[test]
+    fn photo_thumbnail_test() {
+        assert!(false,"test not implemented yet")
+    }
 }
-
-
-/*
-Build simple rust db with unit tests.
-- create db service, same process
-- create
-	- create contact object
-	- query contact object
-	- delete contact object
-- create five contact objects
-	- query to get all five
-	- query to get just three of them
-	- delete them all
-	- query to see none are left
-	- shut down
-- init db from test JSON file
-	- query the contact objects
-	- add a new object
-	- query the objects again to see the new one
-	- shut down
-- live updates
-	- init db from test JSON file
-	- create a live query object for the contacts
-	- create a new object
-	- receive update that query has changed
-	- get new set of contacts
-	- shut down
- */
