@@ -126,6 +126,7 @@ impl PlatformWindowManager {
             if cmd.trace {
                 info!("platwm Lib received {:?}", cmd);
             }
+            let src = cmd.clone();
             match cmd.command {
                 APICommand::SystemShutdown => {
                     info!("the core is shutting down. bye");
@@ -172,7 +173,7 @@ impl PlatformWindowManager {
                 }
                 APICommand::MouseDown(evt) => {
                     let point = Point::init(evt.x, evt.y);
-                    info!("checking mouse down path");
+                    // info!("checking mouse down path");
                     if self.exit_button_bounds.contains(&point) {
                         info!("clicked the exit button!");
                         self.connection.tx_out.send(IncomingMessage {
@@ -185,31 +186,31 @@ impl PlatformWindowManager {
                         return false;
                     }
                     if let Some(win) = self.state.pick_window_at(point) {
-                        info!("picked a window");
+                        // info!("picked a window");
                         let wid = win.id.clone();
                         let aid = win.owner.clone();
 
                         if win.close_button_bounds().contains(&point) {
                             info!("inside the close button");
                             self.gesture = Box::new(WindowCloseButtonGesture::init(point, win.id));
-                            self.gesture.mouse_down(evt, &mut self.state, &self.connection.tx_out,cmd.trace);
+                            self.gesture.mouse_down(evt,&src, &mut self.state, &self.connection.tx_out);
                         } else if win.titlebar_bounds().contains(&point) {
                             info!("inside the title bar");
                             self.gesture = Box::new(WindowDragGesture::init(point, win.id));
-                            self.gesture.mouse_down(evt, &mut self.state, &self.connection.tx_out,cmd.trace);
+                            self.gesture.mouse_down(evt, &src,&mut self.state, &self.connection.tx_out);
                         } else if win.resize_bounds().contains(&point) {
                             info!("inside the resize control");
                             self.gesture = Box::new(WindowResizeGesture::init(point, win.id));
-                            self.gesture.mouse_down(evt, &mut self.state, &self.connection.tx_out,cmd.trace);
+                            self.gesture.mouse_down(evt, &src,&mut self.state, &self.connection.tx_out);
                         } else {
                             // it needs to go to the app
-                            info!("inside the window content for the app");
+                            // info!("inside the window content for the app");
                             self.gesture = Box::new(AppMouseGesture::init(aid,win.id));
-                            self.gesture.mouse_down(evt,&mut self.state, &self.connection.tx_out,cmd.trace);
+                            self.gesture.mouse_down(evt, &src,&mut self.state, &self.connection.tx_out);
                         }
                         self.state.set_focused_window(wid);
                         self.state.raise_window(wid);
-                        info!("sending out focus changed");
+                        // info!("sending out focus changed");
                         self.connection.tx_out.send(IncomingMessage {
                             source:Default::default(),
                             trace: cmd.trace,

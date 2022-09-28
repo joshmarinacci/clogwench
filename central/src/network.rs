@@ -76,7 +76,7 @@ pub fn spawn_client_handler(uuid: Uuid, stream: TcpStream, sender: Sender<Incomi
                         source: uuid,
                         command: cmd.command,
                         trace:cmd.trace,
-                        timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
+                        timestamp_usec:cmd.timestamp_usec,
                     }).unwrap();
                 }
                 Err(e) => {

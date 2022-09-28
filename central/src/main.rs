@@ -121,7 +121,33 @@ impl CentralState {
 
     fn send_to_app(&mut self, id:Uuid, resp: APICommand) {
         // info!("sending to app {:?}",resp);
-        let data = serde_json::to_string(&resp).unwrap();
+        let msg:IncomingMessage = IncomingMessage {
+            source:Default::default(),
+            trace:false,
+            command:resp,
+            timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
+        };
+        let data = serde_json::to_string(&msg).unwrap();
+        if let Some(app) = self.apps.iter_mut().find(|a|a.id == id){
+            let res = app.stream.write_all(data.as_ref());
+            if let Err(e) = res {
+                error!("error happened in app thread {}: {}",id,e);
+            }
+            //.expect("failed to send rect");
+        } else {
+            info!("didnt send to the app. couldnt find an app for {}",id);
+        }
+    }
+    fn send_to_app2(&mut self, id:Uuid, resp: APICommand, source:&IncomingMessage) {
+        // info!("sending to app {:?}",resp);
+        let msg:IncomingMessage = IncomingMessage {
+            source:source.source,
+            trace:source.trace,
+            command:resp,
+            timestamp_usec:source.timestamp_usec,
+        };
+
+        let data = serde_json::to_string(&msg).unwrap();
         if let Some(app) = self.apps.iter_mut().find(|a|a.id == id){
             let res = app.stream.write_all(data.as_ref());
             if let Err(e) = res {
@@ -317,8 +343,15 @@ fn start_router(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, state: Arc
     thread::spawn(move||{
         info!("router thread starting");
         for msg in rx {
+            let msg2 = msg.clone();
             if msg.trace {
                 info!("==== trace: ====== {:?}",msg);
+                // let dela = msg.timestamp_usec -
+                let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+                let orig = Duration::from_micros(msg.timestamp_usec as u64);
+                info!("delay = {:?}",now - orig);
+                // .as_micros(),
+
             }
             match msg.command {
                 APICommand::Debug(DebugMessage::HelloDebugger) => {
@@ -447,7 +480,7 @@ fn start_router(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, state: Arc
                     state.lock().unwrap().send_to_app(e.app_id, APICommand::KeyDown(e))
                 }
                 APICommand::MouseDown(e) => {
-                    state.lock().unwrap().send_to_app(e.app_id, APICommand::MouseDown(e))
+                    state.lock().unwrap().send_to_app2(e.app_id, APICommand::MouseDown(e), &msg2)
                 }
                 APICommand::MouseUp(e) => {
                     state.lock().unwrap().send_to_app(e.app_id, APICommand::MouseUp(e))

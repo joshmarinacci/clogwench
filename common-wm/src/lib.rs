@@ -346,10 +346,14 @@ pub fn start_wm_network_connection(stop: Arc<AtomicBool>, sender: Sender<Incomin
                             source: Default::default(),
                             command: out.command
                         };
-                        println!("sending out message {:?}",im);
+                        if im.trace {
+                            info!("sending out message {:?}",im);
+                        }
                         match serde_json::to_string(&im) {
                             Ok(data) => {
-                                println!("sending data {:?}", data);
+                                if im.trace {
+                                    info!("sending data {:?}", data);
+                                }
                                 if let Err(e) = stream.write_all(data.as_ref()) {
                                     error!("error sending data back to server {}",e);
                                     break;
@@ -384,7 +388,7 @@ pub fn start_wm_network_connection(stop: Arc<AtomicBool>, sender: Sender<Incomin
 
 
 pub trait InputGesture {
-    fn mouse_down(&mut self, evt:MouseDownEvent, state:&mut WindowManagerState, tx_out:&Sender<IncomingMessage>,trace:bool);
+    fn mouse_down(&mut self, evt:MouseDownEvent, source:&IncomingMessage, state:&mut WindowManagerState, tx_out:&Sender<IncomingMessage>);
     fn mouse_move(&mut self, evt:MouseMoveEvent, state:&mut WindowManagerState, tx_out:&Sender<IncomingMessage>);
     fn mouse_up(  &mut self, evt:MouseUpEvent, state:&mut WindowManagerState, tx_out:&Sender<IncomingMessage>);
 }
@@ -401,7 +405,7 @@ impl NoOpGesture {
 }
 
 impl InputGesture for NoOpGesture {
-    fn mouse_down(&mut self, evt: MouseDownEvent, state: &mut WindowManagerState, tx_out:&Sender<IncomingMessage>, trace:bool) {
+    fn mouse_down(&mut self, evt: MouseDownEvent, source: &IncomingMessage, state: &mut WindowManagerState, tx_out: &Sender<IncomingMessage>) {
         info!("got a mouse down event {:?}",evt);
     }
 
@@ -431,7 +435,7 @@ impl WindowDragGesture {
 }
 
 impl InputGesture for WindowDragGesture {
-    fn mouse_down(&mut self, evt: MouseDownEvent, state: &mut WindowManagerState, tx_out:&Sender<IncomingMessage>, trace:bool) {
+    fn mouse_down(&mut self, evt: MouseDownEvent, source: &IncomingMessage, state: &mut WindowManagerState, tx_out: &Sender<IncomingMessage>) {
         // info!("WDG: mouse down {:?}",evt);
         self.win_start = if let Some(win) = state.lookup_window(self.winid) {
             win.position.clone()
@@ -480,7 +484,7 @@ impl WindowResizeGesture {
     }
 }
 impl InputGesture for WindowResizeGesture {
-    fn mouse_down(&mut self, evt: MouseDownEvent, state: &mut WindowManagerState, tx_out:&Sender<IncomingMessage>, trace:bool) {
+    fn mouse_down(&mut self, evt: MouseDownEvent, source: &IncomingMessage, state: &mut WindowManagerState, tx_out: &Sender<IncomingMessage>) {
         // println!("mouse down on resize {},{}", evt.x, evt.y);
         self.mouse_start.x = evt.x;
         self.mouse_start.y = evt.y;
@@ -519,7 +523,7 @@ impl WindowCloseButtonGesture {
     }
 }
 impl InputGesture for WindowCloseButtonGesture {
-    fn mouse_down(&mut self, evt: MouseDownEvent, state: &mut WindowManagerState, tx_out:&Sender<IncomingMessage>, trace:bool) {
+    fn mouse_down(&mut self, evt: MouseDownEvent, source: &IncomingMessage, state: &mut WindowManagerState, tx_out: &Sender<IncomingMessage>) {
     }
 
     fn mouse_move(&mut self, evt: MouseMoveEvent, state: &mut WindowManagerState, tx_out: &Sender<IncomingMessage>) {
@@ -562,16 +566,16 @@ impl AppMouseGesture {
 
 
 impl InputGesture for AppMouseGesture {
-    fn mouse_down(&mut self, evt: MouseDownEvent, state: &mut WindowManagerState, tx_out:&Sender<IncomingMessage>, trace:bool) {
-        println!("Mouse down to app. trace is {}",trace);
+    fn mouse_down(&mut self, evt: MouseDownEvent, source: &IncomingMessage, state: &mut WindowManagerState, tx_out: &Sender<IncomingMessage>) {
+        // println!("Mouse down to app. trace is {}",source.trace);
         let point = Point::init(evt.x, evt.y);
         if let Some(win) = state.lookup_window(self.winid) {
             let app_point = point.subtract(&win.content_bounds().position());
             // win.position.copy_from(&new_pos);
             tx_out.send(IncomingMessage {
                 source:Default::default(),
-                trace,
-                timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
+                trace:source.trace,
+                timestamp_usec:source.timestamp_usec,
                 command: APICommand::MouseDown(MouseDownEvent {
                     app_id: self.app_id,
                     window_id: self.winid,
