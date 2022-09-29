@@ -42,12 +42,12 @@ impl JDB {
             println!("cannot save because no save path was provided");
         }
     }
-    pub(crate) fn create_attachment(&self, blob: &Vec<u8>) -> &str {
-        let att_id = "dummy_att_id";
+    pub(crate) fn create_attachment(&self, blob: &Vec<u8>) -> String {
+        let att_id = format!("attachment_{}",Uuid::new_v4());
         if let Some(dir) = &self.atts_dir {
             if let Ok(_) = fs::create_dir_all(dir) {
                 let mut full_path = dir.clone();
-                full_path.push(att_id);
+                full_path.push(&att_id);
                 if let Ok(mut file) = File::create(&full_path) {
                     if let Ok(bytes) = file.write(blob) {
                         println!("wrote {} bytes to the file {:?}", bytes,full_path);
@@ -145,7 +145,7 @@ impl JDB {
         return songs
     }
 
-    pub(crate) fn load_from_file_with_append(src_file: PathBuf, append_file: PathBuf, att_dir:PathBuf) -> JDB {
+    pub(crate) fn load_from_file_with_append(src_file: &PathBuf, append_file: &PathBuf, att_dir:&PathBuf) -> JDB {
         let mut data:HashMap<String,JObj> = HashMap::new();
 
         let file = File::open(&src_file).unwrap();
@@ -175,9 +175,9 @@ impl JDB {
         }
         JDB {
             data:data.into_values().collect(),
-            base_path: Some(src_file),
-            save_path: Some(append_file),
-            atts_dir: Some(att_dir)
+            base_path: Some(src_file.clone()),
+            save_path: Some(append_file.clone()),
+            atts_dir: Some(att_dir.clone())
         }
     }
 
@@ -281,12 +281,6 @@ impl JObj {
     }
 }
 
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct JAttachment {
-    pub id:String,
-    pub path:String,
-}
 
 #[derive(Debug)]
 pub enum JClause {
@@ -594,7 +588,7 @@ mod tests {
     }
 
     use uuid::Uuid;
-    use gfx::graphics::{GFXBuffer, PixelLayout};
+    use gfx::graphics::{ARGBColor, GFXBuffer, PixelLayout, Rect};
 
     #[test]
     fn persistence_test() {
@@ -608,9 +602,9 @@ mod tests {
             println!("error removing a file {:?}",e);
         }
         let mut jdb = JDB::load_from_file_with_append(
-            PathBuf::from("./test_data.json"),
-            PathBuf::from(&append_file_path),
-            PathBuf::from("dummy-dir"),
+            &PathBuf::from("./test_data.json"),
+            &PathBuf::from(&append_file_path),
+            &PathBuf::from("dummy-dir"),
         );
         {
             //confirm the right number of objects
@@ -659,9 +653,9 @@ mod tests {
         // Load db from the new file,
         {
             let mut jdb = JDB::load_from_file_with_append(
-                PathBuf::from("./test_data.json"),
-                PathBuf::from(&append_file_path),
-                PathBuf::from("dummy-dir"),
+                &PathBuf::from("./test_data.json"),
+                &PathBuf::from(&append_file_path),
+                &PathBuf::from("dummy-dir"),
             );
             // let mut jdb = JDB::load_from_file(PathBuf::from("./test_data.json"));
             // confirm it has the right number of objects.
@@ -711,17 +705,17 @@ mod tests {
         delete_if_exists(attachments_dir);
         {
             let mut jdb = JDB::load_from_file_with_append(
-                PathBuf::from("./test_data.json"),
-                PathBuf::from(&append_file_path),
-                PathBuf::from(attachments_dir));
+                &PathBuf::from("./test_data.json"),
+                &PathBuf::from(&append_file_path),
+                &PathBuf::from(attachments_dir));
             // make binary blob in memory with random data,
             // create attachment,
-            let attid: &str = jdb.create_attachment(&png_blob);
+            let attr_id = jdb.create_attachment(&png_blob);
             // make object,
             let mut obj = JObj::make();
             // attach attachment to object,
             obj.add_field("type","my-test-object");
-            obj.add_field("att", attid);
+            obj.add_field("att", &attr_id);
             // save object
             jdb.process_add(obj);
             // save db to particular file.
@@ -733,9 +727,9 @@ mod tests {
         {
             // Load db from file.
             let mut jdb = JDB::load_from_file_with_append(
-                PathBuf::from("./test_data.json"),
-                PathBuf::from(&append_file_path),
-                PathBuf::from(attachments_dir)
+                &PathBuf::from("./test_data.json"),
+                &PathBuf::from(&append_file_path),
+                &PathBuf::from(attachments_dir)
             );
             // load object,
             let mut query = JQuery::new();
@@ -776,16 +770,57 @@ mod tests {
     #[test]
     fn photo_thumbnail_test() {
         // - create empty db.
-        let mut db = JDB::make_empty();
-        let buf:GFXBuffer = GFXBuffer::new(10, 10, &PixelLayout::ARGB());
+        // set the base path
+        let src_path = PathBuf::from("empty.json");
+        if let Err(e) = fs::write(&src_path,"{ \"data\":[] }") {
+            panic!("couldn't touch the file {:?}",src_path);
+        }
+        let append_path = PathBuf::from("photos.json");
+        let atts_dir = PathBuf::from("atts_dir");
+        let mut db = JDB::load_from_file_with_append(&src_path, &append_path, &atts_dir);
+        // make a fake photo
+        let mut image:GFXBuffer = GFXBuffer::new(16, 16, &PixelLayout::ARGB());
+        let green = ARGBColor::new_argb(255,0,255,255);
+        let blue = ARGBColor::new_argb(255,0,0,255);
+        image.clear(&green);
+        image.fill_rect(&Rect::from_ints(0, 0, 8, 16), &blue);
+        image.to_png(&PathBuf::from("image.png"));
+
+        // create photo object
+        let mut photo = JObj::make();
+        photo.set_field("type","photo");
         // Add photo attachment,
-        // add photo thumbnail attachment (using a gfxbuffer and a new option to generate a scaled copy with nearest neighbor interpolation),
-        // add photo object.
+        let image_att_id = db.create_attachment(&image.data);
+        photo.set_field("image", &image_att_id);
+        // make thumbnail using a gfxbuffer and a new option to generate a scaled copy with nearest neighbor interpolation
+        let thumbnail:GFXBuffer = image.scale_down(2);
+        thumbnail.to_png(&PathBuf::from("thumbnail.png"));
+        // make thumbnail attachment
+        let thumbnail_att_id = db.create_attachment(&thumbnail.data);
+        // attach thumbnail to photo
+        photo.set_field("thumbnail",&thumbnail_att_id);
+        // add photo object to database
+        let photo_id = db.process_add(photo).id;
         // Save to particular file and attachment dir.
+        db.save();
         // Close and reopen db.
+        db.close();
+
+        let mut db = JDB::load_from_file_with_append(&src_path, &append_path, &atts_dir);
         // load photo.
-        // Verify.
-        // Load thumbnail.
-        // verify.
+        if let Some(photo) = db.find_by_id(&photo_id) {
+            // Verify photo
+            assert_eq!(photo.field_matches("type","photo"),true);
+            assert_eq!(photo.has_field("image"),true);
+            assert_eq!(photo.has_field("thumbnail"),true);
+            // verify main image
+            let image_2 = db.load_attachment(photo.field("image").unwrap());
+            assert_eq!(image_2,image.data);
+            // verify thumbnail
+            let thumb_2 = db.load_attachment(photo.field("thumbnail").unwrap());
+            assert_eq!(thumb_2,thumbnail.data);
+        } else {
+            panic!("could not find the photo after saving");
+        }
     }
 }

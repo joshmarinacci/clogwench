@@ -292,6 +292,20 @@ pub struct GFXBuffer {
 }
 
 impl GFXBuffer {
+    pub fn scale_down(&self, scale: u32) -> GFXBuffer {
+        let mut dst = GFXBuffer::new(self.width/scale, self.height/scale, &self.layout);
+        dst.clear(&BLACK);
+        for i in 0..dst.width {
+            for j in 0..dst.height {
+                let color = self.get_pixel_vec_argb((i*scale) as i32, (j*scale) as i32);
+                dst.set_pixel_vec_argb(i as i32, j as i32, &color);
+            }
+        }
+        return dst;
+    }
+}
+
+impl GFXBuffer {
     pub fn new(width:u32, height:u32, layout: &PixelLayout) -> GFXBuffer {
         if width == 0 || height == 0 {
             panic!("cannot create buffer of size {}x{}",width,height);
@@ -437,7 +451,7 @@ impl GFXBuffer {
             }
         }
     }
-    pub fn fill_rect(&mut self, bounds: Rect, color: &ARGBColor) {
+    pub fn fill_rect(&mut self, bounds: &Rect, color: &ARGBColor) {
         // println!("filling bounds {:?}",bounds);
         let bounds = bounds.intersect(self.bounds());
         // println!("clipped {:?}",bounds);
@@ -643,11 +657,11 @@ mod tests {
         assert_eq!(buf2.data,vec![255,0,255,0]);
         buf2.clear(&blue);
         assert_eq!(buf2.data,vec![255,0,0,255]);
-        buf2.fill_rect(Rect::from_ints(0,0,1,1), &red);
+        buf2.fill_rect(&Rect::from_ints(0,0,1,1), &red);
         assert_eq!(buf2.data,vec![255,255,0,0]);
-        buf2.fill_rect(Rect::from_ints(0,0,1,1), &green);
+        buf2.fill_rect(&Rect::from_ints(0,0,1,1), &green);
         assert_eq!(buf2.data,vec![255,0,255,0]);
-        buf2.fill_rect(Rect::from_ints(0,0,1,1), &blue);
+        buf2.fill_rect(&Rect::from_ints(0,0,1,1), &blue);
         assert_eq!(buf2.data,vec![255,0,0,255]);
     }
 
@@ -663,9 +677,9 @@ mod tests {
         assert_eq!(buf2.data,vec![0b000_00000,0b11111_000,]);
         buf2.clear(&grn);
         assert_eq!(buf2.data,vec![0b111_00000,0b00000_111,]);
-        buf2.fill_rect(Rect::from_ints(0,0,1,1), &red);
+        buf2.fill_rect(&Rect::from_ints(0,0,1,1), &red);
         assert_eq!(buf2.data,vec![0b11111_000,0b000_00000,]);
-        buf2.fill_rect(Rect::from_ints(0,0,1,1), &grn);
+        buf2.fill_rect(&Rect::from_ints(0,0,1,1), &grn);
         assert_eq!(buf2.data,vec![0b00000_111,0b111_00000,]);
 
         // === copy ARGB to RGB565
@@ -862,7 +876,7 @@ mod tests {
             let start = Instant::now();
             let bounds = Rect::from_ints(500, 500, 1000, 1000);
             for _ in 0..10 {
-                background.fill_rect(bounds, &color);
+                background.fill_rect(&bounds, &color);
             }
             println!("took {}",start.elapsed().as_secs_f32());
             assert_eq!(background.get_pixel_vec_as_layout(&PixelLayout::ARGB(), 0, 0), BLACK.as_layout(&PixelLayout::ARGB()));
@@ -881,8 +895,8 @@ mod tests {
 
         let mut src_img = GFXBuffer::new(500, 500, &PixelLayout::ARGB());
         src_img.clear(&BLACK);
-        src_img.fill_rect(Rect::from_ints(0,0,250,250),&WHITE);
-        src_img.fill_rect(Rect::from_ints(250,250,250,250),&WHITE);
+        src_img.fill_rect(&Rect::from_ints(0,0,250,250),&WHITE);
+        src_img.fill_rect(&Rect::from_ints(250,250,250,250),&WHITE);
         // export_to_png(&src_img, &PathBuf::from("pattern.png"));
         for layout in &types {
             let mut background = GFXBuffer::new( w, h, layout);
@@ -919,14 +933,14 @@ mod tests {
         draw_test_pattern(&mut buf1);
         buf1.to_png(&PathBuf::from("test_pattern_1.png"));
 
-        let mut buf2 = buf1.to_layout(&PixelLayout::ARGB());
+        let buf2 = buf1.to_layout(&PixelLayout::ARGB());
         buf2.to_png(&PathBuf::from("test_pattern_2.png"));
 
-        let mut buf3 = buf1.to_layout(&PixelLayout::RGB565());
+        let buf3 = buf1.to_layout(&PixelLayout::RGB565());
         buf3.to_png(&PathBuf::from("test_pattern_3.png"));
 
 
-        let mut cursor = GFXBuffer::from_png_file("../resources/cursor.png");
+        let cursor = GFXBuffer::from_png_file("../resources/cursor.png");
         cursor.to_png(&PathBuf::from("cursor_1.png"));
 
         cursor.to_layout(&PixelLayout::RGB565()).to_png(&PathBuf::from("cursor_2.png"));

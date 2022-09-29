@@ -153,7 +153,7 @@ impl PlatformWindowManager {
                 APICommand::DrawRectCommand(dr) => {
                     if let Some(win) = self.state.lookup_window_mut(dr.window_id) {
                         // info!("NativeWM: draw rect to window {:?} {:?}", &dr.rect, &dr.color);
-                        win.backbuffer.fill_rect(dr.rect, &dr.color);
+                        win.backbuffer.fill_rect(&dr.rect, &dr.color);
                         // buf.copy_from(win.position.x, win.position.y, &win.backbuffer);
                     }
                 },

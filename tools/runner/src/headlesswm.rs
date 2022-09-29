@@ -105,7 +105,7 @@ impl HeadlessWindowManager {
                                     APICommand::DrawRectCommand(dr) => {
                                         if let Some(mut win) = state.lookup_window_mut(dr.window_id) {
                                             // info!("draw rect to window {:?} {:?}",&dr.rect, &dr.color);
-                                            win.backbuffer.fill_rect(dr.rect, &dr.color);
+                                            win.backbuffer.fill_rect(&dr.rect, &dr.color);
                                             buf.draw_image(&win.position, &win.backbuffer.bounds(), &win.backbuffer);
                                         }
                                     },
