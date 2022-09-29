@@ -18,6 +18,8 @@ use gfx::font::{FontInfo2, load_font_from_json};
 use gfx::graphics::{ARGBColor, BLACK, GFXBuffer, Point, Rect, WHITE};
 use minibuf::{make_plat, Plat};
 
+const magenta:ARGBColor = ARGBColor { a:255, r:255, g:0, b:255 };
+
 pub struct PlatformWindowManager {
     pub connection:CentralConnection,
     pub plat: Plat,
@@ -97,7 +99,6 @@ impl PlatformWindowManager {
 
 
     pub fn main_service_loop(&mut self) -> bool {
-        let start = Instant::now();
             // println!("Native WM service loop");
         self.plat.service_input();
         let cont = self.process_input();
@@ -110,14 +111,11 @@ impl PlatformWindowManager {
 
 
 
+        let start = Instant::now();
         self.draw_screen();
         self.plat.service_loop();
-        self.fps.push(start.elapsed().as_millis());
 
-        if self.fps.len() > 60 {
-            self.fps.remove(0);
-        }
-        self.tick += 1;
+        self.update_fps(&start);
         true
     }
 
@@ -316,9 +314,7 @@ impl PlatformWindowManager {
     fn draw_screen(&mut self) {
         self.plat.clear();
 
-        self.background.clear(&ARGBColor::new_rgb(120,128,128));
-        self.plat.draw_image(&Point::init(0, 0), &self.background.bounds(), &self.background);
-        let MAGENTA:ARGBColor = ARGBColor::new_rgb(255, 0, 255);
+        self.draw_background();
         self.draw_windows();
 
         if let Some(rect) =  self.state.resize_rect {
@@ -334,27 +330,13 @@ impl PlatformWindowManager {
         }
 
         //draw the fps amount
-        let mut total = 0;
-        for dur in &self.fps {
-            total += dur;
-        }
-        let avg_frame_length = (total as f64)/(self.fps.len() as f64);
-        self.debug_buffer.clear(&BLACK);
-        // println!("avg frame: {:.2}",avg_frame_length);
-        self.font.draw_text_at(&mut self.debug_buffer,
-                               &format!("avg frame: {:.2}", avg_frame_length),
-                               3, 20, &WHITE);
-        self.plat.draw_image(&self.debug_pos, &self.debug_buffer.bounds(), &self.debug_buffer);
-
-        //draw the exit button
-        self.plat.fill_rect(self.exit_button_bounds, &MAGENTA);
-
+        self.draw_debug();
+        self.draw_exit_button();
         // draw the cursor
         self.plat.draw_image(&self.cursor,&self.cursor_image.bounds(),&self.cursor_image);
     }
 
     fn draw_windows(&mut self) {
-        let magenta:ARGBColor = ARGBColor::new_rgb(255, 0, 255);
         let wins:Vec<&Window> = self.state.get_windows_in_order();
         for win in wins {
             let tc = if self.state.is_focused_window(win) {
@@ -382,5 +364,44 @@ impl PlatformWindowManager {
             // draw the resize button
             self.plat.fill_rect(win.resize_bounds(), &magenta);
         }
+    }
+    fn calc_frame_len(&self) -> f64 {
+        let mut total = 0;
+        for dur in &self.fps {
+            total += dur;
+        }
+        let avg_frame_length = (total as f64)/(self.fps.len() as f64);
+        return avg_frame_length
+    }
+    fn draw_debug(&mut self) {
+        let avg_frame_length = self.calc_frame_len();
+        self.debug_buffer.clear(&BLACK);
+        println!("avg frame: {:.2}",avg_frame_length);
+        self.font.draw_text_at(&mut self.debug_buffer,
+                               &format!("avg frame: {:.2}", avg_frame_length),
+                               3, 20, &WHITE);
+        self.plat.draw_image(&self.debug_pos, &self.debug_buffer.bounds(), &self.debug_buffer);
+    }
+    fn draw_exit_button(&mut self) {
+        self.plat.fill_rect(self.exit_button_bounds, &magenta);
+    }
+    fn update_fps(&mut self, start: &Instant) {
+        self.fps.push(start.elapsed().as_millis());
+        if self.fps.len() > 60 {
+            self.fps.remove(0);
+        }
+        self.tick += 1;
+        if self.tick % 60 == 0 {
+            println!("avg frame len {}", self.calc_frame_len())
+        }
+
+    }
+    fn draw_background(&mut self) {
+        let gray = &ARGBColor::new_rgb(120,128,128);
+        // currently filling bg with gray is 8ms. need to speed that up
+        //filling gfxbuf with a color and drawing to plat is 32ms. That must be faster too.
+        self.plat.fill_rect(self.plat.get_screen_bounds(),gray);
+        // self.background.clear(gray);
+        // self.plat.draw_image(&Point::init(0, 0), &self.background.bounds(), &self.background);
     }
 }
