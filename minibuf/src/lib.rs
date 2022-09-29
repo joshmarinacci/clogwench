@@ -39,18 +39,21 @@ impl Plat {
     pub fn fill_rect(&mut self, rect: Rect, fill_color: &ARGBColor) {
         let (width, height) = self.window.get_size();
         let color = fill_color.to_argb_u32();
-        // println!("fill rect {}x{} rect = {} len = {} vs {} color={:#x}", width, height, rect,
-        //          width*height, self.buffer.len(),
-        //     color,
-        // );
-        let ry = rect.y as usize;
-        let rx = rect.x as usize;
-        let rh = rect.h as usize;
-        let rw = rect.w as usize;
-        for y in 0..rh {
-            for x in 0..rw {
-                self.buffer[((ry + y) * width) + rx + x] = color
+        let buffer_bounds = Rect::from_ints(0, 0, width as i32, height as i32);
+        let fill_bounds = buffer_bounds.intersect(rect);
+        let mut row = vec![0; fill_bounds.w as usize];
+        row.fill(color);
+        for (j, row_slice) in self.buffer.chunks_exact_mut(width).enumerate() {
+            let j = j as i32;
+            if j < fill_bounds.y {
+                continue;
             }
+            if j >= fill_bounds.y + fill_bounds.h {
+                continue;
+            }
+            let (_, after) = row_slice.split_at_mut((fill_bounds.x) as usize);
+            let (middle, _) = after.split_at_mut((fill_bounds.w) as usize);
+            middle.copy_from_slice(&row);
         }
     }
     pub fn draw_image(&mut self, dst_pos: &Point, src_bounds: &Rect, src_buf: &GFXBuffer) {

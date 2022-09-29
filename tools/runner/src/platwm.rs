@@ -99,7 +99,6 @@ impl PlatformWindowManager {
 
 
     pub fn main_service_loop(&mut self) -> bool {
-            // println!("Native WM service loop");
         self.plat.service_input();
         let cont = self.process_input();
         if !cont {
@@ -288,11 +287,8 @@ impl PlatformWindowManager {
     }
     fn check_window_sizes(&mut self) {
         for win in self.state.window_list_mut() {
-            // println!("buffer bounds {} {}",win.backbuffer.bounds(), win.content_bounds());
             if !win.backbuffer.bounds().size().eq(&win.content_bounds().size()) {
-                println!("not equal");
-                info!("NativeWM: resizing window backbuffer to {}", &win.content_bounds().size());
-                // win.backbuffer.fill_rect_with_image(&dr.rect,&dr.buffer);
+                info!("NativeWM: resizing window back buffer to {}", &win.content_bounds().size());
                 self.plat.unregister_image2(&win.backbuffer);
                 win.backbuffer = GFXBuffer::new(win.content_size.w as u32, win.content_size.h as u32, &win.backbuffer.layout);
                 self.plat.register_image2(&win.backbuffer);
@@ -313,29 +309,17 @@ impl PlatformWindowManager {
     }
     fn draw_screen(&mut self) {
         self.plat.clear();
-
         self.draw_background();
         self.draw_windows();
-
-        if let Some(rect) =  self.state.resize_rect {
-            let size = 2;
-            let left = Rect::from_ints(rect.x,rect.y,size,rect.h);
-            self.plat.fill_rect(left,&WHITE);
-            let right = Rect::from_ints(rect.x+rect.w-size, rect.y, size, rect.h);
-            self.plat.fill_rect(right, &WHITE);
-            let top = Rect::from_ints(rect.x, rect.y, rect.w, size);
-            self.plat.fill_rect(top, &WHITE);
-            let bot = Rect::from_ints(rect.x, rect.y+rect.h-size, rect.w, size);
-            self.plat.fill_rect(bot, &WHITE);
-        }
-
-        //draw the fps amount
+        self.draw_resize_rect();
         self.draw_debug();
         self.draw_exit_button();
-        // draw the cursor
-        self.plat.draw_image(&self.cursor,&self.cursor_image.bounds(),&self.cursor_image);
+        self.draw_cursor();
     }
 
+    fn draw_cursor(&mut self) {
+        self.plat.draw_image(&self.cursor, &self.cursor_image.bounds(), &self.cursor_image);
+    }
     fn draw_windows(&mut self) {
         let wins:Vec<&Window> = self.state.get_windows_in_order();
         for win in wins {
@@ -403,5 +387,18 @@ impl PlatformWindowManager {
         self.plat.fill_rect(self.plat.get_screen_bounds(),gray);
         // self.background.clear(gray);
         // self.plat.draw_image(&Point::init(0, 0), &self.background.bounds(), &self.background);
+    }
+    fn draw_resize_rect(&mut self) {
+        if let Some(rect) =  self.state.resize_rect {
+            let size = 2;
+            let left = Rect::from_ints(rect.x,rect.y,size,rect.h);
+            self.plat.fill_rect(left,&WHITE);
+            let right = Rect::from_ints(rect.x+rect.w-size, rect.y, size, rect.h);
+            self.plat.fill_rect(right, &WHITE);
+            let top = Rect::from_ints(rect.x, rect.y, rect.w, size);
+            self.plat.fill_rect(top, &WHITE);
+            let bot = Rect::from_ints(rect.x, rect.y+rect.h-size, rect.w, size);
+            self.plat.fill_rect(bot, &WHITE);
+        }
     }
 }
