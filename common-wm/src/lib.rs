@@ -8,10 +8,10 @@ use std::thread::JoinHandle;
 use std::time::{SystemTime, UNIX_EPOCH};
 use log::{error, info};
 use uuid::Uuid;
-use common::{APICommand, ARGBColor, CloseWindowResponse, HelloWindowManager, IncomingMessage, Point, Rect, Size};
+use common::{APICommand, CloseWindowResponse, HelloWindowManager, IncomingMessage};
 use serde::{Deserialize, Serialize};
 use common::events::{MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent};
-use common::graphics::{GFXBuffer, PixelLayout};
+use gfx::graphics::{ARGBColor, GFXBuffer, PixelLayout, Point, Rect, Size};
 
 pub struct App {
     pub id:Uuid,

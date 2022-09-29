@@ -10,11 +10,12 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use log::{error, info, LevelFilter, set_logger, warn};
 use serde::Deserialize;
 use uuid::Uuid;
-use common::{APICommand, APP_MANAGER_PORT, AppDisconnected, AudioPauseTrackResponse, AudioPlayTrackResponse, DBAddResponse, DBDeleteResponse, DBQueryClause, DBQueryClauseKind, DBQueryResponse, DBUpdateResponse, DEBUG_PORT, DebugMessage, HelloAppResponse, HelloWindowManagerResponse, IncomingMessage, OpenWindowCommand, OpenWindowResponse, Rect, WINDOW_MANAGER_PORT};
+use common::{APICommand, APP_MANAGER_PORT, AppDisconnected, AudioPauseTrackResponse, AudioPlayTrackResponse, DBAddResponse, DBDeleteResponse, DBQueryClause, DBQueryClauseKind, DBQueryResponse, DBUpdateResponse, DEBUG_PORT, DebugMessage, HelloAppResponse, HelloWindowManagerResponse, IncomingMessage, OpenWindowCommand, OpenWindowResponse, WINDOW_MANAGER_PORT};
 use structopt::StructOpt;
 use cool_logger::CoolLogger;
 use db::{JDB, JObj, JQuery};
 use audio::AudioService;
+use gfx::graphics::Rect;
 use crate::network::{setup_interface, spawn_client_handler};
 use crate::state::CentralState;
 

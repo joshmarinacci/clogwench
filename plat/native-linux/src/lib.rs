@@ -1,6 +1,6 @@
 use std::sync::mpsc::Sender;
 use common::{ARGBColor, IncomingMessage, Rect, BLACK, Point};
-use common::graphics::{GFXBuffer, PixelLayout};
+use gfx::graphics::{GFXBuffer, PixelLayout};
 use std::sync::{Arc, mpsc};
 use std::sync::atomic::{AtomicBool, Ordering};
 

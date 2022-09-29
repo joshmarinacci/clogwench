@@ -15,8 +15,9 @@ use std::time::Duration;
 use log::{info, LevelFilter, set_logger};
 use serde::Deserialize;
 use uuid::Uuid;
-use common::{APICommand, DebugMessage, HelloWindowManager, IncomingMessage, Point, Rect, WINDOW_MANAGER_PORT};
+use common::{APICommand, DebugMessage, HelloWindowManager, IncomingMessage, WINDOW_MANAGER_PORT};
 use cool_logger::CoolLogger;
+use gfx::graphics::Rect;
 use crate::headlesswm::HeadlessWindowManager;
 use crate::platwm::{PlatformWindowManager};
 

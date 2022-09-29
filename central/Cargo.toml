@@ -9,6 +9,7 @@ edition = "2018"
 [dependencies]
 common = { path="../common"}
 cool-logger = { path="../cool-logger"}
+gfx = { path="../gfx"}
 db = { path="../db"}
 audio = { path="../audio"}
 structopt = "0.3.25"

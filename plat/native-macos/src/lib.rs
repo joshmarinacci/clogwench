@@ -11,9 +11,10 @@ use sdl2::{EventPump};
 use sdl2::pixels::{Color, PixelFormatEnum};
 use sdl2::rect::Rect as SDLRect;
 use uuid::Uuid;
-use common::{APICommand, ARGBColor, IncomingMessage, Point, Rect as CommonRect, Rect};
 use common::events::{KeyDownEvent, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent};
-use common::graphics::{GFXBuffer, PixelLayout};
+use common::{APICommand, IncomingMessage};
+use gfx::graphics::{ARGBColor, GFXBuffer, PixelLayout, Point, Rect};
+use gfx::graphics::Rect as CommonRect;
 
 mod sdl_to_common;
 

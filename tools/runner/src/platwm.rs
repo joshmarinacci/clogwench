@@ -10,12 +10,12 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use log::info;
 use serde::Deserialize;
 use uuid::Uuid;
-use common::{APICommand, ARGBColor, BLACK, DebugMessage, IncomingMessage, Point, Rect, WHITE, WINDOW_MANAGER_PORT, WindowResized};
+use common::{APICommand, DebugMessage, IncomingMessage, WINDOW_MANAGER_PORT, WindowResized};
 use common::events::{KeyDownEvent};
-use common::font::{FontInfo2, load_font_from_json};
 use common::generated::KeyCode;
-use common::graphics::{GFXBuffer};
 use common_wm::{AppMouseGesture, CentralConnection, FOCUSED_TITLEBAR_COLOR, FOCUSED_WINDOW_COLOR, InputGesture, NoOpGesture, start_wm_network_connection, TITLE_BAR_HEIGHT, TITLEBAR_COLOR, Window, WINDOW_BUTTON_COLOR, WINDOW_COLOR, WindowCloseButtonGesture, WindowDragGesture, WindowManagerState, WindowResizeGesture};
+use gfx::font::{FontInfo2, load_font_from_json};
+use gfx::graphics::{ARGBColor, BLACK, GFXBuffer, Point, Rect, WHITE};
 use minibuf::{make_plat, Plat};
 
 pub struct PlatformWindowManager {

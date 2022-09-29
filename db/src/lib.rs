@@ -594,6 +594,8 @@ mod tests {
     }
 
     use uuid::Uuid;
+    use gfx::graphics::{GFXBuffer, PixelLayout};
+
     #[test]
     fn persistence_test() {
         // create test_data_file
@@ -772,12 +774,18 @@ mod tests {
     }
 
     #[test]
-    fn load_disk_attachments_test() {
-        assert!(false,"test not implemented yet")
-    }
-
-    #[test]
     fn photo_thumbnail_test() {
-        assert!(false,"test not implemented yet")
+        // - create empty db.
+        let mut db = JDB::make_empty();
+        let buf:GFXBuffer = GFXBuffer::new(10, 10, &PixelLayout::ARGB());
+        // Add photo attachment,
+        // add photo thumbnail attachment (using a gfxbuffer and a new option to generate a scaled copy with nearest neighbor interpolation),
+        // add photo object.
+        // Save to particular file and attachment dir.
+        // Close and reopen db.
+        // load photo.
+        // Verify.
+        // Load thumbnail.
+        // verify.
     }
 }

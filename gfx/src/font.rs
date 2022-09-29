@@ -1,8 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::fs::{read_to_string};
 use std::io::Error;
-use crate::{ARGBColor, Size};
-use crate::graphics::GFXBuffer;
+use crate::graphics::{ARGBColor, GFXBuffer, Size};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct GlyphInfo {

@@ -1,4 +1,4 @@
-use common::{APICommand, DebugMessage, HelloWindowManager, IncomingMessage, Point, WHITE, WINDOW_MANAGER_PORT};
+use common::{APICommand, DebugMessage, HelloWindowManager, IncomingMessage, WINDOW_MANAGER_PORT};
 use common_wm::{WindowManagerState};
 use core::default::Default;
 use core::option::Option;
@@ -16,7 +16,7 @@ use thread::spawn;
 use log::{error, info, warn};
 use serde::Deserialize;
 use common::events::{MouseButton, MouseDownEvent};
-use common::graphics::{GFXBuffer, PixelLayout};
+use gfx::graphics::{GFXBuffer, PixelLayout, Point, WHITE};
 
 pub struct HeadlessWindowManager {
     stream: TcpStream,

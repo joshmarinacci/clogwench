@@ -7,5 +7,6 @@ edition = "2021"
 
 [dependencies]
 minifb = "0.23"
+gfx = { path="../gfx"}
 common = { path="../common"}
 log = "0.4.14"

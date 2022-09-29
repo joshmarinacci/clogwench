@@ -8,13 +8,13 @@ use std::rc::Rc;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use minifb::{Key, MouseButton, MouseMode, Scale, Window, WindowOptions};
-use common::{ARGBColor, IncomingMessage, Rect, BLACK, Point, APICommand};
 use std::sync::mpsc::Sender;
 use std::time::{SystemTime, UNIX_EPOCH};
 use log::info;
 use common::events::{KeyDownEvent, MouseDownEvent, MouseMoveEvent, MouseUpEvent};
 use common::generated::KeyCode;
-use common::graphics::{GFXBuffer, PixelLayout};
+use common::{APICommand, IncomingMessage};
+use gfx::graphics::{ARGBColor, GFXBuffer, PixelLayout, Point, Rect};
 
 // const WIDTH: usize = 640;
 // const HEIGHT: usize = 360;

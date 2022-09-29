@@ -1,7 +1,7 @@
 use framebuffer::Framebuffer;
 use log::info;
 use common::{ARGBColor, BLACK, Rect, Point};
-use common::graphics::{GFXBuffer, PixelLayout};
+use gfx::graphics::{GFXBuffer, PixelLayout};
 
 pub struct Surf {
     fb:Framebuffer,
