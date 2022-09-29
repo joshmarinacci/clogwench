@@ -700,9 +700,9 @@ mod tests {
         let png_blob: Vec<u8> = vec![0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
         // create empty db with particular attachment dir,
         let append_file_path = "./test_data_append.json";
-        delete_if_exists(&append_file_path);
+        delete_file_if_exists(&append_file_path);
         let attachments_dir = "./atts";
-        delete_if_exists(attachments_dir);
+        delete_file_if_exists(attachments_dir);
         {
             let mut jdb = JDB::load_from_file_with_append(
                 &PathBuf::from("./test_data.json"),
@@ -745,13 +745,13 @@ mod tests {
             // confirm it has the same data.
             assert_eq!(png_blob,blob);
             // Delete db file.
-            delete_if_exists(&append_file_path);
+            delete_file_if_exists(&append_file_path);
             // Delete attachment dir.
-            delete_dir(attachments_dir);
+            delete_dir_if_exists(attachments_dir);
         }
     }
 
-    fn delete_dir(dir: &str) {
+    fn delete_dir_if_exists(dir: &str) {
         if let Err(e) = fs::remove_dir_all(dir) {
             println!("error removing directory {:?}",dir);
         } else {
@@ -759,7 +759,7 @@ mod tests {
         }
     }
 
-    fn delete_if_exists(path: &str) {
+    fn delete_file_if_exists(path: &str) {
         if let Err(e) = fs::remove_file(path) {
             println!("error removing a file {:?}",e);
         } else {
@@ -771,13 +771,23 @@ mod tests {
     fn photo_thumbnail_test() {
         // - create empty db.
         // set the base path
-        let src_path = PathBuf::from("empty.json");
+        let src_path = "empty.json";
+        delete_file_if_exists(src_path);
         if let Err(e) = fs::write(&src_path,"{ \"data\":[] }") {
             panic!("couldn't touch the file {:?}",src_path);
         }
-        let append_path = PathBuf::from("photos.json");
-        let atts_dir = PathBuf::from("atts_dir");
-        let mut db = JDB::load_from_file_with_append(&src_path, &append_path, &atts_dir);
+
+
+        let append_path = "photos.json";
+        delete_file_if_exists(append_path);
+
+        let atts_dir = "atts_dir";
+        delete_dir_if_exists(atts_dir);
+
+        let mut db = JDB::load_from_file_with_append(
+            &PathBuf::from(src_path),
+            &PathBuf::from(append_path),
+            &PathBuf::from(atts_dir));
         // make a fake photo
         let mut image:GFXBuffer = GFXBuffer::new(16, 16, &PixelLayout::ARGB());
         let green = ARGBColor::new_argb(255,0,255,255);
@@ -806,7 +816,7 @@ mod tests {
         // Close and reopen db.
         db.close();
 
-        let mut db = JDB::load_from_file_with_append(&src_path, &append_path, &atts_dir);
+        let mut db = JDB::load_from_file_with_append(&PathBuf::from(src_path), &PathBuf::from(append_path), &PathBuf::from(atts_dir));
         // load photo.
         if let Some(photo) = db.find_by_id(&photo_id) {
             // Verify photo
@@ -822,5 +832,11 @@ mod tests {
         } else {
             panic!("could not find the photo after saving");
         }
+
+        delete_file_if_exists(src_path);
+        delete_file_if_exists(append_path);
+        delete_dir_if_exists(atts_dir);
+        delete_file_if_exists("image.png");
+        delete_file_if_exists("thumbnail.png");
     }
 }
