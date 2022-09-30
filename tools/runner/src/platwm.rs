@@ -360,7 +360,6 @@ impl PlatformWindowManager {
     fn draw_debug(&mut self) {
         let avg_frame_length = self.calc_frame_len();
         self.debug_buffer.clear(&BLACK);
-        println!("avg frame: {:.2}",avg_frame_length);
         self.font.draw_text_at(&mut self.debug_buffer,
                                &format!("avg frame: {:.2}", avg_frame_length),
                                3, 20, &WHITE);
