@@ -265,6 +265,20 @@ fn minifb_to_KeyCode(id: &Key) -> KeyCode {
         Key::Key8 => KeyCode::DIGIT_8,
         Key::Key9 => KeyCode::DIGIT_9,
 
+        Key::Right => KeyCode::ARROW_RIGHT,
+        Key::Left  => KeyCode::ARROW_LEFT,
+        Key::Down  => KeyCode::ARROW_DOWN,
+        Key::Up    => KeyCode::ARROW_UP,
+
+        Key::Delete => KeyCode::DELETE,
+        Key::Backspace => KeyCode::BACKSPACE,
+
+        Key::Apostrophe => KeyCode::QUOTE,
+        Key::Backquote => KeyCode::BACKQUOTE,
+        Key::Backslash => KeyCode::BACKSLASH,
+        Key::Comma => KeyCode::COMMA,
+        Key::Equal => KeyCode::EQUALS,
+
         _ => KeyCode::UNKNOWN,
     }
 }
