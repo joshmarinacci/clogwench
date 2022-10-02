@@ -11,7 +11,8 @@ use minifb::{Key, MouseButton, MouseMode, Scale, Window, WindowOptions};
 use std::sync::mpsc::Sender;
 use std::time::{SystemTime, UNIX_EPOCH};
 use log::info;
-use common::events::{KeyDownEvent, MouseDownEvent, MouseMoveEvent, MouseUpEvent};
+use minifb::Key::LeftShift;
+use common::events::{KeyDownEvent, KeyUpEvent, ModifierState, MouseDownEvent, MouseMoveEvent, MouseUpEvent};
 use common::generated::KeyCode;
 use common::{APICommand, IncomingMessage};
 use gfx::graphics::{ARGBColor, GFXBuffer, PixelLayout, Point, Rect};
@@ -28,6 +29,7 @@ pub struct Plat {
     mouse_down:bool,
     pub buffer: Vec<u32>,
     pub keys_data2: KeyVec,
+    pub mod_state: ModifierState,
 }
 
 impl Plat {
@@ -151,27 +153,45 @@ impl Plat {
             }
         }
 
-        let mut keys = self.keys_data2.borrow_mut();
-        for (t,s) in keys.iter() {
-            // println!("Code point: {:?} state {}", t,s);
-            let keycode = minifb_to_KeyCode(t);
-            let cmd = IncomingMessage {
-                trace: false,
-                timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
-                source: Default::default(),
-                command: APICommand::KeyDown(KeyDownEvent {
-                    app_id: Default::default(),
-                    window_id: Default::default(),
-                    original_timestamp: 0,
-                    code: keycode,
-                    key: "".to_string()
-                })
-            };
-            if let Err(e) = self.sender.send(cmd) {
-                println!("error sending key down out {:?}",e);
+        for (key, down) in self.keys_data2.borrow_mut().iter() {
+            println!("Code point: {:?} state {}", key, down);
+            if is_modifier_key(key) {
+                match key {
+                    LeftShift => self.mod_state.shift = *down,
+                    // RightShift => self.mod_state.shift = *down,
+                    _ => {}
+                }
+                println!("state {:?}",self.mod_state);
+                continue;
+            } else {
+                let keycode = minifb_to_KeyCode(key);
+                let command:APICommand = if *down {
+                    APICommand::KeyDown(KeyDownEvent {
+                        app_id: Default::default(),
+                        window_id: Default::default(),
+                        key: keycode,
+                        mods: self.mod_state.clone(),
+                    })
+                } else {
+                    APICommand::KeyUp(KeyUpEvent {
+                        app_id: Default::default(),
+                        window_id: Default::default(),
+                        key: keycode,
+                        mods: self.mod_state.clone(),
+                    })
+                };
+                let cmd = IncomingMessage {
+                    trace:false,
+                    timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
+                    source: Default::default(),
+                    command,
+                };
+                if let Err(e) = self.sender.send(cmd) {
+                    println!("error sending key down out {:?}",e);
+                }
             }
         }
-        keys.clear();
+        self.keys_data2.borrow_mut().clear();
     }
     pub fn get_preferred_pixel_layout(&self) -> &PixelLayout {
         return &self.layout
@@ -184,12 +204,67 @@ impl Plat {
     pub fn get_screen_bounds(&self) -> Rect {
         self.screen_size
     }
+    fn update_modifier_state(&mut self, p0: &Key, p1: &bool) {
+        self.mod_state.shift = true
+    }
+}
+
+fn is_modifier_key(key: &Key) -> bool {
+    match key {
+        Key::LeftShift => true,
+        Key::RightShift => true,
+        Key::LeftCtrl => true,
+        Key::RightCtrl => true,
+        Key::LeftAlt => true,
+        Key::RightAlt => true,
+        Key::LeftSuper => true,
+        Key::RightSuper => true,
+        _ => false
+    }
 }
 
 fn minifb_to_KeyCode(id: &Key) -> KeyCode {
     match id {
         Key::A => KeyCode::LETTER_A,
         Key::B => KeyCode::LETTER_B,
+        Key::C => KeyCode::LETTER_C,
+        Key::D => KeyCode::LETTER_D,
+        Key::E => KeyCode::LETTER_E,
+        Key::F => KeyCode::LETTER_F,
+        Key::G => KeyCode::LETTER_G,
+
+        Key::H => KeyCode::LETTER_H,
+        Key::I => KeyCode::LETTER_I,
+        Key::J => KeyCode::LETTER_J,
+        Key::K => KeyCode::LETTER_K,
+        Key::L => KeyCode::LETTER_L,
+        Key::M => KeyCode::LETTER_M,
+        Key::N => KeyCode::LETTER_N,
+        Key::O => KeyCode::LETTER_O,
+        Key::P => KeyCode::LETTER_P,
+
+        Key::Q => KeyCode::LETTER_Q,
+        Key::R => KeyCode::LETTER_R,
+        Key::S => KeyCode::LETTER_S,
+        Key::T => KeyCode::LETTER_T,
+        Key::U => KeyCode::LETTER_U,
+        Key::V => KeyCode::LETTER_V,
+        Key::W => KeyCode::LETTER_W,
+        Key::X => KeyCode::LETTER_X,
+        Key::Y => KeyCode::LETTER_Y,
+        Key::Z => KeyCode::LETTER_Z,
+
+        Key::Key0 => KeyCode::DIGIT_0,
+        Key::Key1 => KeyCode::DIGIT_1,
+        Key::Key2 => KeyCode::DIGIT_2,
+        Key::Key3 => KeyCode::DIGIT_3,
+        Key::Key4 => KeyCode::DIGIT_4,
+        Key::Key5 => KeyCode::DIGIT_5,
+        Key::Key6 => KeyCode::DIGIT_6,
+        Key::Key7 => KeyCode::DIGIT_7,
+        Key::Key8 => KeyCode::DIGIT_8,
+        Key::Key9 => KeyCode::DIGIT_9,
+
         _ => KeyCode::UNKNOWN,
     }
 }
@@ -248,5 +323,6 @@ pub fn make_plat<'a>(stop:Arc<AtomicBool>, sender: Sender<IncomingMessage>, widt
         layout:PixelLayout::ARGB(),
         mouse_down:false,
         keys_data2,
+        mod_state:ModifierState::empty(),
     });
 }

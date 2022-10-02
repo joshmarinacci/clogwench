@@ -11,7 +11,7 @@ use sdl2::{EventPump};
 use sdl2::pixels::{Color, PixelFormatEnum};
 use sdl2::rect::Rect as SDLRect;
 use uuid::Uuid;
-use common::events::{KeyDownEvent, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent};
+use common::events::{KeyDownEvent, ModifierState, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent};
 use common::{APICommand, IncomingMessage};
 use gfx::graphics::{ARGBColor, GFXBuffer, PixelLayout, Point, Rect};
 use gfx::graphics::Rect as CommonRect;
@@ -90,9 +90,8 @@ impl Plat {
                             command: APICommand::KeyDown(KeyDownEvent{
                                 app_id: Default::default(),
                                 window_id: Default::default(),
-                                original_timestamp: 0,
-                                code: sdl_to_common::sdl_to_common(kk,keymod),
-                                key: sdl_to_common::sdl_to_common_letter(kk,keymod),
+                                key: sdl_to_common::sdl_to_common(kk, keymod),
+                                mods: ModifierState::empty(),
                             })
                         };
                         if let Err(e) = self.sender.send(cmd) {

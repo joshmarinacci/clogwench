@@ -153,23 +153,24 @@ pub fn setup_evdev_watcher(mut device: Device, stop: Arc<AtomicBool>, tx: Sender
                                     APICommand::KeyDown(KeyDownEvent {
                                         app_id: Default::default(),
                                         window_id: Default::default(),
-                                        original_timestamp: 0,
-                                        code: keycode,
-                                        key: "".to_string()
+                                        key: keycode,
+                                        mods: ModifierState::empty(),
                                     })
                                 } else {
                                     APICommand::KeyUp(KeyUpEvent {
                                         app_id: Default::default(),
                                         window_id: Default::default(),
-                                        original_timestamp: 0,
                                         key: keycode,
+                                        mods: ModifierState::empty(),
                                     })
                                 }
                             }
                         };
                         let cmd = IncomingMessage {
                             source: Default::default(),
-                            command: appcmd
+                            command: appcmd,
+                            trace: false,
+                            timestamp_usec: 0
                         };
                         tx.send(cmd).unwrap()
                     },

@@ -11,7 +11,7 @@ use log::info;
 use serde::Deserialize;
 use uuid::Uuid;
 use common::{APICommand, DebugMessage, IncomingMessage, WINDOW_MANAGER_PORT, WindowResized};
-use common::events::{KeyDownEvent};
+use common::events::{KeyDownEvent, ModifierState};
 use common::generated::KeyCode;
 use common_wm::{AppMouseGesture, CentralConnection, FOCUSED_TITLEBAR_COLOR, FOCUSED_WINDOW_COLOR, InputGesture, NoOpGesture, start_wm_network_connection, TITLE_BAR_HEIGHT, TITLEBAR_COLOR, Window, WINDOW_BUTTON_COLOR, WINDOW_COLOR, WindowCloseButtonGesture, WindowDragGesture, WindowManagerState, WindowResizeGesture};
 use gfx::font::{FontInfo2, load_font_from_json};
@@ -227,7 +227,7 @@ impl PlatformWindowManager {
                     }
                 }
                 APICommand::KeyDown(evt) => {
-                    match evt.code {
+                    match evt.key {
                         KeyCode::ESCAPE => {
                             self.connection.tx_out.send(IncomingMessage {
                                 source:Default::default(),
@@ -240,11 +240,12 @@ impl PlatformWindowManager {
                             return false;
                         }
                         _ => {
-                            // info!("got a key down event {:?}",evt);
+                            info!("got a key down event {:?}. forwarding",evt);
                             if let Some(id) = self.state.get_focused_window() {
                                 if let Some(win) = self.state.lookup_window(*id) {
                                     let wid = win.id.clone();
                                     let aid = win.owner.clone();
+                                    println!("got wid {} and aid {}",wid,aid);
                                     self.connection.tx_out.send(IncomingMessage {
                                         source:Default::default(),
                                         trace: false,
@@ -253,12 +254,15 @@ impl PlatformWindowManager {
                                         command: APICommand::KeyDown(KeyDownEvent {
                                             app_id: aid,
                                             window_id: wid,
-                                            original_timestamp: evt.original_timestamp,
                                             key: evt.key,
-                                            code: evt.code,
+                                            mods:evt.mods,
                                         })
                                     }).unwrap();
+                                } else {
+                                    info!("window not found. dropping keyboard event");
                                 }
+                            } else {
+                                info!("no focused window. dropping keyboard event");
                             }
                         }
                     }

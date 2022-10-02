@@ -4,20 +4,38 @@ use uuid::Uuid;
 use crate::generated::KeyCode;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ModifierState {
+    pub shift:bool,
+    pub ctrl:bool,
+    pub alt:bool,
+    pub meta:bool,
+}
+
+impl ModifierState {
+    pub fn empty() -> ModifierState {
+        ModifierState {
+            shift:false,
+            ctrl:false,
+            alt:false,
+            meta:false,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct KeyDownEvent {
     pub app_id:Uuid,
     pub window_id:Uuid,
-    pub original_timestamp:i64,
-    pub code:KeyCode,
-    pub key:String,
+    pub key:KeyCode,
+    pub mods:ModifierState,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct KeyUpEvent {
     pub app_id:Uuid,
     pub window_id:Uuid,
-    pub original_timestamp:i64,
-    pub key:KeyCode
+    pub key:KeyCode,
+    pub mods:ModifierState,
 }
 
 
