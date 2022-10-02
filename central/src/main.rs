@@ -480,6 +480,9 @@ fn start_router(stop: Arc<AtomicBool>, rx: Receiver<IncomingMessage>, state: Arc
                 APICommand::KeyDown(e) => {
                     state.lock().unwrap().send_to_app(e.app_id, APICommand::KeyDown(e))
                 }
+                APICommand::KeyUp(e) => {
+                    state.lock().unwrap().send_to_app(e.app_id, APICommand::KeyUp(e))
+                }
                 APICommand::MouseDown(e) => {
                     state.lock().unwrap().send_to_app2(e.app_id, APICommand::MouseDown(e), &msg2)
                 }
