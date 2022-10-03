@@ -11,7 +11,6 @@ use minifb::{Key, MouseButton, MouseMode, Scale, Window, WindowOptions};
 use std::sync::mpsc::Sender;
 use std::time::{SystemTime, UNIX_EPOCH};
 use log::info;
-use minifb::Key::LeftShift;
 use common::events::{KeyDownEvent, KeyUpEvent, ModifierState, MouseDownEvent, MouseMoveEvent, MouseUpEvent};
 use common::generated::KeyCode;
 use common::{APICommand, IncomingMessage};
@@ -152,43 +151,34 @@ impl Plat {
                 }
             }
         }
-
         for (key, down) in self.keys_data2.borrow_mut().iter() {
-            println!("Code point: {:?} state {}", key, down);
-            if is_modifier_key(key) {
-                match key {
-                    LeftShift => self.mod_state.shift = *down,
-                    // RightShift => self.mod_state.shift = *down,
-                    _ => {}
-                }
-                println!("state {:?}",self.mod_state);
-                continue;
+            let keycode = minifb_to_KeyCode(key);
+            let mut mod_state:ModifierState = ModifierState::empty();
+            mod_state.shift = self.window.is_key_down(Key::LeftShift) || self.window.is_key_down(Key::RightShift);
+            mod_state.ctrl  = self.window.is_key_down(Key::LeftCtrl)  || self.window.is_key_down(Key::RightCtrl);
+            let command:APICommand = if *down {
+                APICommand::KeyDown(KeyDownEvent {
+                    app_id: Default::default(),
+                    window_id: Default::default(),
+                    key: keycode,
+                    mods: mod_state,
+                })
             } else {
-                let keycode = minifb_to_KeyCode(key);
-                let command:APICommand = if *down {
-                    APICommand::KeyDown(KeyDownEvent {
-                        app_id: Default::default(),
-                        window_id: Default::default(),
-                        key: keycode,
-                        mods: self.mod_state.clone(),
-                    })
-                } else {
-                    APICommand::KeyUp(KeyUpEvent {
-                        app_id: Default::default(),
-                        window_id: Default::default(),
-                        key: keycode,
-                        mods: self.mod_state.clone(),
-                    })
-                };
-                let cmd = IncomingMessage {
-                    trace:false,
-                    timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
-                    source: Default::default(),
-                    command,
-                };
-                if let Err(e) = self.sender.send(cmd) {
-                    println!("error sending key down out {:?}",e);
-                }
+                APICommand::KeyUp(KeyUpEvent {
+                    app_id: Default::default(),
+                    window_id: Default::default(),
+                    key: keycode,
+                    mods: mod_state,
+                })
+            };
+            let cmd = IncomingMessage {
+                trace:false,
+                timestamp_usec: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros(),
+                source: Default::default(),
+                command,
+            };
+            if let Err(e) = self.sender.send(cmd) {
+                println!("error sending key down out {:?}",e);
             }
         }
         self.keys_data2.borrow_mut().clear();
@@ -300,7 +290,11 @@ impl minifb::InputCallback for Input {
     }
     fn set_key_state(&mut self, key: Key, state: bool) {
         // println!("key {:?} state={:?}", key, state);
-        self.keys.borrow_mut().push((key,state));
+        if is_modifier_key(&key) {
+            // println!("skipping mods")
+        } else {
+            self.keys.borrow_mut().push((key, state));
+        }
     }
 }
 pub fn make_plat<'a>(stop:Arc<AtomicBool>, sender: Sender<IncomingMessage>, width:u32, height:u32, scale:u32) -> Result<Plat, String> {
