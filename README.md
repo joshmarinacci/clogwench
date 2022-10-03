@@ -2,21 +2,23 @@
 
 # new instructions June 2022
 
-pre-install homebrew and rust
-Install pkg-config and sdl2
 
 ### macos
+
+First pre-install homebrew and rust, then install `pkg-config` and `sdl2`
+
 ```shell
 brew install pkg-config
 brew install sdl2
 ```
 
+now build everything and run it
 ```shell
 cargo build
 cargo run --bin runner -- --wmtype native --datafile=tools/runner/data.json
 ```
 
-An SDL window will open with a mouse cursor and a pink button to quit.
+An SDL window will open with a mouse cursor and a pink-magenta button to quit.
 
 ### linux
 
@@ -29,6 +31,7 @@ An SDL window will open with a mouse cursor and a pink button to quit.
 Now you need the following native deps:
 * `sudo apt install libasound2-dev`
 
+Now build IdealOS and run it.
 ```shell
 cargo build
 cargo run --bin runner -- --wmtype native --datafile=tools/runner/data.json
@@ -36,9 +39,11 @@ cargo run --bin runner -- --wmtype native --datafile=tools/runner/data.json
 
 
 # Apps
-This repo is just the core and window manager. The apps are in the [clogwench-app](https://github.com/joshmarinacci/clogwench-apps) repo. To use apps, clone
-that repo, build them with the instructions, then add the apps.json file to the datapath when
-you start the os. ex: if  you checked out `clogwench-apps` next to `clogwench` then you
+
+This `clogwench` repo is just the core and window manager. The apps are in 
+the [clogwench-app](https://github.com/joshmarinacci/clogwench-apps) repo. To use the apps, clone
+that repo, build them with the instructions, then add the `apps.json` file to the `datapath` when
+you start IdealOS. For example: if  you checked out `clogwench-apps` next to `clogwench` then you
 can run:
 
 ```shell
@@ -51,7 +56,13 @@ You may also want the test data
 git clone https://github.com/joshmarinacci/querylang-testdata.git
 ```
 
-This will let you have cool sample music, images, and text documents to work with.
+This will let you have cool sample music, images, and text documents to work with. To run the test data
+as well as the apps, run:
+
+```shell
+cargo run --bin runner -- --wmtype native --datafile=tools/runner/data.json --datafile=../clogwench-apps/apps.json --datafile=../querylang-testdata/data.json
+```
+
 
 
 
