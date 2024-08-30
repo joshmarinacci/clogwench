@@ -65,6 +65,26 @@ cargo run --bin runner -- --wmtype native --datafile=tools/runner/data.json --da
 
 
 
+## details
+
+### Running components separately.
+
+In one terminal run the central server
+
+```shell
+cargo run --bin central -- --database = db/test_data.json
+```
+
+In another terminal go to the `clogwench-apps` repo and run an app:
+
+```shell
+cd ../clogwench-apps/dock
+npm install
+npm run dev
+```
+
+And the dock will launch. It will check the database for the list of
+available apps and create a button for each one.
 
 # arch
 
