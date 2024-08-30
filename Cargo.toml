@@ -18,3 +18,10 @@ default-members = [
     "plat",
     "tools/runner",
 ]
+
+
+[workspace.metadata.scripts]
+central-only = "cargo run --bin central -- --database=db/test_data.json"
+dev = "cargo run --bin runner -- --wmtype native"
+dock = "npm --prefix ../clogwench-apps/dock run dev"
+

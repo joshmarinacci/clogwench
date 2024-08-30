@@ -15,10 +15,14 @@ brew install sdl2
 now build everything and run it
 ```shell
 cargo build
-cargo run --bin runner -- --wmtype native --datafile=tools/runner/data.json
+cargo run-script dev
 ```
 
 An SDL window will open with a mouse cursor and a pink-magenta button to quit.
+
+In another terminal window start the dock with `cargo run-script dock`
+
+
 
 ### linux
 
