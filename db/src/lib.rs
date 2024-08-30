@@ -138,7 +138,7 @@ impl JDB {
                     song.data.insert(s.clone(), v.as_str().unwrap().to_string());
                 }
             }
-            println!("adding a db object {:?}",song);
+            // println!("adding a db object {:?}",song);
             // db.data.push(song);
             songs.push(song);
         }

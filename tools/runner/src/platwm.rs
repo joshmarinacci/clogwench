@@ -16,8 +16,8 @@ use common::generated::KeyCode;
 use common_wm::{AppMouseGesture, CentralConnection, FOCUSED_TITLEBAR_COLOR, FOCUSED_WINDOW_COLOR, InputGesture, NoOpGesture, start_wm_network_connection, TITLE_BAR_HEIGHT, TITLEBAR_COLOR, Window, WINDOW_BUTTON_COLOR, WINDOW_COLOR, WindowCloseButtonGesture, WindowDragGesture, WindowManagerState, WindowResizeGesture};
 use gfx::font::{FontInfo2, load_font_from_json};
 use gfx::graphics::{ARGBColor, BLACK, GFXBuffer, Point, Rect, WHITE};
-use minibuf::{make_plat, Plat};
-
+// use minibuf::{make_plat, Plat};
+use plat::{make_plat, Plat};
 const magenta:ARGBColor = ARGBColor { a:255, r:255, g:0, b:255 };
 
 pub struct PlatformWindowManager {
