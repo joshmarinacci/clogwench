@@ -4,7 +4,7 @@ resolver = "2"
 members = [
     "central",
     "common",
-    "db",
+    "db", "experiments/zmqclient", "experiments/zmqwindow",
     "gfx",
     "plat",
     "tools/runner",

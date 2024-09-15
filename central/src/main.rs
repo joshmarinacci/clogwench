@@ -14,7 +14,7 @@ use common::{APICommand, APP_MANAGER_PORT, AppDisconnected, AudioPauseTrackRespo
 use structopt::StructOpt;
 use cool_logger::CoolLogger;
 use db::{JDB, JObj, JQuery};
-use audio::AudioService;
+// use audio::AudioService;
 use gfx::graphics::Rect;
 use crate::network::{setup_interface, spawn_client_handler};
 use crate::state::CentralState;
@@ -48,7 +48,7 @@ impl CentralState {
             apps: vec![],
             debuggers: vec![],
             db:JDB::load_from_file(file),
-            audio_service: AudioService::make(),
+            // audio_service: AudioService::make(),
         }
     }
     fn add_app_from_stream(&mut self, stream:TcpStream, sender: Sender<IncomingMessage>, stop: Arc<AtomicBool>) {
@@ -252,15 +252,15 @@ impl CentralState {
     fn send_to_audio(&mut self, cmd: APICommand) {
         match cmd {
             APICommand::AudioPlayTrackRequest(req) => {
-                if let Some(processor) = self.audio_service.load_track(&req.track, &self.db.base_path) {
-                    processor.play();
-                    let msg = AudioPlayTrackResponse {
-                        app_id: req.app_id,
-                        success: true,
-                        track: req.track,
-                    };
-                    self.send_to_app(msg.app_id, APICommand::AudioPlayTrackResponse(msg))
-                }
+                // if let Some(processor) = self.audio_service.load_track(&req.track, &self.db.base_path) {
+                //     processor.play();
+                //     let msg = AudioPlayTrackResponse {
+                //         app_id: req.app_id,
+                //         success: true,
+                //         track: req.track,
+                //     };
+                //     self.send_to_app(msg.app_id, APICommand::AudioPlayTrackResponse(msg))
+                // }
             }
             APICommand::AudioPauseTrackRequest(req) => {
                 let mut msg = AudioPauseTrackResponse {
@@ -268,12 +268,12 @@ impl CentralState {
                     success:true,
                     track: req.track,
                 };
-                if let Some(processor) = self.audio_service.current_processor() {
-                    processor.pause();
-                    msg.success = true
-                } else {
-                    msg.success = false
-                }
+                // if let Some(processor) = self.audio_service.current_processor() {
+                //     processor.pause();
+                //     msg.success = true
+                // } else {
+                //     msg.success = false
+                // }
                 self.send_to_app(msg.app_id, APICommand::AudioPauseTrackResponse(msg))
             }
             _ => {

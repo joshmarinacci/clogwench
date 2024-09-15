@@ -1,0 +1,9 @@
+[package]
+name = "zmqclient"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = "1.40.0"
+async-std = "1.13.0"
+zmq = "0.10.0"

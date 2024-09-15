@@ -8,7 +8,7 @@
 //! Platform-dependant Audio Outputs
 
 use std::result;
-
+// use std::time::Duration;
 use symphonia::core::audio::{AudioBufferRef, SignalSpec};
 use symphonia::core::units::Duration;
 
@@ -86,6 +86,9 @@ mod cpal {
                 cpal::SampleFormat::U16 => {
                     CpalAudioOutputImpl::<u16>::try_open(spec, duration, &device)
                 }
+                _ => {
+                    return Err(AudioOutputError::OpenStreamError);
+                }
             }
         }
     }
@@ -126,6 +129,7 @@ mod cpal {
                     data[written..].iter_mut().for_each(|s| *s = T::MID);
                 },
                 move |err| error!("audio output error: {:?}", err),
+                Some(std::time::Duration::new(5,0))
             );
 
             if let Err(err) = stream_result {

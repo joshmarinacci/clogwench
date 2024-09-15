@@ -379,7 +379,7 @@ impl PlatformWindowManager {
         }
         self.tick += 1;
         if self.tick % 60 == 0 {
-            println!("avg frame len {}", self.calc_frame_len())
+            // println!("avg frame len {}", self.calc_frame_len())
         }
 
     }
