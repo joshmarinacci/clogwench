@@ -24,4 +24,5 @@ default-members = [
 central-only = "cargo run --bin central -- --database=db/test_data.json"
 dev = "cargo run --bin runner -- --wmtype native"
 dock = "npm --prefix ../clogwench-apps/dock run dev"
+single-window-receiver = "cargo run --bin sender"
 

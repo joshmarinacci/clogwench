@@ -87,8 +87,8 @@ fn main() {
             }
         }
         canvas.copy(&tex,None,dst).unwrap();
-        canvas.set_draw_color(Color::RED);
-        canvas.fill_rect(SDLRect::new(0,0,100,100));
+        // canvas.set_draw_color(Color::RED);
+        // canvas.fill_rect(SDLRect::new(0,0,100,100));
         canvas.present();
         ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
     }
