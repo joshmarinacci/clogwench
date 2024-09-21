@@ -12,7 +12,7 @@ use common::events::ModifierState;
 use sdl_util::sdl_to_common;
 
 fn main() {
-    println!("starting window side");
+    // println!("starting window side");
 
     let ctx = zmq::Context::new();
     let socket = ctx.socket(zmq::DEALER).unwrap();
@@ -60,13 +60,26 @@ fn main() {
                     println!("got keycode {:?}", code);
                     let kc = sdl_to_common(code,keymod);
                     println!("turned into clogwench keycode {:?}", kc);
+                    println!("mod is {:?}", keymod);
                     let kc_string = serde_json::to_string(&kc).unwrap();
-                    let mods:ModifierState = ModifierState {
+                    let mut mods:ModifierState = ModifierState {
                         shift: false,
                         ctrl: false,
                         alt: false,
                         meta: false,
                     };
+                    if (keymod == Mod::LSHIFTMOD || keymod == Mod::RSHIFTMOD) {
+                        mods.shift = true
+                    }
+                    if (keymod == Mod::LCTRLMOD || keymod == Mod::RCTRLMOD) {
+                        mods.ctrl = true
+                    }
+                    if (keymod == Mod::LALTMOD || keymod == Mod::RALTMOD) {
+                        mods.alt = true
+                    }
+                    if (keymod == Mod::LGUIMOD || keymod == Mod::RGUIMOD) {
+                        mods.meta = true
+                    }
                     let mods_string = serde_json::to_string(&mods).unwrap();
                     socket.send_multipart(&["key-down", kc_string.as_str(), mods_string.as_str()], 0).unwrap()
                     // println!("quitting");
@@ -83,13 +96,13 @@ fn main() {
                 Event::Window { timestamp, window_id, win_event } => {
                     match win_event {
                         WindowEvent::Resized(w,h) => {
-                            println!("resized to {}x{}",w,h);
+                            // println!("resized to {}x{}",w,h);
                             let size = Size::init(w,h);
                             let size_string = serde_json::to_string(&size).unwrap();
                             socket.send_multipart(&["window-resized", size_string.as_str()],0).unwrap()
                         },
                         WindowEvent::Close => {
-                            println!("window closed");
+                            // println!("window closed");
                             socket.send_multipart(&["window-closed"],0).unwrap()
                         }
                         _ => {}
@@ -100,37 +113,35 @@ fn main() {
         }
         // println!("look for messages");
         if socket.poll(zmq::POLLIN, 10).expect("client failed polling") > 0 {
-            println!("receiving data");
+            // println!("receiving data");
             // let msg = socket.recv_multipart(0).expect("failed");
             socket.recv(&mut msg,0).unwrap();
-            println!("got {}", msg.as_str().unwrap());
+            // println!("got {}", msg.as_str().unwrap());
             if(msg.as_str().unwrap().eq("open-window")) {
                 socket.recv(&mut msg,0).unwrap();
-                println!("open window size is {}", msg.as_str().unwrap());
+                // println!("open window size is {}", msg.as_str().unwrap());
                 if let Ok(size) = serde_json::from_str::<Size>(msg.as_str().unwrap()) {
-                    println!("the size is {}",size);
+                    // println!("the size is {}",size);
                     let rect = sdl2::rect::Rect::new(0, 0, size.w as u32, size.h as u32);
                     canvas.set_viewport(rect)
                 }
             }
             if(msg.as_str().unwrap().eq("repaint")) {
-                println!("Received a repaint message");
+                // println!("Received a repaint message");
                 socket.recv(&mut msg,0).unwrap();
-                println!("size should be {}", msg.as_str().unwrap());
+                // println!("size should be {}", msg.as_str().unwrap());
                 if let Ok(size) = serde_json::from_str::<Size>(msg.as_str().unwrap()) {
                     let rect = sdl2::rect::Rect::new(0, 0, size.w as u32, size.h as u32);
                     // canvas.set_viewport(rect)
-                    println!("the repaint size is {:?}",rect);
-                    println!("current texture size is {:?}", texture_bounds );
+                    // println!("the repaint size is {:?}",rect);
+                    // println!("current texture size is {:?}", texture_bounds );
                     if(texture_bounds.w != rect.w ) {
-                        println!("different size, must recreate");
+                        // println!("different size, must recreate");
                         texture_bounds.w = rect.w;
                         texture_bounds.h = rect.h;
                         tex = tex_creator.create_texture(
                             PixelFormatEnum::ABGR8888,
                             TextureAccess::Target, texture_bounds.w as u32, texture_bounds.h as u32).unwrap();
-                    } else {
-                        println!("same size. just copy over")
                     }
                     socket.recv(&mut msg,0).unwrap();
                     let arr = msg.to_vec();
