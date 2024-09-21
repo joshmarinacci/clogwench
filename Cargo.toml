@@ -4,7 +4,9 @@ resolver = "2"
 members = [
     "central",
     "common",
-    "db", "experiments/zmqclient", "experiments/zmqwindow",
+    "db",
+    "experiments/zmqclient",
+    "experiments/zmqwindow",
     "gfx",
     "plat",
     "tools/runner",
@@ -17,6 +19,7 @@ default-members = [
     "gfx",
     "plat",
     "tools/runner",
+    "experiments/zmqwindow"
 ]
 
 
@@ -24,5 +27,5 @@ default-members = [
 central-only = "cargo run --bin central -- --database=db/test_data.json"
 dev = "cargo run --bin runner -- --wmtype native"
 dock = "npm --prefix ../clogwench-apps/dock run dev"
-single-window-receiver = "cargo run --bin sender"
+window = "cargo run --bin zmqwindow"
 
