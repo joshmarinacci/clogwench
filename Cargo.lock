@@ -985,6 +985,7 @@ dependencies = [
  "gfx",
  "log",
  "sdl2",
+ "sdl_util",
  "uuid",
 ]
 
@@ -1365,6 +1366,14 @@ dependencies = [
  "libc",
  "pkg-config",
  "version-compare 0.1.1",
+]
+
+[[package]]
+name = "sdl_util"
+version = "0.1.0"
+dependencies = [
+ "common",
+ "sdl2",
 ]
 
 [[package]]
@@ -2021,8 +2030,10 @@ dependencies = [
 name = "zmqwindow"
 version = "0.1.0"
 dependencies = [
+ "common",
  "gfx",
  "sdl2",
+ "sdl_util",
  "serde",
  "serde_json",
  "zmq",

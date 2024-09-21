@@ -1,6 +1,21 @@
-
-use sdl2::keyboard::{Keycode, Mod};
 use common::generated::KeyCode;
+use sdl2::keyboard::{Keycode, Mod};
+
+
+pub fn add(left: u64, right: u64) -> u64 {
+    left + right
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn it_works() {
+        let result = add(2, 2);
+        assert_eq!(result, 4);
+    }
+}
 
 //hi. cool!
 pub fn sdl_to_common(kc: Keycode, keymod: Mod) -> KeyCode {
@@ -98,6 +113,7 @@ pub fn sdl_to_common(kc: Keycode, keymod: Mod) -> KeyCode {
     // println!("to code {:?}",code);
     code
 }
+
 pub fn sdl_to_common_letter(kc: Keycode, keymod: Mod) -> String {
     if keymod.contains(Mod::LSHIFTMOD) || keymod.contains(Mod::RSHIFTMOD) {
         match kc {

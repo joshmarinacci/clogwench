@@ -90,7 +90,7 @@ impl Plat {
                             command: APICommand::KeyDown(KeyDownEvent{
                                 app_id: Default::default(),
                                 window_id: Default::default(),
-                                key: sdl_to_common::sdl_to_common(kk, keymod),
+                                key: sdl_util::sdl_to_common(kk, keymod),
                                 mods: ModifierState::empty(),
                             })
                         };

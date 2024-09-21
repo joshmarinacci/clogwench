@@ -4,10 +4,12 @@ use std::{str};
 use std::time::{Duration, Instant};
 use sdl2::pixels::{Color, PixelFormatEnum};
 use sdl2::event::{Event, WindowEvent};
-use sdl2::keyboard::Keycode;
+use sdl2::keyboard::{Keycode, Mod};
 use gfx::graphics::{ARGBColor, GFXBuffer, PixelLayout, Point, Rect, Size};
 use sdl2::rect::Rect as SDLRect;
 use sdl2::render::TextureAccess;
+use common::events::ModifierState;
+use sdl_util::sdl_to_common;
 
 fn main() {
     println!("starting window side");
@@ -23,7 +25,7 @@ fn main() {
     // let canvas = Canvas.createCanvas(window.pixelWidth,window.pixelHeight)
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
-    
+
     let window = video_subsystem.window("rust-sdl2 demo", 300, 300)
         .position_centered()
         .resizable()
@@ -39,22 +41,36 @@ fn main() {
     let mut tex = tex_creator.create_texture(
         PixelFormatEnum::ABGR8888,
         TextureAccess::Target, texture_bounds.w as u32, texture_bounds.h as u32).unwrap();
-    
+
     canvas.copy(&tex, None, texture_bounds).unwrap();
 
-
-    let mut event_pump = sdl_context.event_pump().unwrap();
     
+    let mut event_pump = sdl_context.event_pump().unwrap();
+
     let mut last:u128 = 0;
     let now = Instant::now();
     'running: loop {
         // println!("look for input events");
         for event in event_pump.poll_iter() {
             match event {
-                Event::Quit { .. } |
-                Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
-                    println!("quitting");
+                Event::Quit { .. } => {
                     break 'running;
+                }
+                Event::KeyDown { keycode: Some(code), keymod,.. } => {
+                    println!("got keycode {:?}", code);
+                    let kc = sdl_to_common(code,keymod);
+                    println!("turned into clogwench keycode {:?}", kc);
+                    let kc_string = serde_json::to_string(&kc).unwrap();
+                    let mods:ModifierState = ModifierState {
+                        shift: false,
+                        ctrl: false,
+                        alt: false,
+                        meta: false,
+                    };
+                    let mods_string = serde_json::to_string(&mods).unwrap();
+                    socket.send_multipart(&["key-down", kc_string.as_str(), mods_string.as_str()], 0).unwrap()
+                    // println!("quitting");
+                    // break 'running;
                 },
                 Event::MouseButtonDown { x, y , ..} => {
                     last = now.elapsed().as_millis();
@@ -78,7 +94,7 @@ fn main() {
                         }
                         _ => {}
                     }
-                }, 
+                },
                 _ => {}
             }
         }

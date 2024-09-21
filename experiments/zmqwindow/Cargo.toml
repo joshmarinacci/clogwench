@@ -7,5 +7,7 @@ edition = "2021"
 zmq = "0.10.0"
 sdl2 = "0.37.0"
 gfx = { path="../../gfx"}
+common = { path="../../common"}
 serde = "1.0.210"
 serde_json = "1.0.127"
+sdl_util = { path="../../sdl_util"}

@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 gfx = { path= "../../gfx" }
+sdl_util = { path="../../sdl_util"}
 common = { path="../../common"}
 uuid = { version="0.8.2", features=["v4","serde"]}
 log = "0.4.14"

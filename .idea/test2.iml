@@ -28,6 +28,7 @@
       <sourceFolder url="file://$MODULE_DIR$/minibuf/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/experiments/zmqclient/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/experiments/zmqwindow/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/sdl_util/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/temp" />
       <excludeFolder url="file://$MODULE_DIR$/.tmp" />
       <excludeFolder url="file://$MODULE_DIR$/tmp" />

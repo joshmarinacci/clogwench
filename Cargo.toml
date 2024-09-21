@@ -8,7 +8,7 @@ members = [
     "experiments/zmqclient",
     "experiments/zmqwindow",
     "gfx",
-    "plat",
+    "plat", "sdl_util",
     "tools/runner",
 ]
 
