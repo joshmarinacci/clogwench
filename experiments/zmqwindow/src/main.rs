@@ -45,7 +45,7 @@ fn main() {
 
     canvas.copy(&tex, None, texture_bounds).unwrap();
 
-    
+
     let mut event_pump = sdl_context.event_pump().unwrap();
 
     'running: loop {
@@ -66,8 +66,8 @@ fn main() {
                     let point = Point::init(x,y);
                     let mut mouse_button = "Primary";
                     if(mouse_btn == MouseButton::Right) {  mouse_button = "Secondary";  }
-                    socket.send_multipart(&["mouse-down", 
-                        serde_json::to_string(&point).unwrap().as_str(), 
+                    socket.send_multipart(&["mouse-down",
+                        serde_json::to_string(&point).unwrap().as_str(),
                         mouse_button], 0).unwrap()
                 }
                 Event::MouseButtonUp { x,y,mouse_btn, ..} => {
@@ -111,9 +111,7 @@ fn main() {
                 socket.recv(&mut msg,0).unwrap();
                 // println!("open window size is {}", msg.as_str().unwrap());
                 if let Ok(size) = serde_json::from_str::<Size>(msg.as_str().unwrap()) {
-                    // println!("the size is {}",size);
-                    let rect = sdl2::rect::Rect::new(0, 0, size.w as u32, size.h as u32);
-                    canvas.set_viewport(rect)
+                    let _ = canvas.window_mut().set_size(size.w as u32, size.h as u32);
                 }
             }
             if(msg.as_str().unwrap().eq("repaint")) {
