@@ -5,6 +5,7 @@ use std::time::{Duration, Instant};
 use sdl2::pixels::{Color, PixelFormatEnum};
 use sdl2::event::{Event, WindowEvent};
 use sdl2::keyboard::{Keycode, Mod};
+use sdl2::mouse::MouseButton;
 use gfx::graphics::{ARGBColor, GFXBuffer, PixelLayout, Point, Rect, Size};
 use sdl2::rect::Rect as SDLRect;
 use sdl2::render::TextureAccess;
@@ -47,8 +48,6 @@ fn main() {
     
     let mut event_pump = sdl_context.event_pump().unwrap();
 
-    let mut last:u128 = 0;
-    let now = Instant::now();
     'running: loop {
         // println!("look for input events");
         for event in event_pump.poll_iter() {
@@ -57,52 +56,43 @@ fn main() {
                     break 'running;
                 }
                 Event::KeyDown { keycode: Some(code), keymod,.. } => {
-                    println!("got keycode {:?}", code);
                     let kc = sdl_to_common(code,keymod);
-                    println!("turned into clogwench keycode {:?}", kc);
-                    println!("mod is {:?}", keymod);
-                    let kc_string = serde_json::to_string(&kc).unwrap();
-                    let mut mods:ModifierState = ModifierState {
-                        shift: false,
-                        ctrl: false,
-                        alt: false,
-                        meta: false,
-                    };
-                    if (keymod == Mod::LSHIFTMOD || keymod == Mod::RSHIFTMOD) {
-                        mods.shift = true
-                    }
-                    if (keymod == Mod::LCTRLMOD || keymod == Mod::RCTRLMOD) {
-                        mods.ctrl = true
-                    }
-                    if (keymod == Mod::LALTMOD || keymod == Mod::RALTMOD) {
-                        mods.alt = true
-                    }
-                    if (keymod == Mod::LGUIMOD || keymod == Mod::RGUIMOD) {
-                        mods.meta = true
-                    }
-                    let mods_string = serde_json::to_string(&mods).unwrap();
-                    socket.send_multipart(&["key-down", kc_string.as_str(), mods_string.as_str()], 0).unwrap()
-                    // println!("quitting");
-                    // break 'running;
+                    let mods:ModifierState = create_mod(keymod);
+                    socket.send_multipart(&["key-down",
+                        serde_json::to_string(&kc).unwrap().as_str(),
+                        serde_json::to_string(&mods).unwrap().as_str()], 0).unwrap()
                 },
-                Event::MouseButtonDown { x, y , ..} => {
-                    last = now.elapsed().as_millis();
-                    // println!("got mouse button down {} {} {:?}",x,y, now.elapsed().as_millis());
+                Event::MouseButtonDown { x, y , mouse_btn, ..} => {
                     let point = Point::init(x,y);
-                    let point_string = serde_json::to_string(&point).unwrap();
-                    // await sock.send([null,MyMessageType.Clicked,JSON.stringify(point.toJSON())])
-                    socket.send_multipart(&["clicked", point_string.as_str()], 0).unwrap()
-                },
+                    let mut mouse_button = "Primary";
+                    if(mouse_btn == MouseButton::Right) {  mouse_button = "Secondary";  }
+                    socket.send_multipart(&["mouse-down", 
+                        serde_json::to_string(&point).unwrap().as_str(), 
+                        mouse_button], 0).unwrap()
+                }
+                Event::MouseButtonUp { x,y,mouse_btn, ..} => {
+                    let point = Point::init(x,y);
+                    let mut mouse_button = "Primary";
+                    if(mouse_btn == MouseButton::Right) {  mouse_button = "Secondary";  }
+                    socket.send_multipart(&["mouse-up",
+                        serde_json::to_string(&point).unwrap().as_str(),
+                        mouse_button], 0).unwrap()
+                }
+                Event::MouseMotion {x,y,mousestate,..} => {
+                    let point = Point::init(x,y);
+                    socket.send_multipart(&["mouse-move",
+                        serde_json::to_string(&point).unwrap().as_str(),
+                        ], 0).unwrap()
+                }
                 Event::Window { timestamp, window_id, win_event } => {
                     match win_event {
                         WindowEvent::Resized(w,h) => {
-                            // println!("resized to {}x{}",w,h);
                             let size = Size::init(w,h);
-                            let size_string = serde_json::to_string(&size).unwrap();
-                            socket.send_multipart(&["window-resized", size_string.as_str()],0).unwrap()
+                            socket.send_multipart(&["window-resized",
+                                serde_json::to_string(&size).unwrap().as_str(),
+                                ],0).unwrap()
                         },
                         WindowEvent::Close => {
-                            // println!("window closed");
                             socket.send_multipart(&["window-closed"],0).unwrap()
                         }
                         _ => {}
@@ -147,7 +137,6 @@ fn main() {
                     let arr = msg.to_vec();
                     let pitch:usize = (texture_bounds.w * 4) as usize;
                     tex.update(texture_bounds, &arr, pitch).unwrap();
-                    let delta = now.elapsed().as_millis() - last;
                 }
             }
         }
@@ -157,4 +146,26 @@ fn main() {
         canvas.present();
         ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
     }
+}
+
+fn create_mod(keymod: Mod) -> ModifierState {
+    let mut mods:ModifierState = ModifierState {
+        shift: false,
+        ctrl: false,
+        alt: false,
+        meta: false,
+    };
+    if (keymod == Mod::LSHIFTMOD || keymod == Mod::RSHIFTMOD) {
+        mods.shift = true
+    }
+    if (keymod == Mod::LCTRLMOD || keymod == Mod::RCTRLMOD) {
+        mods.ctrl = true
+    }
+    if (keymod == Mod::LALTMOD || keymod == Mod::RALTMOD) {
+        mods.alt = true
+    }
+    if (keymod == Mod::LGUIMOD || keymod == Mod::RGUIMOD) {
+        mods.meta = true
+    }
+    mods
 }
